@@ -31,14 +31,14 @@ export default function Navbar() {
     <header
       className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
         scrolled
-          ? "border-b border-white/5 bg-[#050816]/80 backdrop-blur-xl"
+          ? "border-b border-zinc-200/70 bg-white/80 backdrop-blur-xl"
           : "bg-transparent"
       }`}
     >
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3.5 lg:px-8">
         <Link href="/" className="flex items-center gap-2.5 group">
           <Logo className="h-8 w-8 transition-transform group-hover:scale-105" />
-          <span className="text-lg font-semibold tracking-tight text-white">HostGate</span>
+          <span className="text-lg font-semibold tracking-tight text-zinc-900">HostGate</span>
         </Link>
 
         <ul className="hidden items-center gap-1 lg:flex">
@@ -46,7 +46,7 @@ export default function Navbar() {
             <li key={l.href}>
               <Link
                 href={l.href}
-                className="rounded-full px-3.5 py-2 text-sm text-zinc-300 transition hover:bg-white/[0.06] hover:text-white"
+                className="rounded-full px-3.5 py-2 text-sm text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900"
               >
                 {l.label}
               </Link>
@@ -58,13 +58,13 @@ export default function Navbar() {
           <LanguageToggle />
           <Link
             href="#"
-            className="text-sm font-medium text-zinc-300 transition hover:text-white"
+            className="text-sm font-medium text-zinc-600 transition hover:text-zinc-900"
           >
             {pick(t.nav.login, locale)}
           </Link>
           <Link
             href="#pricing"
-            className="group relative inline-flex items-center justify-center overflow-hidden rounded-full bg-white px-4 py-2 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-100"
+            className="inline-flex items-center justify-center rounded-full bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800"
           >
             {pick(t.nav.start, locale)}
           </Link>
@@ -72,7 +72,7 @@ export default function Navbar() {
 
         <button
           onClick={() => setMenuOpen((o) => !o)}
-          className="rounded-md p-2 text-zinc-300 lg:hidden"
+          className="rounded-md p-2 text-zinc-700 lg:hidden"
           aria-label="Menu"
         >
           <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
@@ -86,14 +86,14 @@ export default function Navbar() {
       </nav>
 
       {menuOpen && (
-        <div className="border-t border-white/5 bg-[#050816]/95 px-5 pb-5 backdrop-blur-xl lg:hidden">
+        <div className="border-t border-zinc-200 bg-white/95 px-5 pb-5 backdrop-blur-xl lg:hidden">
           <ul className="flex flex-col gap-1 pt-2">
             {links.map((l) => (
               <li key={l.href}>
                 <Link
                   href={l.href}
                   onClick={() => setMenuOpen(false)}
-                  className="block rounded-lg px-3 py-2.5 text-sm text-zinc-300 hover:bg-white/[0.06]"
+                  className="block rounded-lg px-3 py-2.5 text-sm text-zinc-700 hover:bg-zinc-100"
                 >
                   {l.label}
                 </Link>
@@ -105,7 +105,7 @@ export default function Navbar() {
             <Link
               href="#pricing"
               onClick={() => setMenuOpen(false)}
-              className="flex-1 rounded-full bg-white px-4 py-2.5 text-center text-sm font-semibold text-zinc-900"
+              className="flex-1 rounded-full bg-zinc-900 px-4 py-2.5 text-center text-sm font-semibold text-white"
             >
               {pick(t.nav.start, locale)}
             </Link>

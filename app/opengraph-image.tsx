@@ -17,8 +17,8 @@ export default async function OG() {
           justifyContent: "center",
           padding: "80px",
           background:
-            "radial-gradient(ellipse at top, #1e1b4b 0%, #050816 70%)",
-          color: "white",
+            "radial-gradient(ellipse at top, #f5f3ff 0%, #ffffff 70%)",
+          color: "#18181b",
           fontFamily: "system-ui, sans-serif",
         }}
       >
@@ -30,7 +30,7 @@ export default async function OG() {
               height: 56,
               borderRadius: 14,
               background:
-                "linear-gradient(135deg, #818cf8 0%, #c084fc 50%, #f472b6 100%)",
+                "linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -41,7 +41,7 @@ export default async function OG() {
           >
             H
           </div>
-          <div style={{ fontSize: 36, fontWeight: 700 }}>HostGate</div>
+          <div style={{ fontSize: 36, fontWeight: 700, color: "#18181b" }}>HostGate</div>
         </div>
 
         {/* Headline */}
@@ -54,13 +54,14 @@ export default async function OG() {
             letterSpacing: "-0.03em",
             display: "flex",
             flexDirection: "column",
+            color: "#18181b",
           }}
         >
           <span>Run your hotel</span>
           <span
             style={{
               background:
-                "linear-gradient(135deg, #818cf8 0%, #c084fc 50%, #f472b6 100%)",
+                "linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%)",
               backgroundClip: "text",
               color: "transparent",
             }}
@@ -74,7 +75,7 @@ export default async function OG() {
           style={{
             marginTop: 28,
             fontSize: 28,
-            color: "#a1a1aa",
+            color: "#71717a",
             maxWidth: 900,
             lineHeight: 1.35,
           }}
@@ -90,11 +91,11 @@ export default async function OG() {
             gap: 16,
             alignItems: "center",
             fontSize: 22,
-            color: "#71717a",
+            color: "#a1a1aa",
           }}
         >
           <span>hostgate.app</span>
-          <span style={{ color: "#3f3f46" }}>·</span>
+          <span style={{ color: "#d4d4d8" }}>·</span>
           <span>Start free · No credit card</span>
         </div>
       </div>

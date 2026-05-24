@@ -9,7 +9,7 @@ export default function FAQ() {
   const [open, setOpen] = useState<number | null>(0);
 
   return (
-    <section id="faq" className="relative py-24 lg:py-32">
+    <section id="faq" className="relative bg-zinc-50/60 py-24 lg:py-32">
       <div className="mx-auto max-w-4xl px-5 lg:px-8">
         <SectionHeader
           badge={pick(t.faq.badge, locale)}
@@ -20,17 +20,15 @@ export default function FAQ() {
           {t.faq.items.map((item, i) => (
             <div
               key={i}
-              className={`overflow-hidden rounded-xl border transition ${
-                open === i
-                  ? "border-white/20 bg-white/[0.04]"
-                  : "border-white/10 bg-white/[0.02] hover:border-white/20"
+              className={`overflow-hidden rounded-xl border bg-white transition ${
+                open === i ? "border-zinc-300 shadow-sm" : "border-zinc-200"
               }`}
             >
               <button
                 onClick={() => setOpen(open === i ? null : i)}
                 className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
               >
-                <span className="text-sm font-semibold text-white sm:text-base">
+                <span className="text-sm font-semibold text-zinc-900 sm:text-base">
                   {pick(item.q, locale)}
                 </span>
                 <svg
@@ -38,7 +36,7 @@ export default function FAQ() {
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2"
-                  className={`h-4 w-4 flex-none text-zinc-400 transition-transform ${
+                  className={`h-4 w-4 flex-none text-zinc-500 transition-transform ${
                     open === i ? "rotate-180" : ""
                   }`}
                 >
@@ -51,7 +49,7 @@ export default function FAQ() {
                 }`}
               >
                 <div className="overflow-hidden">
-                  <p className="px-5 pb-5 text-sm leading-relaxed text-zinc-300">
+                  <p className="px-5 pb-5 text-sm leading-relaxed text-zinc-600">
                     {pick(item.a, locale)}
                   </p>
                 </div>

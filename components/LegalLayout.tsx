@@ -19,18 +19,18 @@ export default function LegalLayout({
   return (
     <article className="relative pt-32 pb-20">
       <div className="mx-auto max-w-3xl px-5 lg:px-8">
-        <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
+        <h1 className="text-4xl font-bold tracking-tight text-zinc-900 sm:text-5xl">
           {pick(title, locale)}
         </h1>
-        <p className="mt-3 text-sm text-zinc-400">
+        <p className="mt-3 text-sm text-zinc-500">
           {pick(t.legal.lastUpdated, locale)}: {lastUpdated}
         </p>
 
         <div className="mt-10 space-y-8">
           {body.map((sec, i) => (
             <section key={i}>
-              <h2 className="text-xl font-semibold text-white">{sec.heading}</h2>
-              <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-zinc-300">
+              <h2 className="text-xl font-semibold text-zinc-900">{sec.heading}</h2>
+              <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-zinc-700">
                 {sec.content}
               </p>
             </section>

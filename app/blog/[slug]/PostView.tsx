@@ -13,16 +13,16 @@ export default function PostView({ slug }: { slug: string }) {
   return (
     <article className="relative pt-32 pb-20">
       <div className="mx-auto max-w-3xl px-5 lg:px-8">
-        <Link href="/blog" className="text-sm text-zinc-400 hover:text-white">
+        <Link href="/blog" className="text-sm text-zinc-500 hover:text-zinc-900">
           {pick(t.blog.backToBlog, locale)}
         </Link>
 
         <div className={`mt-6 h-44 overflow-hidden rounded-2xl bg-gradient-to-br ${post.gradient} relative`}>
-          <div className="absolute inset-0 bg-grid opacity-30" />
+          <div className="absolute inset-0 bg-grid opacity-30 mix-blend-overlay" />
         </div>
 
-        <div className="mt-6 flex flex-wrap items-center gap-3 text-xs text-zinc-400">
-          <span className="rounded-full bg-white/[0.06] px-2.5 py-1">{pick(post.category, locale)}</span>
+        <div className="mt-6 flex flex-wrap items-center gap-3 text-xs text-zinc-500">
+          <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-zinc-700">{pick(post.category, locale)}</span>
           <span>
             {new Date(post.date).toLocaleDateString(locale === "th" ? "th-TH" : "en-US", {
               year: "numeric",
@@ -35,31 +35,31 @@ export default function PostView({ slug }: { slug: string }) {
           </span>
         </div>
 
-        <h1 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">
+        <h1 className="mt-3 text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl">
           {pick(post.title, locale)}
         </h1>
-        <p className="mt-3 text-base leading-relaxed text-zinc-300">{pick(post.excerpt, locale)}</p>
+        <p className="mt-3 text-base leading-relaxed text-zinc-600">{pick(post.excerpt, locale)}</p>
 
-        <div className="mt-10 max-w-none text-zinc-300">
+        <div className="mt-10 max-w-none text-zinc-700">
           <MarkdownLite text={content} />
         </div>
 
-        <hr className="my-12 border-white/10" />
+        <hr className="my-12 border-zinc-200" />
 
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-center">
-          <p className="text-sm font-semibold text-white">
+        <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-6 text-center">
+          <p className="text-sm font-semibold text-zinc-900">
             {locale === "th"
               ? "พร้อมนำเทคนิคเหล่านี้ไปใช้กับธุรกิจของคุณ?"
               : "Ready to put these ideas to work?"}
           </p>
-          <p className="mt-1 text-xs text-zinc-400">
+          <p className="mt-1 text-xs text-zinc-600">
             {locale === "th"
               ? "เริ่มต้นใช้งาน HostGate ฟรีวันนี้"
               : "Start using HostGate for free today."}
           </p>
           <Link
             href="/#pricing"
-            className="mt-4 inline-flex items-center justify-center rounded-full bg-white px-5 py-2 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-100"
+            className="mt-4 inline-flex items-center justify-center rounded-full bg-zinc-900 px-5 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800"
           >
             {pick(t.nav.start, locale)}
           </Link>
@@ -92,14 +92,14 @@ function MarkdownLite({ text }: { text: string }) {
     if (line.startsWith("## ")) {
       flush();
       out.push(
-        <h2 key={out.length} className="mt-10 text-2xl font-bold text-white">
+        <h2 key={out.length} className="mt-10 text-2xl font-bold text-zinc-900">
           {line.slice(3)}
         </h2>
       );
     } else if (line.startsWith("### ")) {
       flush();
       out.push(
-        <h3 key={out.length} className="mt-8 text-lg font-semibold text-white">
+        <h3 key={out.length} className="mt-8 text-lg font-semibold text-zinc-900">
           {line.slice(4)}
         </h3>
       );
@@ -137,13 +137,13 @@ function inline(text: string) {
     if (next.index! > 0) parts.push(rest.slice(0, next.index));
     if (next === codeM) {
       parts.push(
-        <code key={key++} className="rounded bg-white/[0.08] px-1.5 py-0.5 font-mono text-[0.9em] text-fuchsia-200">
+        <code key={key++} className="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-[0.9em] text-indigo-700">
           {next[1]}
         </code>
       );
     } else {
       parts.push(
-        <strong key={key++} className="font-semibold text-white">
+        <strong key={key++} className="font-semibold text-zinc-900">
           {next[1]}
         </strong>
       );

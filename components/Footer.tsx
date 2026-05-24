@@ -47,15 +47,15 @@ export default function Footer() {
   ];
 
   return (
-    <footer className="relative mt-32 border-t border-white/5">
+    <footer className="relative mt-16 border-t border-zinc-200 bg-white">
       <div className="mx-auto max-w-7xl px-5 py-16 lg:px-8">
         <div className="grid grid-cols-2 gap-10 md:grid-cols-6">
           <div className="col-span-2 md:col-span-2">
             <div className="flex items-center gap-2.5">
               <Logo className="h-8 w-8" />
-              <span className="text-lg font-semibold tracking-tight text-white">HostGate</span>
+              <span className="text-lg font-semibold tracking-tight text-zinc-900">HostGate</span>
             </div>
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-zinc-400">
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-zinc-600">
               {pick(t.footer.tagline, locale)}
             </p>
             <div className="mt-6 flex items-center gap-3">
@@ -73,11 +73,11 @@ export default function Footer() {
 
           {cols.map((c) => (
             <div key={c.title}>
-              <h4 className="text-sm font-semibold text-white">{c.title}</h4>
+              <h4 className="text-sm font-semibold text-zinc-900">{c.title}</h4>
               <ul className="mt-4 space-y-2.5">
                 {c.links.map((l) => (
                   <li key={l.label}>
-                    <Link href={l.href} className="text-sm text-zinc-400 transition hover:text-white">
+                    <Link href={l.href} className="text-sm text-zinc-600 transition hover:text-zinc-900">
                       {l.label}
                     </Link>
                   </li>
@@ -87,7 +87,7 @@ export default function Footer() {
           ))}
         </div>
 
-        <div className="mt-12 flex flex-col items-start justify-between gap-4 border-t border-white/5 pt-8 md:flex-row md:items-center">
+        <div className="mt-12 flex flex-col items-start justify-between gap-4 border-t border-zinc-200 pt-8 md:flex-row md:items-center">
           <p className="text-xs text-zinc-500">
             © {year} HostGate. {pick(t.footer.rights, locale)}
           </p>
@@ -113,7 +113,7 @@ function SocialIcon({
     <a
       href={href}
       aria-label={label}
-      className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 text-zinc-400 transition hover:border-white/30 hover:text-white"
+      className="flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200 text-zinc-500 transition hover:border-zinc-300 hover:text-zinc-900"
     >
       <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor">
         {children}

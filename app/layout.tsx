@@ -44,11 +44,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark">
-      <body className="min-h-screen overflow-x-hidden">
+    <html lang="en">
+      <body className="min-h-screen overflow-x-hidden bg-white text-zinc-900">
         <I18nProvider>
           <div className="relative">
-            <div className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-40 [mask-image:radial-gradient(ellipse_80%_60%_at_50%_0%,#000_50%,transparent_100%)]" />
             <Navbar />
             <main>{children}</main>
             <Footer />
