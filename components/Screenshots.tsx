@@ -5,8 +5,8 @@ import { SectionHeader } from "./Features";
 import Reveal from "./Reveal";
 import MacBookFrame from "./MacBookFrame";
 import IPhoneFrame from "./IPhoneFrame";
-import DashboardMock from "./DashboardMock";
-import MobileMock from "./MobileMock";
+import AnimatedDashboard from "./AnimatedDashboard";
+import AnimatedMobile from "./AnimatedMobile";
 
 export default function Screenshots() {
   const { locale, t } = useI18n();
@@ -29,7 +29,7 @@ export default function Screenshots() {
             <div className="w-full md:flex-1">
               <div className="tilt">
                 <MacBookFrame>
-                  <DashboardMock />
+                  <AnimatedDashboard />
                 </MacBookFrame>
               </div>
             </div>
@@ -38,7 +38,7 @@ export default function Screenshots() {
             <div className="mx-auto w-[220px] flex-none md:mx-0 md:w-[200px] lg:w-[240px]">
               <div className="tilt float">
                 <IPhoneFrame>
-                  <MobileMock />
+                  <AnimatedMobile />
                 </IPhoneFrame>
               </div>
             </div>

@@ -3,12 +3,12 @@
 import { ReactNode } from "react";
 
 /**
- * MacBook Pro-inspired frame — pure CSS, no images.
+ * MacBook Pro "Space Black" frame — black aluminum, pure CSS.
  * Proportions match Apple's product photography:
  *   - Thin black bezels with rounded corners
- *   - Aluminum silver lid wrapping the screen
- *   - Small camera notch (proportional)
- *   - Hinge bar + bottom base extending slightly wider than the lid
+ *   - Black aluminum lid (Space Black)
+ *   - Small camera notch (~18% of screen width)
+ *   - Hinge bar + base extending slightly wider
  */
 export default function MacBookFrame({
   children,
@@ -19,11 +19,11 @@ export default function MacBookFrame({
 }) {
   return (
     <div className={`relative mx-auto w-full device-shadow ${className}`}>
-      {/* Aluminum lid */}
-      <div className="relative rounded-[14px] bg-gradient-to-b from-[#e5e7eb] via-[#d1d5db] to-[#c8ccd1] p-[6px]">
-        {/* Black bezel + screen */}
+      {/* Space Black aluminum lid */}
+      <div className="relative rounded-[14px] bg-gradient-to-b from-[#2a2a2c] via-[#1c1c1e] to-[#0d0d0f] p-[6px]">
+        {/* Inner black bezel + screen */}
         <div className="relative overflow-hidden rounded-[9px] bg-black">
-          {/* Camera notch — small, proportional (about 18% of screen width) */}
+          {/* Camera notch — proportional, blends with bezel */}
           <div className="pointer-events-none absolute left-1/2 top-0 z-30 flex h-[14px] w-[18%] max-w-[120px] -translate-x-1/2 items-end justify-center rounded-b-[8px] bg-black">
             <span className="mb-[4px] h-[4px] w-[4px] rounded-full bg-[#1a1a1a] ring-[1px] ring-[#2a2a2a]" />
           </div>
@@ -36,17 +36,16 @@ export default function MacBookFrame({
         </div>
       </div>
 
-      {/* Hinge bar (lid bottom) — slightly darker aluminum */}
-      <div className="relative mx-auto h-[10px] w-[101%] -translate-x-[0.5%] rounded-b-[3px] bg-gradient-to-b from-[#b5b9be] to-[#9ea3a8]">
-        {/* Hinge dimple in the middle */}
-        <div className="absolute left-1/2 top-0 h-[4px] w-[14%] -translate-x-1/2 rounded-b-md bg-gradient-to-b from-black/15 to-transparent" />
+      {/* Hinge bar — slightly darker than lid */}
+      <div className="relative mx-auto h-[10px] w-[101%] -translate-x-[0.5%] rounded-b-[3px] bg-gradient-to-b from-[#1a1a1c] to-[#0a0a0c]">
+        <div className="absolute left-1/2 top-0 h-[4px] w-[14%] -translate-x-1/2 rounded-b-md bg-gradient-to-b from-black/40 to-transparent" />
       </div>
 
-      {/* Base (chassis extending wider) */}
-      <div className="mx-auto h-[5px] w-[105%] -translate-x-[2.5%] rounded-b-[8px] bg-gradient-to-b from-[#a8acb1] to-[#8d9196]" />
+      {/* Base extending wider */}
+      <div className="mx-auto h-[5px] w-[105%] -translate-x-[2.5%] rounded-b-[8px] bg-gradient-to-b from-[#171719] to-[#08080a]" />
 
-      {/* Shadow beneath base */}
-      <div className="pointer-events-none mx-auto h-[12px] w-[95%] -translate-y-1 rounded-[50%] bg-black/15 blur-md" />
+      {/* Shadow beneath */}
+      <div className="pointer-events-none mx-auto h-[12px] w-[95%] -translate-y-1 rounded-[50%] bg-black/20 blur-md" />
     </div>
   );
 }

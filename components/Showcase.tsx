@@ -5,7 +5,7 @@ import { useI18n, pick } from "@/lib/i18n";
 import { SectionHeader } from "./Features";
 import Reveal from "./Reveal";
 import MacBookFrame from "./MacBookFrame";
-import DashboardMock from "./DashboardMock";
+import AnimatedDashboard from "./AnimatedDashboard";
 
 /**
  * Apple-style sticky-scroll showcase.
@@ -19,27 +19,33 @@ export default function Showcase() {
 
   const features = [
     {
+      // Scene 1 — calendar drag
+      phase: 1,
       eyebrow: { th: "ปฏิทิน", en: "Calendar" },
-      title: { th: "เห็นทุกห้อง.\nในมุมมองเดียว.", en: "Every room.\nOne view." },
+      title: { th: "ลากวาง.\nย้ายการจอง.", en: "Drag.\nMove bookings." },
       desc: {
-        th: "ลากวางเพื่อย้ายการจอง เปลี่ยนสถานะห้องด้วยคลิกเดียว",
-        en: "Drag to move bookings. Click to change room status. That simple.",
+        th: "ลากบล็อกการจองเพื่อย้ายห้องหรือเปลี่ยนวัน เห็นผลทันที",
+        en: "Drag a booking to change its room or dates. Updates instantly.",
       },
     },
     {
+      // Scene 2 — new booking + guest details
+      phase: 2,
+      eyebrow: { th: "ลูกค้า", en: "Guests" },
+      title: { th: "เห็นทุกการจอง.\nรู้จักทุกคน.", en: "Every booking.\nEvery guest." },
+      desc: {
+        th: "การจองใหม่เข้า → แจ้งเตือนทันที พร้อมรายละเอียดลูกค้าครบ",
+        en: "New bookings arrive instantly with full guest details one tap away.",
+      },
+    },
+    {
+      // Scene 3 — channel sync
+      phase: 3,
       eyebrow: { th: "OTA", en: "Channels" },
-      title: { th: "ทุก OTA.\nซิงค์อัตโนมัติ.", en: "Every channel.\nIn sync." },
+      title: { th: "ทุก OTA.\nซิงค์ทันที.", en: "Every channel.\nIn sync." },
       desc: {
         th: "Booking, Agoda, Airbnb, Expedia เปลี่ยนราคาที่เดียว อัปเดตทุกที่",
-        en: "Booking, Agoda, Airbnb, Expedia. Change a rate once. It updates everywhere.",
-      },
-    },
-    {
-      eyebrow: { th: "การเงิน", en: "Money" },
-      title: { th: "เก็บเงิน.\nทันที.", en: "Get paid.\nInstantly." },
-      desc: {
-        th: "PromptPay, บัตรเครดิต, โอนผ่านธนาคาร — รับชำระทุกช่องทาง",
-        en: "PromptPay, credit cards, bank transfers — all payment methods supported.",
+        en: "Booking, Agoda, Airbnb, Expedia. Change a rate once. Update everywhere.",
       },
     },
   ];
@@ -87,10 +93,10 @@ export default function Showcase() {
       >
         <div className="sticky top-0 flex h-screen items-center">
           <div className="mx-auto grid w-full max-w-7xl grid-cols-2 items-center gap-12 px-5 lg:px-8">
-            {/* Left: MacBook (pinned) */}
+            {/* Left: MacBook (pinned) — shows phase synced to scroll */}
             <div className="float">
               <MacBookFrame>
-                <DashboardMock />
+                <AnimatedDashboard phase={features[active]?.phase} />
               </MacBookFrame>
             </div>
 

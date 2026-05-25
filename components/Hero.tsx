@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useI18n, pick } from "@/lib/i18n";
 import MacBookFrame from "./MacBookFrame";
 import IPhoneFrame from "./IPhoneFrame";
-import DashboardMock from "./DashboardMock";
-import MobileMock from "./MobileMock";
+import AnimatedDashboard from "./AnimatedDashboard";
+import AnimatedMobile from "./AnimatedMobile";
 
 export default function Hero() {
   const { locale, t } = useI18n();
@@ -82,7 +82,7 @@ export default function Hero() {
         >
           <div className="tilt mx-auto">
             <MacBookFrame>
-              <DashboardMock />
+              <AnimatedDashboard />
             </MacBookFrame>
           </div>
 
@@ -90,7 +90,7 @@ export default function Hero() {
           <div className="absolute right-2 -bottom-6 hidden w-[160px] float sm:right-4 sm:-bottom-10 sm:block md:right-12 md:-bottom-12 md:w-[200px] lg:right-20 lg:-bottom-16 lg:w-[240px]">
             <div className="tilt">
               <IPhoneFrame>
-                <MobileMock />
+                <AnimatedMobile />
               </IPhoneFrame>
             </div>
           </div>
@@ -99,7 +99,7 @@ export default function Hero() {
           <div className="mt-12 flex justify-center sm:hidden">
             <div className="w-[220px]">
               <IPhoneFrame>
-                <MobileMock />
+                <AnimatedMobile />
               </IPhoneFrame>
             </div>
           </div>
