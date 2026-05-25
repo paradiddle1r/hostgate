@@ -37,20 +37,27 @@ export default function StudioDisplay({
         </div>
       </div>
 
-      {/* Aluminum stand — arm */}
-      <div className="relative mx-auto mt-[2px] h-[30px] w-[26%] rounded-b-md bg-gradient-to-b from-[#a1a1aa] via-[#8d9196] to-[#71717a]">
-        {/* Subtle highlight on the arm */}
+      {/* Aluminum stand — arm (aspect-ratio keeps it proportional) */}
+      <div
+        className="relative mx-auto mt-[2px] w-[26%] rounded-b-md bg-gradient-to-b from-[#a1a1aa] via-[#8d9196] to-[#71717a]"
+        style={{ aspectRatio: "26 / 6" }}
+      >
         <div className="absolute left-1/2 top-0 h-full w-[1px] -translate-x-1/2 bg-white/20" />
       </div>
 
-      {/* Stand base */}
-      <div className="relative mx-auto h-[10px] w-[42%] rounded-b-[8px] bg-gradient-to-b from-[#a1a1aa] via-[#71717a] to-[#52525b]">
-        {/* Front highlight */}
+      {/* Stand base (also proportional) */}
+      <div
+        className="relative mx-auto w-[42%] rounded-b-[8px] bg-gradient-to-b from-[#a1a1aa] via-[#71717a] to-[#52525b]"
+        style={{ aspectRatio: "42 / 3.5" }}
+      >
         <div className="absolute inset-x-2 top-0 h-[1px] bg-white/20" />
       </div>
 
       {/* Soft floor shadow */}
-      <div className="pointer-events-none mx-auto h-[12px] w-[60%] -translate-y-2 rounded-[50%] bg-black/15 blur-md" />
+      <div
+        className="pointer-events-none mx-auto w-[60%] -translate-y-2 rounded-[50%] bg-black/15 blur-md"
+        style={{ aspectRatio: "60 / 3" }}
+      />
     </div>
   );
 }

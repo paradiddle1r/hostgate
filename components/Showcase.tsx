@@ -137,18 +137,27 @@ export default function Showcase() {
         </div>
       </div>
 
-      {/* Mobile fallback: stacked simple cards */}
-      <div className="mx-auto mt-12 max-w-3xl space-y-12 px-5 lg:hidden">
+      {/* Mobile fallback: stacked cards with device preview */}
+      <div className="mx-auto mt-12 max-w-3xl space-y-16 px-5 lg:hidden">
         {features.map((f, i) => (
           <Reveal key={i}>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-600">
-                {pick(f.eyebrow, locale)}
-              </p>
-              <h3 className="mt-3 whitespace-pre-line text-3xl font-semibold leading-tight tracking-tight text-zinc-900">
-                {pick(f.title, locale)}
-              </h3>
-              <p className="mt-3 text-base text-zinc-600">{pick(f.desc, locale)}</p>
+            <div className="flex flex-col gap-6">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-indigo-600 sm:text-xs">
+                  {pick(f.eyebrow, locale)}
+                </p>
+                <h3 className="mt-3 whitespace-pre-line text-3xl font-semibold leading-[1.05] tracking-[-0.03em] text-zinc-900 sm:text-4xl">
+                  {pick(f.title, locale)}
+                </h3>
+                <p className="mt-3 text-base text-zinc-600 sm:text-lg">{pick(f.desc, locale)}</p>
+              </div>
+              <div className="mx-auto w-full max-w-md">
+                <div className="tilt">
+                  <StudioDisplay>
+                    <AnimatedDashboard phase={f.phase} />
+                  </StudioDisplay>
+                </div>
+              </div>
             </div>
           </Reveal>
         ))}

@@ -137,7 +137,7 @@ export default function FeatureBreakdown() {
   ];
 
   return (
-    <section className="relative py-24 lg:py-32">
+    <section className="relative py-20 lg:py-32">
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
         <Reveal>
           <SectionHeader
@@ -151,7 +151,7 @@ export default function FeatureBreakdown() {
           />
         </Reveal>
 
-        <div className="mt-20 space-y-32 lg:space-y-44">
+        <div className="mt-16 space-y-20 sm:mt-20 sm:space-y-28 lg:space-y-44">
           {rows.map((row, i) => (
             <FeatureRowComponent key={i} row={row} reversed={i % 2 === 1} />
           ))}
@@ -165,15 +165,19 @@ function FeatureRowComponent({ row, reversed }: { row: FeatureRow; reversed: boo
   const { locale } = useI18n();
 
   const deviceFrame = (
-    <div className="tilt">
-      {row.device === "studio" && <StudioDisplay>{row.scene}</StudioDisplay>}
+    <div className="tilt mx-auto w-full">
+      {row.device === "studio" && (
+        <div className="mx-auto w-full max-w-lg lg:max-w-none">
+          <StudioDisplay>{row.scene}</StudioDisplay>
+        </div>
+      )}
       {row.device === "ipad" && (
-        <div className="mx-auto max-w-[480px]">
+        <div className="mx-auto w-full max-w-md lg:max-w-[520px]">
           <IpadFrame orientation="landscape">{row.scene}</IpadFrame>
         </div>
       )}
       {row.device === "iphone" && (
-        <div className="mx-auto max-w-[260px]">
+        <div className="mx-auto w-[200px] sm:w-[240px] lg:w-[280px]">
           <IPhoneFrame>{row.scene}</IPhoneFrame>
         </div>
       )}
@@ -182,14 +186,16 @@ function FeatureRowComponent({ row, reversed }: { row: FeatureRow; reversed: boo
 
   const text = (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-600">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-indigo-600 sm:text-xs sm:tracking-[0.25em]">
         {pick(row.eyebrow, locale)}
       </p>
-      <h3 className="mt-4 whitespace-pre-line text-4xl font-semibold leading-[1.05] tracking-[-0.03em] text-zinc-900 lg:text-5xl">
+      <h3 className="mt-3 whitespace-pre-line text-3xl font-semibold leading-[1.05] tracking-[-0.03em] text-zinc-900 sm:mt-4 sm:text-4xl lg:text-5xl">
         {pick(row.title, locale)}
       </h3>
-      <p className="mt-5 text-lg leading-relaxed text-zinc-600">{pick(row.desc, locale)}</p>
-      <ul className="mt-6 space-y-2.5">
+      <p className="mt-4 text-base leading-relaxed text-zinc-600 sm:mt-5 sm:text-lg">
+        {pick(row.desc, locale)}
+      </p>
+      <ul className="mt-5 space-y-2 sm:mt-6 sm:space-y-2.5">
         {row.bullets.map((b, i) => (
           <li key={i} className="flex items-start gap-3 text-sm text-zinc-700">
             <svg viewBox="0 0 20 20" className="mt-0.5 h-4 w-4 flex-none text-zinc-900" fill="currentColor">
@@ -204,7 +210,7 @@ function FeatureRowComponent({ row, reversed }: { row: FeatureRow; reversed: boo
 
   return (
     <Reveal>
-      <div className={`grid gap-12 lg:grid-cols-2 lg:gap-16 ${reversed ? "lg:grid-flow-dense" : ""}`}>
+      <div className={`grid gap-10 lg:grid-cols-2 lg:gap-16 ${reversed ? "lg:grid-flow-dense" : ""}`}>
         <div className={`flex items-center ${reversed ? "lg:col-start-2" : ""}`}>{text}</div>
         <div className={`flex items-center ${reversed ? "lg:col-start-1" : ""}`}>{deviceFrame}</div>
       </div>

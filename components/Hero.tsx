@@ -11,7 +11,7 @@ export default function Hero() {
   const { locale, t } = useI18n();
 
   return (
-    <section className="relative isolate overflow-hidden pt-32 pb-16 lg:pt-48 lg:pb-28">
+    <section className="relative isolate overflow-hidden pt-28 pb-12 sm:pt-32 sm:pb-16 lg:pt-48 lg:pb-28">
       {/* Animated mesh gradient */}
       <div className="mesh-bg">
         <div className="blob" />
@@ -20,14 +20,14 @@ export default function Hero() {
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
         <div className="mx-auto max-w-4xl text-center">
           <p
-            className="hero-anim text-xs font-semibold uppercase tracking-[0.25em] text-indigo-600"
+            className="hero-anim text-[11px] font-semibold uppercase tracking-[0.2em] text-indigo-600 sm:text-xs sm:tracking-[0.25em]"
             style={{ animationDelay: "0.05s" }}
           >
             {pick(t.hero.badge, locale)}
           </p>
 
           <h1
-            className="hero-anim mt-5 text-5xl font-semibold leading-[1.02] tracking-[-0.045em] text-zinc-900 sm:text-7xl lg:text-[6.5rem]"
+            className="hero-anim mt-4 text-4xl font-semibold leading-[1.05] tracking-[-0.04em] text-zinc-900 sm:mt-5 sm:text-6xl sm:leading-[1.02] sm:tracking-[-0.045em] lg:text-[6.5rem]"
             style={{ animationDelay: "0.15s" }}
           >
             {pick(t.hero.title1, locale)}
@@ -36,19 +36,19 @@ export default function Hero() {
           </h1>
 
           <p
-            className="hero-anim mx-auto mt-7 max-w-xl text-lg text-zinc-600 sm:text-xl"
+            className="hero-anim mx-auto mt-5 max-w-xl text-base leading-relaxed text-zinc-600 sm:mt-7 sm:text-lg lg:text-xl"
             style={{ animationDelay: "0.25s" }}
           >
             {pick(t.hero.subtitle, locale)}
           </p>
 
           <div
-            className="hero-anim mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row"
+            className="hero-anim mt-8 flex flex-col items-center justify-center gap-3 sm:mt-10 sm:flex-row"
             style={{ animationDelay: "0.35s" }}
           >
             <Link
               href="#pricing"
-              className="group inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-zinc-900 px-6 py-3 text-sm font-medium text-white shadow-[0_8px_30px_-10px_rgba(0,0,0,0.3)] transition hover:bg-zinc-800 hover:shadow-[0_12px_36px_-10px_rgba(0,0,0,0.4)] sm:w-auto"
+              className="group inline-flex w-full max-w-xs items-center justify-center gap-1.5 rounded-full bg-zinc-900 px-6 py-3 text-sm font-medium text-white shadow-[0_8px_30px_-10px_rgba(0,0,0,0.3)] transition hover:bg-zinc-800 hover:shadow-[0_12px_36px_-10px_rgba(0,0,0,0.4)] sm:w-auto"
             >
               {pick(t.hero.ctaPrimary, locale)}
               <svg viewBox="0 0 16 16" className="h-3 w-3 transition group-hover:translate-x-0.5" fill="none" stroke="currentColor" strokeWidth="2">
@@ -57,7 +57,7 @@ export default function Hero() {
             </Link>
             <Link
               href="#screenshots"
-              className="group inline-flex w-full items-center justify-center gap-1.5 text-sm font-medium text-indigo-600 transition hover:text-indigo-700 sm:w-auto"
+              className="group inline-flex w-full max-w-xs items-center justify-center gap-1.5 text-sm font-medium text-indigo-600 transition hover:text-indigo-700 sm:w-auto"
             >
               <span className="link-underline">{pick(t.hero.ctaSecondary, locale)}</span>
               <svg viewBox="0 0 16 16" className="h-3 w-3 transition group-hover:translate-x-0.5" fill="none" stroke="currentColor" strokeWidth="2">
@@ -66,37 +66,47 @@ export default function Hero() {
             </Link>
           </div>
 
-          <p className="hero-anim mt-5 text-xs text-zinc-500" style={{ animationDelay: "0.45s" }}>
+          <p className="hero-anim mt-4 text-xs text-zinc-500 sm:mt-5" style={{ animationDelay: "0.45s" }}>
             {pick(t.hero.note, locale)}
           </p>
         </div>
 
-        {/* Studio Display + iPhone composition */}
+        {/* Devices */}
         <div
-          className="hero-anim relative mx-auto mt-20 max-w-5xl lg:mt-24"
+          className="hero-anim relative mx-auto mt-12 max-w-5xl sm:mt-16 lg:mt-24"
           style={{ animationDelay: "0.6s" }}
         >
-          <div className="tilt mx-auto">
-            <StudioDisplay>
-              <AnimatedDashboard />
-            </StudioDisplay>
-          </div>
-
-          {/* iPhone floats bottom-right */}
-          <div className="absolute right-2 bottom-2 hidden w-[160px] float sm:right-4 sm:bottom-8 sm:block md:right-8 md:bottom-12 md:w-[200px] lg:right-16 lg:bottom-16 lg:w-[240px]">
-            <div className="tilt">
-              <IPhoneFrame>
-                <AnimatedMobile />
-              </IPhoneFrame>
+          {/* Mobile / Tablet: stack devices */}
+          <div className="flex flex-col items-center gap-6 lg:hidden">
+            <div className="w-full max-w-xl">
+              <div className="tilt">
+                <StudioDisplay>
+                  <AnimatedDashboard />
+                </StudioDisplay>
+              </div>
+            </div>
+            <div className="w-[180px] sm:w-[220px]">
+              <div className="tilt">
+                <IPhoneFrame>
+                  <AnimatedMobile />
+                </IPhoneFrame>
+              </div>
             </div>
           </div>
 
-          {/* Mobile-only iPhone */}
-          <div className="mt-12 flex justify-center sm:hidden">
-            <div className="w-[220px]">
-              <IPhoneFrame>
-                <AnimatedMobile />
-              </IPhoneFrame>
+          {/* Desktop: Studio Display with floating iPhone */}
+          <div className="hidden lg:block">
+            <div className="tilt mx-auto">
+              <StudioDisplay>
+                <AnimatedDashboard />
+              </StudioDisplay>
+            </div>
+            <div className="absolute right-16 bottom-16 w-[240px] float">
+              <div className="tilt">
+                <IPhoneFrame>
+                  <AnimatedMobile />
+                </IPhoneFrame>
+              </div>
             </div>
           </div>
         </div>

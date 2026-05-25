@@ -64,12 +64,14 @@ export function SectionHeader({
 }) {
   return (
     <div className="mx-auto max-w-3xl text-center">
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">{badge}</p>
-      <h2 className="mt-4 text-4xl font-semibold tracking-[-0.03em] text-zinc-900 sm:text-5xl lg:text-6xl">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-indigo-600 sm:text-xs">
+        {badge}
+      </p>
+      <h2 className="mt-3 text-3xl font-semibold tracking-[-0.03em] text-zinc-900 sm:mt-4 sm:text-4xl md:text-5xl lg:text-6xl">
         {title}
       </h2>
       {subtitle && (
-        <p className="mt-4 text-lg text-zinc-600">{subtitle}</p>
+        <p className="mt-3 text-base text-zinc-600 sm:mt-4 sm:text-lg">{subtitle}</p>
       )}
     </div>
   );
