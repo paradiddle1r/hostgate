@@ -68,7 +68,9 @@ export default function AuthForm({ mode }: Props) {
       setError(pick(t.auth.error.generic, locale));
       return;
     }
-    router.push(`/auth/verify-email?email=${encodeURIComponent(email)}`);
+    // Page lives in the (auth) route group — the parentheses are stripped from
+    // the URL, so the actual path is /verify-email (not /auth/verify-email).
+    router.push(`/verify-email?email=${encodeURIComponent(email)}`);
   };
 
   const copy = mode === "login" ? t.auth.login : t.auth.signup;

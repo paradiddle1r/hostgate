@@ -47,19 +47,6 @@ export async function provisionTenant(input: ProvisionInput): Promise<ProvisionR
     return { ok: false, error: "not_authenticated" };
   }
 
-  // ----- DEBUG: what does PostgREST see in the RLS context? -----
-  const { data: echo, error: echoErr } = await supabase.rpc("echo_uid");
-  console.error("[provisionTenant] auth.getUser().id =", user.id);
-  console.error("[provisionTenant] PostgREST sees   =", echo, "err:", echoErr);
-  if (echoErr || !echo || (Array.isArray(echo) && (!echo[0]?.uid || echo[0].uid !== user.id))) {
-    const seenUid = Array.isArray(echo) ? echo[0]?.uid : null;
-    const seenRole = Array.isArray(echo) ? echo[0]?.role : null;
-    return {
-      ok: false,
-      error: `session_mismatch: user.id=${user.id} but PostgREST sees uid=${seenUid} role=${seenRole}`,
-    };
-  }
-
   // ----- 1. Generate a slug from the property name -----
   const baseSlug = slugify(input.property_name) || `prop-${Date.now().toString(36)}`;
   const slug = await uniqueSlug(supabase, baseSlug);
