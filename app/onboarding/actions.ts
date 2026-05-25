@@ -37,8 +37,15 @@ export type ProvisionResult =
 export async function provisionTenant(input: ProvisionInput): Promise<ProvisionResult> {
   const supabase = createClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "not_authenticated" };
+  const { data: { user }, error: userErr } = await supabase.auth.getUser();
+  if (userErr) {
+    console.error("[provisionTenant] getUser failed:", userErr);
+    return { ok: false, error: `auth: ${userErr.message}` };
+  }
+  if (!user) {
+    console.error("[provisionTenant] no user in session");
+    return { ok: false, error: "not_authenticated" };
+  }
 
   // ----- 1. Generate a slug from the property name -----
   const baseSlug = slugify(input.property_name) || `prop-${Date.now().toString(36)}`;
@@ -55,7 +62,8 @@ export async function provisionTenant(input: ProvisionInput): Promise<ProvisionR
     .select("id")
     .single();
   if (tenantErr || !tenant) {
-    return { ok: false, error: tenantErr?.message ?? "tenant_insert_failed" };
+    console.error("[provisionTenant] tenant insert failed:", tenantErr);
+    return { ok: false, error: `tenant: ${tenantErr?.message ?? "insert_failed"}` };
   }
 
   // ----- 3. Owner membership -----
@@ -65,9 +73,10 @@ export async function provisionTenant(input: ProvisionInput): Promise<ProvisionR
     role: "owner",
   });
   if (memberErr) {
+    console.error("[provisionTenant] tenant_members insert failed:", memberErr);
     // rollback the tenant (no real transactions over PostgREST, so cleanup manually)
     await supabase.from("tenants").delete().eq("id", tenant.id);
-    return { ok: false, error: memberErr.message };
+    return { ok: false, error: `member: ${memberErr.message}` };
   }
 
   // ----- 4. The property itself -----
@@ -85,8 +94,9 @@ export async function provisionTenant(input: ProvisionInput): Promise<ProvisionR
     .select("id")
     .single();
   if (propertyErr || !property) {
+    console.error("[provisionTenant] property insert failed:", propertyErr);
     await supabase.from("tenants").delete().eq("id", tenant.id);
-    return { ok: false, error: propertyErr?.message ?? "property_insert_failed" };
+    return { ok: false, error: `property: ${propertyErr?.message ?? "insert_failed"}` };
   }
 
   // ----- 5. Room types -----
@@ -102,10 +112,11 @@ export async function provisionTenant(input: ProvisionInput): Promise<ProvisionR
   if (cleanedRooms.length > 0) {
     const { error: roomsErr } = await supabase.from("room_types").insert(cleanedRooms);
     if (roomsErr) {
+      console.error("[provisionTenant] room_types insert failed:", roomsErr);
       // tenant/property remain — user can add rooms later. Don't roll back.
       return {
         ok: false,
-        error: `partial:${roomsErr.message}`,
+        error: `rooms: ${roomsErr.message}`,
       };
     }
   }

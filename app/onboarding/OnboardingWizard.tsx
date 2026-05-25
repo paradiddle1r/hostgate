@@ -86,7 +86,8 @@ export default function OnboardingWizard({ userEmail }: { userEmail: string }) {
         room_types: validRooms,
       });
       if (!res.ok) {
-        setError(pick(t.onboarding.error, locale));
+        // Surface the real error message — important for debugging RLS / auth issues.
+        setError(`${pick(t.onboarding.error, locale)} — ${res.error}`);
         return;
       }
       router.push("/app");
