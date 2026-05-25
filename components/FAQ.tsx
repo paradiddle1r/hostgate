@@ -3,20 +3,23 @@
 import { useState } from "react";
 import { useI18n, pick } from "@/lib/i18n";
 import { SectionHeader } from "./Features";
+import Reveal from "./Reveal";
 
 export default function FAQ() {
   const { locale, t } = useI18n();
   const [open, setOpen] = useState<number | null>(0);
 
   return (
-    <section id="faq" className="relative bg-zinc-50/60 py-24 lg:py-32">
+    <section id="faq" className="relative bg-zinc-50/60 py-24 lg:py-36">
       <div className="mx-auto max-w-4xl px-5 lg:px-8">
-        <SectionHeader
-          badge={pick(t.faq.badge, locale)}
-          title={pick(t.faq.title, locale)}
-        />
+        <Reveal>
+          <SectionHeader
+            badge={pick(t.faq.badge, locale)}
+            title={pick(t.faq.title, locale)}
+          />
+        </Reveal>
 
-        <div className="mt-14 space-y-3">
+        <Reveal variant="stagger" className="mt-14 space-y-3">
           {t.faq.items.map((item, i) => (
             <div
               key={i}
@@ -26,9 +29,9 @@ export default function FAQ() {
             >
               <button
                 onClick={() => setOpen(open === i ? null : i)}
-                className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
+                className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left"
               >
-                <span className="text-sm font-semibold text-zinc-900 sm:text-base">
+                <span className="text-base font-semibold text-zinc-900">
                   {pick(item.q, locale)}
                 </span>
                 <svg
@@ -49,14 +52,14 @@ export default function FAQ() {
                 }`}
               >
                 <div className="overflow-hidden">
-                  <p className="px-5 pb-5 text-sm leading-relaxed text-zinc-600">
+                  <p className="px-6 pb-5 text-sm leading-relaxed text-zinc-600">
                     {pick(item.a, locale)}
                   </p>
                 </div>
               </div>
             </div>
           ))}
-        </div>
+        </Reveal>
       </div>
     </section>
   );

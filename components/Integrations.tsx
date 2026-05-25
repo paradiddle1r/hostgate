@@ -2,6 +2,7 @@
 
 import { useI18n, pick } from "@/lib/i18n";
 import { SectionHeader } from "./Features";
+import Reveal from "./Reveal";
 
 const integrations = [
   { name: "Booking.com", color: "bg-blue-500" },
@@ -21,19 +22,21 @@ const integrations = [
 export default function Integrations() {
   const { locale, t } = useI18n();
   return (
-    <section className="relative bg-zinc-50/60 py-24 lg:py-32">
+    <section className="relative bg-zinc-50/60 py-24 lg:py-36">
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
-        <SectionHeader
-          badge={pick(t.integrations.badge, locale)}
-          title={pick(t.integrations.title, locale)}
-          subtitle={pick(t.integrations.subtitle, locale)}
-        />
+        <Reveal>
+          <SectionHeader
+            badge={pick(t.integrations.badge, locale)}
+            title={pick(t.integrations.title, locale)}
+            subtitle={pick(t.integrations.subtitle, locale)}
+          />
+        </Reveal>
 
-        <div className="mt-14 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+        <Reveal variant="stagger" className="mt-14 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
           {integrations.map((i) => (
             <div
               key={i.name}
-              className="group flex flex-col items-center gap-3 rounded-2xl border border-zinc-200 bg-white p-5 transition hover:border-zinc-300 hover:shadow-sm"
+              className="lift flex flex-col items-center gap-3 rounded-2xl border border-zinc-200 bg-white p-5"
             >
               <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${i.color} text-white font-bold text-lg`}>
                 {i.name[0]}
@@ -41,13 +44,7 @@ export default function Integrations() {
               <span className="text-center text-xs font-medium text-zinc-700">{i.name}</span>
             </div>
           ))}
-        </div>
-
-        <p className="mt-10 text-center text-xs text-zinc-500">
-          {locale === "th"
-            ? "และอีกมากมายผ่าน API + Webhook"
-            : "And many more via API + Webhooks"}
-        </p>
+        </Reveal>
       </div>
     </section>
   );

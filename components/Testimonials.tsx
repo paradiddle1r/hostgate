@@ -2,23 +2,26 @@
 
 import { useI18n, pick } from "@/lib/i18n";
 import { SectionHeader } from "./Features";
+import Reveal from "./Reveal";
 
 export default function Testimonials() {
   const { locale, t } = useI18n();
 
   return (
-    <section id="testimonials" className="relative py-24 lg:py-32">
+    <section id="testimonials" className="relative py-24 lg:py-36">
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
-        <SectionHeader
-          badge={pick(t.testimonials.badge, locale)}
-          title={pick(t.testimonials.title, locale)}
-        />
+        <Reveal>
+          <SectionHeader
+            badge={pick(t.testimonials.badge, locale)}
+            title={pick(t.testimonials.title, locale)}
+          />
+        </Reveal>
 
-        <div className="mt-14 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Reveal variant="stagger" className="mt-14 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {t.testimonials.items.map((item, i) => (
             <figure
               key={i}
-              className="relative flex h-full flex-col rounded-2xl border border-zinc-200 bg-white p-6 transition hover:shadow-sm"
+              className="lift flex h-full flex-col rounded-2xl border border-zinc-200 bg-white p-6"
             >
               <div className="mb-3 flex gap-0.5 text-amber-500">
                 {Array.from({ length: 5 }).map((_, s) => (
@@ -31,7 +34,7 @@ export default function Testimonials() {
                 &ldquo;{pick(item.quote, locale)}&rdquo;
               </blockquote>
               <figcaption className="mt-5 flex items-center gap-3 border-t border-zinc-200 pt-4">
-                <div className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-white ${avatarBg[i % 4]}`}>
+                <div className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold text-white ${avatarBg[i % 4]}`}>
                   {item.name[0]}
                 </div>
                 <div>
@@ -41,22 +44,23 @@ export default function Testimonials() {
               </figcaption>
             </figure>
           ))}
-        </div>
+        </Reveal>
 
-        {/* Stats */}
-        <div className="mt-16 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-200 md:grid-cols-4">
-          {[
-            { v: "2,400+", l: locale === "th" ? "ที่พักใช้งาน" : "Properties using us" },
-            { v: "1.2M+", l: locale === "th" ? "การจองที่จัดการ" : "Bookings managed" },
-            { v: "99.99%", l: locale === "th" ? "เวลาออนไลน์" : "Uptime" },
-            { v: "4.9/5", l: locale === "th" ? "คะแนนรีวิวเฉลี่ย" : "Average rating" },
-          ].map((s) => (
-            <div key={s.l} className="bg-white p-6 text-center">
-              <div className="text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl">{s.v}</div>
-              <div className="mt-2 text-xs text-zinc-500">{s.l}</div>
-            </div>
-          ))}
-        </div>
+        <Reveal variant="scale" delay={150}>
+          <div className="mt-16 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-200 md:grid-cols-4">
+            {[
+              { v: "2,400+", l: locale === "th" ? "ที่พักใช้งาน" : "Properties" },
+              { v: "1.2M+", l: locale === "th" ? "การจอง" : "Bookings" },
+              { v: "99.99%", l: locale === "th" ? "Uptime" : "Uptime" },
+              { v: "4.9", l: locale === "th" ? "คะแนนเฉลี่ย" : "Rating" },
+            ].map((s) => (
+              <div key={s.l} className="bg-white p-8 text-center">
+                <div className="text-4xl font-semibold tracking-[-0.03em] text-zinc-900 sm:text-5xl">{s.v}</div>
+                <div className="mt-2 text-xs text-zinc-500">{s.l}</div>
+              </div>
+            ))}
+          </div>
+        </Reveal>
       </div>
     </section>
   );

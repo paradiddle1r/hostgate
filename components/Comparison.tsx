@@ -2,49 +2,53 @@
 
 import { useI18n, pick } from "@/lib/i18n";
 import { SectionHeader } from "./Features";
+import Reveal from "./Reveal";
 
 export default function Comparison() {
   const { locale, t } = useI18n();
   return (
-    <section className="relative py-24 lg:py-32">
+    <section className="relative py-24 lg:py-36">
       <div className="mx-auto max-w-5xl px-5 lg:px-8">
-        <SectionHeader
-          badge={pick(t.comparison.badge, locale)}
-          title={pick(t.comparison.title, locale)}
-          subtitle={pick(t.comparison.subtitle, locale)}
-        />
+        <Reveal>
+          <SectionHeader
+            badge={pick(t.comparison.badge, locale)}
+            title={pick(t.comparison.title, locale)}
+            subtitle={pick(t.comparison.subtitle, locale)}
+          />
+        </Reveal>
 
-        <div className="mt-14 overflow-hidden rounded-2xl border border-zinc-200 bg-white">
-          {/* Header row */}
-          <div className="grid grid-cols-[1.4fr_1fr_1fr_1fr] gap-px bg-zinc-200 text-xs sm:text-sm">
-            <div className="bg-white px-4 py-4 font-semibold text-zinc-500 sm:px-6">
-              {pick(t.comparison.cols.feature, locale)}
-            </div>
-            <div className="bg-zinc-900 px-4 py-4 text-center font-bold text-white sm:px-6">
-              {pick(t.comparison.cols.hostgate, locale)}
-            </div>
-            <div className="bg-white px-4 py-4 text-center text-zinc-700 sm:px-6">
-              {pick(t.comparison.cols.excel, locale)}
-            </div>
-            <div className="bg-white px-4 py-4 text-center text-zinc-700 sm:px-6">
-              {pick(t.comparison.cols.other, locale)}
-            </div>
-          </div>
-
-          {t.comparison.rows.map((row, i) => (
-            <div
-              key={i}
-              className="grid grid-cols-[1.4fr_1fr_1fr_1fr] gap-px bg-zinc-200 text-xs sm:text-sm"
-            >
-              <div className="bg-white px-4 py-3.5 text-zinc-900 sm:px-6">
-                {pick(row.label, locale)}
+        <Reveal variant="scale" delay={100}>
+          <div className="mt-14 overflow-hidden rounded-2xl border border-zinc-200 bg-white">
+            <div className="grid grid-cols-[1.4fr_1fr_1fr_1fr] gap-px bg-zinc-200 text-xs sm:text-sm">
+              <div className="bg-white px-4 py-4 font-medium text-zinc-500 sm:px-6">
+                {pick(t.comparison.cols.feature, locale)}
               </div>
-              <Cell variant={row.hostgate} highlight />
-              <Cell variant={row.excel} />
-              <Cell variant={row.other} />
+              <div className="bg-zinc-900 px-4 py-4 text-center font-semibold text-white sm:px-6">
+                {pick(t.comparison.cols.hostgate, locale)}
+              </div>
+              <div className="bg-white px-4 py-4 text-center text-zinc-700 sm:px-6">
+                {pick(t.comparison.cols.excel, locale)}
+              </div>
+              <div className="bg-white px-4 py-4 text-center text-zinc-700 sm:px-6">
+                {pick(t.comparison.cols.other, locale)}
+              </div>
             </div>
-          ))}
-        </div>
+
+            {t.comparison.rows.map((row, i) => (
+              <div
+                key={i}
+                className="grid grid-cols-[1.4fr_1fr_1fr_1fr] gap-px bg-zinc-200 text-xs sm:text-sm"
+              >
+                <div className="bg-white px-4 py-3.5 text-zinc-900 sm:px-6">
+                  {pick(row.label, locale)}
+                </div>
+                <Cell variant={row.hostgate} highlight />
+                <Cell variant={row.excel} />
+                <Cell variant={row.other} />
+              </div>
+            ))}
+          </div>
+        </Reveal>
       </div>
     </section>
   );

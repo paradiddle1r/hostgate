@@ -16,26 +16,26 @@ export const translations = {
     start: { th: "เริ่มต้นฟรี", en: "Start free" },
   },
   hero: {
-    badge: { th: "ระบบใหม่ • ใช้งานฟรีตลอดชีพ สำหรับห้องไม่เกิน 5 ห้อง", en: "New • Free forever for up to 5 rooms" },
-    title1: { th: "ระบบจัดการห้องพัก", en: "Run your hotel" },
-    title2: { th: "ที่เจ้าของหอพักรัก", en: "the smart way" },
+    badge: { th: "เปิดให้ใช้งานแล้ว", en: "Now available" },
+    title1: { th: "ที่พักของคุณ.", en: "Your property." },
+    title2: { th: "บริหารง่ายขึ้น.", en: "Simplified." },
     subtitle: {
-      th: "HostGate คือ Hotel & Apartment PMS ครบวงจร จัดการ Booking, Check-in/out, Channel Manager, แม่บ้าน และรายงานยอดขาย จบในที่เดียว ใช้ได้ทั้งบนมือถือและคอม",
-      en: "HostGate is the all-in-one Hotel & Apartment PMS. Manage bookings, check-in/out, channels, housekeeping and reports — all from one beautiful dashboard, on any device.",
+      th: "ระบบจัดการห้องพัก สำหรับโรงแรมและอพาร์ตเมนต์ ออกแบบใหม่ตั้งแต่ต้น",
+      en: "A property management system for hotels and apartments. Rethought from the ground up.",
     },
-    ctaPrimary: { th: "เริ่มใช้งานฟรี", en: "Start for free" },
+    ctaPrimary: { th: "เริ่มใช้งาน", en: "Get started" },
     ctaSecondary: { th: "ดู Demo", en: "Watch demo" },
-    note: { th: "ไม่ต้องใช้บัตรเครดิต • ตั้งค่าใน 5 นาที", en: "No credit card required • Set up in 5 minutes" },
+    note: { th: "ไม่ต้องใช้บัตรเครดิต", en: "No credit card required" },
   },
   trusted: {
-    title: { th: "เชื่อใจโดยที่พักทั่วประเทศไทย", en: "Trusted by properties across Thailand" },
+    title: { th: "เลือกใช้โดยที่พักทั่วประเทศ", en: "Used by properties across Thailand" },
   },
   features: {
     badge: { th: "ฟีเจอร์", en: "Features" },
-    title: { th: "ทุกอย่างที่หอพักของคุณต้องการ", en: "Everything your property needs" },
+    title: { th: "ครบ. ในที่เดียว.", en: "Everything. In one place." },
     subtitle: {
-      th: "ออกแบบมาเพื่อเจ้าของโรงแรม รีสอร์ท อพาร์ตเมนต์ และโฮสเทล — เริ่มใช้งานง่ายในไม่กี่นาที",
-      en: "Built for hotel, resort, apartment and hostel owners — set up in minutes, scale to thousands of rooms.",
+      th: "ตั้งแต่จองห้อง ไปจนถึงรายงานสิ้นเดือน",
+      en: "From the first booking to month-end reports.",
     },
     items: [
       {
@@ -104,19 +104,19 @@ export const translations = {
     ],
   },
   screenshots: {
-    badge: { th: "แดชบอร์ด", en: "Dashboard" },
-    title: { th: "ดีไซน์ที่สะอาด ใช้งานง่าย แม้พนักงานใหม่", en: "Clean, intuitive — even new staff get it" },
+    badge: { th: "อินเตอร์เฟซ", en: "Interface" },
+    title: { th: "เรียบง่าย. คล่องตัว.", en: "Simple. Fast." },
     subtitle: {
-      th: "อินเตอร์เฟซที่เข้าใจง่ายในแบบเดียวกับแอปที่คุณใช้ทุกวัน เน้นการมองเห็นและความเร็ว",
-      en: "An interface that feels familiar from day one — designed for speed and clarity.",
+      th: "ออกแบบให้ใช้งานได้ทันที ไม่ต้องอบรม",
+      en: "Designed to feel familiar from day one.",
     },
   },
   pricing: {
     badge: { th: "ราคา", en: "Pricing" },
-    title: { th: "ราคาที่ตรงไปตรงมา เริ่มต้นฟรี", en: "Simple pricing. Start free." },
+    title: { th: "ราคาตรงไปตรงมา", en: "Straightforward pricing" },
     subtitle: {
-      th: "ทุกแพ็กเกจมาพร้อมฟีเจอร์หลัก ยกระดับเมื่อพร้อม ยกเลิกได้ทุกเมื่อ",
-      en: "Every plan includes core features. Upgrade when you're ready. Cancel anytime.",
+      th: "เลือกแผนที่เหมาะกับขนาดของคุณ ยกเลิกได้ทุกเมื่อ",
+      en: "Pick a plan that fits your size. Cancel anytime.",
     },
     monthly: { th: "รายเดือน", en: "Monthly" },
     yearly: { th: "รายปี (ประหยัด 20%)", en: "Yearly (save 20%)" },
@@ -223,10 +223,10 @@ export const translations = {
   },
   howItWorks: {
     badge: { th: "ขั้นตอน", en: "How it works" },
-    title: { th: "เริ่มใช้งานใน 3 ขั้นตอน", en: "Get started in 3 steps" },
+    title: { th: "เริ่มต้นใน 3 ขั้นตอน", en: "Three steps to go live" },
     subtitle: {
-      th: "ไม่ต้องเขียนโค้ด ไม่ต้องลงโปรแกรม — สมัครแล้วเริ่มรับจองได้เลย",
-      en: "No code, no installs — sign up and start taking bookings.",
+      th: "ตั้งค่าด้วยตัวเองได้",
+      en: "Set up on your own.",
     },
     steps: [
       {
@@ -254,18 +254,18 @@ export const translations = {
   },
   integrations: {
     badge: { th: "การเชื่อมต่อ", en: "Integrations" },
-    title: { th: "ทำงานร่วมกับเครื่องมือที่คุณใช้อยู่", en: "Plays well with the tools you already use" },
+    title: { th: "ทำงานกับทุกเครื่องมือ", en: "Works with what you use" },
     subtitle: {
-      th: "เชื่อมต่อ OTA ระบบชำระเงิน และระบบบัญชีในไม่กี่คลิก",
-      en: "Connect to OTAs, payment gateways, and accounting tools in just a few clicks.",
+      th: "OTA ระบบชำระเงิน และระบบบัญชี",
+      en: "OTAs, payments, and accounting.",
     },
   },
   comparison: {
     badge: { th: "เปรียบเทียบ", en: "Comparison" },
-    title: { th: "ทำไม HostGate ถึงต่างจากเครื่องมืออื่น", en: "Why HostGate is different" },
+    title: { th: "ต่างจากของเดิม", en: "Different by design" },
     subtitle: {
-      th: "ดูชัด ๆ ว่าทำไมเจ้าของที่พักเปลี่ยนมาใช้ HostGate",
-      en: "See exactly why hosts switch to HostGate.",
+      th: "อะไรที่ HostGate ทำได้ที่อื่นทำไม่ได้",
+      en: "What HostGate does, others don't.",
     },
     cols: {
       feature: { th: "ฟีเจอร์", en: "Feature" },
@@ -322,8 +322,8 @@ export const translations = {
     lastUpdated: { th: "ปรับปรุงล่าสุด", en: "Last updated" },
   },
   testimonials: {
-    badge: { th: "เสียงจากผู้ใช้", en: "Testimonials" },
-    title: { th: "เจ้าของที่พักทั่วประเทศเลือก HostGate", en: "Hosts everywhere choose HostGate" },
+    badge: { th: "เสียงจากผู้ใช้", en: "Customers" },
+    title: { th: "ลูกค้าของเรา", en: "Hosts say it best" },
     items: [
       {
         name: "คุณนิว",
@@ -360,8 +360,8 @@ export const translations = {
     ],
   },
   faq: {
-    badge: { th: "คำถามที่พบบ่อย", en: "FAQ" },
-    title: { th: "ทุกอย่างที่คุณอยากรู้", en: "Everything you want to know" },
+    badge: { th: "คำถาม", en: "FAQ" },
+    title: { th: "ที่ถูกถามบ่อย", en: "Frequently asked" },
     items: [
       {
         q: { th: "ใช้ฟรีได้จริงตลอดชีพไหม?", en: "Is it really free forever?" },
@@ -408,13 +408,13 @@ export const translations = {
     ],
   },
   cta: {
-    title: { th: "พร้อมเริ่มต้นกับ HostGate?", en: "Ready to get started with HostGate?" },
+    title: { th: "เริ่มวันนี้.", en: "Start today." },
     subtitle: {
-      th: "เริ่มใช้งานฟรีวันนี้ ไม่ต้องใช้บัตรเครดิต ตั้งค่าใน 5 นาที",
-      en: "Start free today. No credit card. Set up in 5 minutes.",
+      th: "ไม่ต้องใช้บัตรเครดิต",
+      en: "No credit card required.",
     },
-    primary: { th: "สมัครใช้งานฟรี", en: "Create free account" },
-    secondary: { th: "พูดคุยกับฝ่ายขาย", en: "Talk to sales" },
+    primary: { th: "สมัครใช้งาน", en: "Sign up" },
+    secondary: { th: "ติดต่อฝ่ายขาย", en: "Talk to sales" },
   },
   footer: {
     tagline: { th: "ระบบจัดการห้องพักสำหรับเจ้าของที่พักยุคใหม่", en: "PMS for modern hospitality owners." },

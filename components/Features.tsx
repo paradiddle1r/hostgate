@@ -1,6 +1,7 @@
 "use client";
 
 import { useI18n, pick } from "@/lib/i18n";
+import Reveal from "./Reveal";
 
 const icons = [
   <path key="r" strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3M3 11h18M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />,
@@ -17,26 +18,28 @@ const icons = [
 export default function Features() {
   const { locale, t } = useI18n();
   return (
-    <section id="features" className="relative py-24 lg:py-32">
+    <section id="features" className="relative py-24 lg:py-36">
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
-        <SectionHeader
-          badge={pick(t.features.badge, locale)}
-          title={pick(t.features.title, locale)}
-          subtitle={pick(t.features.subtitle, locale)}
-        />
+        <Reveal>
+          <SectionHeader
+            badge={pick(t.features.badge, locale)}
+            title={pick(t.features.title, locale)}
+            subtitle={pick(t.features.subtitle, locale)}
+          />
+        </Reveal>
 
-        <div className="mt-16 grid gap-px overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-200 sm:grid-cols-2 lg:grid-cols-3">
+        <Reveal variant="stagger" className="mt-16 grid gap-px overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-200 sm:grid-cols-2 lg:grid-cols-3">
           {t.features.items.map((item, i) => (
             <div
               key={i}
-              className="group relative bg-white p-7 transition hover:bg-zinc-50"
+              className="lift group relative bg-white p-7"
             >
-              <div className="mb-5 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-zinc-900 text-white">
+              <div className="mb-5 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-zinc-900 text-white transition group-hover:scale-105">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="h-5 w-5">
                   {icons[i]}
                 </svg>
               </div>
-              <h3 className="text-base font-semibold text-zinc-900">
+              <h3 className="text-base font-semibold tracking-tight text-zinc-900">
                 {pick(item.title, locale)}
               </h3>
               <p className="mt-2 text-sm leading-relaxed text-zinc-600">
@@ -44,7 +47,7 @@ export default function Features() {
               </p>
             </div>
           ))}
-        </div>
+        </Reveal>
       </div>
     </section>
   );
@@ -60,15 +63,13 @@ export function SectionHeader({
   subtitle?: string;
 }) {
   return (
-    <div className="mx-auto max-w-2xl text-center">
-      <span className="inline-flex items-center rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium uppercase tracking-wider text-zinc-500 shadow-sm">
-        {badge}
-      </span>
-      <h2 className="mt-4 text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl lg:text-5xl">
+    <div className="mx-auto max-w-3xl text-center">
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">{badge}</p>
+      <h2 className="mt-4 text-4xl font-semibold tracking-[-0.03em] text-zinc-900 sm:text-5xl lg:text-6xl">
         {title}
       </h2>
       {subtitle && (
-        <p className="mt-4 text-base leading-relaxed text-zinc-600 sm:text-lg">{subtitle}</p>
+        <p className="mt-4 text-lg text-zinc-600">{subtitle}</p>
       )}
     </div>
   );
