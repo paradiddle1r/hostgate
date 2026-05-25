@@ -1,10 +1,12 @@
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
 /**
- * Server-component Supabase client.
- * Reads + writes the auth cookie via Next.js's `cookies()` helper.
- * Call this inside Server Components, Route Handlers, and Server Actions.
+ * Server-component / Server-action Supabase client.
+ * Uses the newer `getAll` / `setAll` cookie API which correctly handles
+ * chunked auth cookies (Supabase splits large OAuth JWTs into multiple
+ * `sb-…-auth-token.0`, `.1` cookies — the legacy `get/set/remove` API
+ * doesn't reassemble them, which silently breaks `auth.uid()` in RLS).
  */
 export function createClient() {
   const cookieStore = cookies();
@@ -14,22 +16,16 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
+        getAll() {
+          return cookieStore.getAll();
         },
-        set(name: string, value: string, options: CookieOptions) {
+        setAll(cookiesToSet) {
           try {
-            cookieStore.set({ name, value, ...options });
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options);
+            });
           } catch {
-            // Server Components can't set cookies. The middleware refreshes
-            // the session so this is just defensive.
-          }
-        },
-        remove(name: string, options: CookieOptions) {
-          try {
-            cookieStore.set({ name, value: "", ...options });
-          } catch {
-            // see above
+            // Server Components can't set cookies — middleware refreshes them.
           }
         },
       },
