@@ -74,13 +74,13 @@ export default function Navbar() {
         <div className="hidden items-center gap-3 lg:flex">
           <LanguageToggle />
           <Link
-            href="#"
+            href="/login"
             className="text-sm font-medium text-zinc-600 transition hover:text-zinc-900"
           >
             {pick(t.nav.login, locale)}
           </Link>
           <Link
-            href="#pricing"
+            href="/signup"
             className="inline-flex items-center justify-center rounded-full bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800"
           >
             {pick(t.nav.start, locale)}
@@ -120,7 +120,7 @@ export default function Navbar() {
           <div className="mt-4 flex items-center justify-between gap-3">
             <LanguageToggle />
             <Link
-              href="#pricing"
+              href="/signup"
               onClick={() => setMenuOpen(false)}
               className="flex-1 rounded-full bg-zinc-900 px-4 py-2.5 text-center text-sm font-semibold text-white"
             >

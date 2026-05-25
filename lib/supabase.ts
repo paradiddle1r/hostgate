@@ -1,25 +1,11 @@
-import { createClient } from "@supabase/supabase-js";
+/**
+ * Legacy single-file export. Kept for backward compatibility with the
+ * contact form. New code should import from `@/lib/supabase/client` (browser)
+ * or `@/lib/supabase/server` (Server Components).
+ */
+import { createClient } from "@/lib/supabase/client";
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-if (!url || !anonKey) {
-  // ในช่วง dev ถ้ายังไม่ได้ใส่ env จะเห็น warning นี้
-  // production จะ throw เพื่อไม่ให้ deploy ที่ไม่มี config
-  if (process.env.NODE_ENV === "production") {
-    throw new Error(
-      "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY env vars"
-    );
-  }
-}
-
-export const supabase = createClient(
-  url ?? "https://placeholder.supabase.co",
-  anonKey ?? "placeholder-anon-key",
-  {
-    auth: { persistSession: false },
-  }
-);
+const supabase = createClient();
 
 export interface ContactSubmission {
   name: string;

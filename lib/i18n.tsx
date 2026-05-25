@@ -434,6 +434,114 @@ export const translations = {
     minRead: { th: "นาที", en: "min read" },
     backToBlog: { th: "← กลับไปหน้าบทความ", en: "← Back to blog" },
   },
+  auth: {
+    login: {
+      title: { th: "เข้าสู่ระบบ", en: "Welcome back" },
+      subtitle: { th: "ยังไม่มีบัญชี?", en: "Don't have an account?" },
+      switchCta: { th: "สมัครใช้งาน", en: "Sign up" },
+    },
+    signup: {
+      title: { th: "สร้างบัญชี HostGate", en: "Create your account" },
+      subtitle: { th: "มีบัญชีอยู่แล้ว?", en: "Already have one?" },
+      switchCta: { th: "เข้าสู่ระบบ", en: "Log in" },
+    },
+    google: { th: "ใช้บัญชี Google", en: "Continue with Google" },
+    apple: { th: "ใช้บัญชี Apple", en: "Continue with Apple" },
+    facebook: { th: "ใช้บัญชี Facebook", en: "Continue with Facebook" },
+    line: { th: "ใช้บัญชี LINE", en: "Continue with LINE" },
+    lineSoon: { th: "เร็วๆ นี้", en: "Coming soon" },
+    orDivider: { th: "หรือ", en: "or" },
+    emailPlaceholder: { th: "อีเมล", en: "Email address" },
+    emailCta: { th: "ใช้อีเมล", en: "Continue with email" },
+    emailSending: { th: "กำลังส่ง…", en: "Sending…" },
+    terms: {
+      th: "เมื่อดำเนินการต่อ คุณยอมรับเงื่อนไขการใช้งานและนโยบายความเป็นส่วนตัว",
+      en: "By continuing you agree to our Terms and Privacy Policy.",
+    },
+    verifyTitle: { th: "เช็คอีเมลของคุณ", en: "Check your inbox" },
+    verifyBody: {
+      th: "เราส่งลิงก์ยืนยันไปที่ {email} แล้ว — คลิกลิงก์เพื่อเข้าใช้งาน",
+      en: "We sent a sign-in link to {email}. Click it to continue.",
+    },
+    verifyResend: { th: "ส่งใหม่อีกครั้ง", en: "Resend link" },
+    error: {
+      providerNotConfigured: {
+        th: "ผู้ให้บริการนี้ยังไม่ได้ตั้งค่าใน Supabase — แจ้งทีมงาน",
+        en: "This sign-in method isn't set up yet — please contact support.",
+      },
+      generic: {
+        th: "เข้าสู่ระบบไม่สำเร็จ ลองอีกครั้ง",
+        en: "Sign in failed. Please try again.",
+      },
+      invalidEmail: { th: "อีเมลไม่ถูกต้อง", en: "Invalid email address" },
+    },
+  },
+  onboarding: {
+    stepLabel: { th: "ขั้นที่ {n} จาก 3", en: "Step {n} of 3" },
+    back: { th: "ย้อนกลับ", en: "Back" },
+    continue: { th: "ถัดไป", en: "Continue" },
+    finish: { th: "สร้างระบบของฉัน", en: "Create my PMS" },
+    saving: { th: "กำลังบันทึก…", en: "Saving…" },
+    error: {
+      th: "บันทึกไม่สำเร็จ ลองอีกครั้ง",
+      en: "Could not save. Please try again.",
+    },
+    step1: {
+      title: { th: "คุณบริหารที่พักแบบไหน?", en: "What do you manage?" },
+      subtitle: { th: "เลือกหนึ่งข้อ", en: "Pick one to continue" },
+      daily: {
+        title: { th: "รายวัน", en: "Daily stay" },
+        desc: { th: "โรงแรม รีสอร์ท เกสท์เฮาส์", en: "Hotel, resort, guesthouse" },
+      },
+      monthly: {
+        title: { th: "รายเดือน", en: "Monthly stay" },
+        desc: { th: "อพาร์ตเมนต์ หอพัก", en: "Apartment, dormitory" },
+      },
+      both: {
+        title: { th: "ทั้งสองอย่าง", en: "Both" },
+        desc: { th: "รายวัน + รายเดือน ในที่เดียว", en: "Daily + monthly together" },
+      },
+    },
+    step2: {
+      title: { th: "เกี่ยวกับที่พักของคุณ", en: "Tell us about your property" },
+      subtitle: { th: "ใส่ข้อมูลพื้นฐาน — แก้ไขภายหลังได้", en: "Basic info — you can edit later" },
+      propertyName: { th: "ชื่อที่พัก", en: "Property name" },
+      propertyNamePh: { th: "เช่น Sukhumvit Inn", en: "e.g. Sukhumvit Inn" },
+      address: { th: "ที่อยู่", en: "Address" },
+      addressPh: { th: "เลขที่ ถนน", en: "Street address" },
+      city: { th: "เมือง", en: "City" },
+      cityPh: { th: "เช่น เชียงใหม่", en: "e.g. Chiang Mai" },
+      country: { th: "ประเทศ", en: "Country" },
+      currency: { th: "สกุลเงิน", en: "Currency" },
+    },
+    step3: {
+      title: { th: "ห้องของคุณ", en: "Your rooms" },
+      subtitleDaily: {
+        th: "ใส่ประเภทห้องและจำนวนสำหรับห้องรายวัน",
+        en: "List the room types and how many of each for daily stays",
+      },
+      subtitleMonthly: {
+        th: "ใส่ประเภทห้องและจำนวนสำหรับห้องรายเดือน",
+        en: "List the room types and how many of each for monthly stays",
+      },
+      subtitleBoth: {
+        th: "ใส่ทั้งห้องรายวันและรายเดือน — เลือกประเภทแต่ละแถว",
+        en: "Add daily and monthly rooms — pick the stay type per row",
+      },
+      typeName: { th: "ประเภทห้อง", en: "Room type" },
+      typeNamePh: { th: "เช่น Standard, Deluxe", en: "e.g. Standard, Deluxe" },
+      qty: { th: "จำนวน", en: "Quantity" },
+      stayKind: { th: "ประเภท", en: "Stay" },
+      stayKindDaily: { th: "รายวัน", en: "Daily" },
+      stayKindMonthly: { th: "รายเดือน", en: "Monthly" },
+      addRow: { th: "+ เพิ่มประเภทห้อง", en: "+ Add room type" },
+      remove: { th: "ลบ", en: "Remove" },
+      empty: {
+        th: "กรุณาเพิ่มประเภทห้องอย่างน้อยหนึ่งรายการ",
+        en: "Add at least one room type",
+      },
+    },
+  },
 } as const;
 
 type TranslationKey = keyof typeof translations;
