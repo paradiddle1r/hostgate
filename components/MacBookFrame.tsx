@@ -3,8 +3,12 @@
 import { ReactNode } from "react";
 
 /**
- * MacBook Pro 14"-inspired frame — pure CSS/SVG, no images.
- * Refined proportions, multi-layer shadow, accurate notch.
+ * MacBook Pro-inspired frame — pure CSS, no images.
+ * Proportions match Apple's product photography:
+ *   - Thin black bezels with rounded corners
+ *   - Aluminum silver lid wrapping the screen
+ *   - Small camera notch (proportional)
+ *   - Hinge bar + bottom base extending slightly wider than the lid
  */
 export default function MacBookFrame({
   children,
@@ -15,28 +19,34 @@ export default function MacBookFrame({
 }) {
   return (
     <div className={`relative mx-auto w-full device-shadow ${className}`}>
-      {/* Outer aluminum lid */}
-      <div className="relative rounded-[20px] bg-gradient-to-b from-zinc-200 to-zinc-300 p-[10px]">
-        {/* Inner screen bezel */}
-        <div className="relative overflow-hidden rounded-[12px] bg-black">
-          {/* Camera notch */}
-          <div className="pointer-events-none absolute left-1/2 top-0 z-30 flex h-[18px] w-[140px] -translate-x-1/2 items-center justify-center rounded-b-[10px] bg-black">
-            <span className="h-[6px] w-[6px] rounded-full bg-zinc-700 ring-1 ring-zinc-900/80" />
+      {/* Aluminum lid */}
+      <div className="relative rounded-[14px] bg-gradient-to-b from-[#e5e7eb] via-[#d1d5db] to-[#c8ccd1] p-[6px]">
+        {/* Black bezel + screen */}
+        <div className="relative overflow-hidden rounded-[9px] bg-black">
+          {/* Camera notch — small, proportional (about 18% of screen width) */}
+          <div className="pointer-events-none absolute left-1/2 top-0 z-30 flex h-[14px] w-[18%] max-w-[120px] -translate-x-1/2 items-end justify-center rounded-b-[8px] bg-black">
+            <span className="mb-[4px] h-[4px] w-[4px] rounded-full bg-[#1a1a1a] ring-[1px] ring-[#2a2a2a]" />
           </div>
-          {/* Screen reflection top */}
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-1/3 bg-gradient-to-b from-white/[0.03] to-transparent" />
+
           {/* Screen content */}
           <div className="relative z-10 aspect-[16/10] w-full bg-white">{children}</div>
+
+          {/* Subtle top reflection */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-[30%] bg-gradient-to-b from-white/[0.04] to-transparent" />
         </div>
       </div>
 
-      {/* Lid bottom (hinge area) */}
-      <div className="relative mx-auto -mt-[1px] h-[12px] w-[101%] -translate-x-[0.5%] rounded-b-[4px] bg-gradient-to-b from-zinc-300 via-zinc-300 to-zinc-200">
-        <div className="absolute left-1/2 top-0 h-[5px] w-[16%] -translate-x-1/2 rounded-b-md bg-gradient-to-b from-zinc-400/40 to-transparent" />
+      {/* Hinge bar (lid bottom) — slightly darker aluminum */}
+      <div className="relative mx-auto h-[10px] w-[101%] -translate-x-[0.5%] rounded-b-[3px] bg-gradient-to-b from-[#b5b9be] to-[#9ea3a8]">
+        {/* Hinge dimple in the middle */}
+        <div className="absolute left-1/2 top-0 h-[4px] w-[14%] -translate-x-1/2 rounded-b-md bg-gradient-to-b from-black/15 to-transparent" />
       </div>
 
-      {/* Base extending beyond lid */}
-      <div className="mx-auto h-[6px] w-[103%] -translate-x-[1.5%] rounded-b-[6px] bg-gradient-to-b from-zinc-200 to-zinc-100 shadow-[0_4px_12px_rgba(0,0,0,0.06)]" />
+      {/* Base (chassis extending wider) */}
+      <div className="mx-auto h-[5px] w-[105%] -translate-x-[2.5%] rounded-b-[8px] bg-gradient-to-b from-[#a8acb1] to-[#8d9196]" />
+
+      {/* Shadow beneath base */}
+      <div className="pointer-events-none mx-auto h-[12px] w-[95%] -translate-y-1 rounded-[50%] bg-black/15 blur-md" />
     </div>
   );
 }
