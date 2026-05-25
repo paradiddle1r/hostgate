@@ -14,6 +14,7 @@ export const translations = {
     blog: { th: "บทความ", en: "Blog" },
     login: { th: "เข้าสู่ระบบ", en: "Log in" },
     start: { th: "เริ่มต้นฟรี", en: "Start free" },
+    dashboard: { th: "ไปที่ Dashboard", en: "Open dashboard" },
   },
   hero: {
     badge: { th: "เปิดให้ใช้งานแล้ว", en: "Now available" },

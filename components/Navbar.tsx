@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useI18n, pick } from "@/lib/i18n";
+import { createClient } from "@/lib/supabase/client";
 import Logo from "./Logo";
 import LanguageToggle from "./LanguageToggle";
 
@@ -10,6 +11,28 @@ export default function Navbar() {
   const { locale, t } = useI18n();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  // null = haven't checked yet, false = signed out, true = signed in.
+  // Treating "unknown" specially avoids the login-button flash on first paint
+  // for already-authenticated users.
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    let active = true;
+
+    supabase.auth.getUser().then(({ data }) => {
+      if (active) setSignedIn(!!data.user);
+    });
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
+      setSignedIn(!!session?.user);
+    });
+
+    return () => {
+      active = false;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     // rAF-throttled to avoid setState on every wheel/touch frame on mobile.
@@ -73,18 +96,29 @@ export default function Navbar() {
 
         <div className="hidden items-center gap-3 lg:flex">
           <LanguageToggle />
-          <Link
-            href="/login"
-            className="text-sm font-medium text-zinc-600 transition hover:text-zinc-900"
-          >
-            {pick(t.nav.login, locale)}
-          </Link>
-          <Link
-            href="/signup"
-            className="inline-flex items-center justify-center rounded-full bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800"
-          >
-            {pick(t.nav.start, locale)}
-          </Link>
+          {signedIn ? (
+            <Link
+              href="/app"
+              className="inline-flex items-center justify-center rounded-full bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800"
+            >
+              {pick(t.nav.dashboard, locale)}
+            </Link>
+          ) : signedIn === false ? (
+            <>
+              <Link
+                href="/login"
+                className="text-sm font-medium text-zinc-600 transition hover:text-zinc-900"
+              >
+                {pick(t.nav.login, locale)}
+              </Link>
+              <Link
+                href="/signup"
+                className="inline-flex items-center justify-center rounded-full bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800"
+              >
+                {pick(t.nav.start, locale)}
+              </Link>
+            </>
+          ) : null}
         </div>
 
         <button
@@ -119,13 +153,23 @@ export default function Navbar() {
           </ul>
           <div className="mt-4 flex items-center justify-between gap-3">
             <LanguageToggle />
-            <Link
-              href="/signup"
-              onClick={() => setMenuOpen(false)}
-              className="flex-1 rounded-full bg-zinc-900 px-4 py-2.5 text-center text-sm font-semibold text-white"
-            >
-              {pick(t.nav.start, locale)}
-            </Link>
+            {signedIn ? (
+              <Link
+                href="/app"
+                onClick={() => setMenuOpen(false)}
+                className="flex-1 rounded-full bg-zinc-900 px-4 py-2.5 text-center text-sm font-semibold text-white"
+              >
+                {pick(t.nav.dashboard, locale)}
+              </Link>
+            ) : (
+              <Link
+                href="/signup"
+                onClick={() => setMenuOpen(false)}
+                className="flex-1 rounded-full bg-zinc-900 px-4 py-2.5 text-center text-sm font-semibold text-white"
+              >
+                {pick(t.nav.start, locale)}
+              </Link>
+            )}
           </div>
         </div>
       )}
