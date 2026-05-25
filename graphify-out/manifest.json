@@ -45,14 +45,14 @@
     "semantic_hash": "22bb9bac3b1e6c41d80102b055491ed7"
   },
   "/Users/pornchai/Documents/HostGate.app/app/layout.tsx": {
-    "mtime": 1779652646.5788233,
-    "ast_hash": "ca5d311179fc0c3986a78c3d05a69846",
-    "semantic_hash": "ca5d311179fc0c3986a78c3d05a69846"
+    "mtime": 1779724125.292862,
+    "ast_hash": "e7ca3cc1763cb84bcac2ff308be900c2",
+    "semantic_hash": ""
   },
   "/Users/pornchai/Documents/HostGate.app/app/page.tsx": {
-    "mtime": 1779697930.528917,
-    "ast_hash": "17e66617f239481babdef5fc78296e29",
-    "semantic_hash": "17e66617f239481babdef5fc78296e29"
+    "mtime": 1779718747.2380643,
+    "ast_hash": "1665753ffb3578f397c029d30e0f5666",
+    "semantic_hash": ""
   },
   "/Users/pornchai/Documents/HostGate.app/app/contact/page.tsx": {
     "mtime": 1779648966.1120095,
@@ -95,9 +95,9 @@
     "semantic_hash": "de7c0a71900baa5cdd60b536431753a2"
   },
   "/Users/pornchai/Documents/HostGate.app/components/Hero.tsx": {
-    "mtime": 1779716422.1467476,
-    "ast_hash": "f5dae6edf285d072b1c13239c637b2cd",
-    "semantic_hash": "f5dae6edf285d072b1c13239c637b2cd"
+    "mtime": 1779724133.35108,
+    "ast_hash": "c36347b1b808798863b20cb411fe16c5",
+    "semantic_hash": ""
   },
   "/Users/pornchai/Documents/HostGate.app/components/Navbar.tsx": {
     "mtime": 1779652665.9326699,
@@ -105,9 +105,9 @@
     "semantic_hash": "54767be3e2395376765671015aa16298"
   },
   "/Users/pornchai/Documents/HostGate.app/components/Pricing.tsx": {
-    "mtime": 1779689919.99188,
-    "ast_hash": "9b15d7f82661dafa62fab9d052e47585",
-    "semantic_hash": "9b15d7f82661dafa62fab9d052e47585"
+    "mtime": 1779724165.2840738,
+    "ast_hash": "63f3f81e5cd3c30ff81010559761e552",
+    "semantic_hash": ""
   },
   "/Users/pornchai/Documents/HostGate.app/components/LanguageToggle.tsx": {
     "mtime": 1779652673.0039916,
@@ -120,9 +120,9 @@
     "semantic_hash": "020e2e8f9d7edcacf59a317068e70441"
   },
   "/Users/pornchai/Documents/HostGate.app/components/Features.tsx": {
-    "mtime": 1779689834.3182964,
-    "ast_hash": "5c525a84432cab86a344031e27b9ce7f",
-    "semantic_hash": "5c525a84432cab86a344031e27b9ce7f"
+    "mtime": 1779719269.038511,
+    "ast_hash": "cd2bd466e4625c6bb7859a186f529a0d",
+    "semantic_hash": ""
   },
   "/Users/pornchai/Documents/HostGate.app/components/HowItWorks.tsx": {
     "mtime": 1779689863.0655591,
@@ -140,14 +140,14 @@
     "semantic_hash": "6e2bf7bba5d163ce6a9465ab0ce3287b"
   },
   "/Users/pornchai/Documents/HostGate.app/components/Showcase.tsx": {
-    "mtime": 1779716513.051341,
-    "ast_hash": "4dbb34efed9bc10eb16f6cff2d5e3d55",
-    "semantic_hash": "4dbb34efed9bc10eb16f6cff2d5e3d55"
+    "mtime": 1779719296.01974,
+    "ast_hash": "eaa370966802aad1ed1aa3273cac76b1",
+    "semantic_hash": ""
   },
   "/Users/pornchai/Documents/HostGate.app/components/Footer.tsx": {
-    "mtime": 1779652939.4239507,
-    "ast_hash": "1db51c4f86644e1a536f7548c3b8951d",
-    "semantic_hash": "1db51c4f86644e1a536f7548c3b8951d"
+    "mtime": 1779724176.2486787,
+    "ast_hash": "dcbc0dcee0544a50f5c5cdc2bd78bfec",
+    "semantic_hash": ""
   },
   "/Users/pornchai/Documents/HostGate.app/components/Testimonials.tsx": {
     "mtime": 1779697876.7400796,
@@ -155,14 +155,14 @@
     "semantic_hash": "cddce4d010b7694983d4cf7b608f86b5"
   },
   "/Users/pornchai/Documents/HostGate.app/components/Trusted.tsx": {
-    "mtime": 1779697922.5230684,
-    "ast_hash": "e678e95fa931a8eee9fd4ea30aae05f3",
-    "semantic_hash": "e678e95fa931a8eee9fd4ea30aae05f3"
+    "mtime": 1779724148.0341613,
+    "ast_hash": "3011f4d2e66c9e72b52646c2ad248ec5",
+    "semantic_hash": ""
   },
   "/Users/pornchai/Documents/HostGate.app/components/IPhoneFrame.tsx": {
-    "mtime": 1779701532.0214908,
-    "ast_hash": "13684401df05762071e6e5a8e6ee3e26",
-    "semantic_hash": "13684401df05762071e6e5a8e6ee3e26"
+    "mtime": 1779722739.3276682,
+    "ast_hash": "1d33d9f88e9bfced4a791ffc591de37b",
+    "semantic_hash": ""
   },
   "/Users/pornchai/Documents/HostGate.app/components/DashboardMock.tsx": {
     "mtime": 1779689671.1857324,
@@ -200,14 +200,14 @@
     "semantic_hash": "56358d11a0e136f6a8465fbc1399486c"
   },
   "/Users/pornchai/Documents/HostGate.app/components/FAQ.tsx": {
-    "mtime": 1779689951.9183521,
-    "ast_hash": "61a8da0a5979c6561a2ee07086db7cb6",
-    "semantic_hash": "61a8da0a5979c6561a2ee07086db7cb6"
+    "mtime": 1779724170.3794458,
+    "ast_hash": "178a6456c8a76637d830abb0c6ed4d37",
+    "semantic_hash": ""
   },
   "/Users/pornchai/Documents/HostGate.app/components/Integrations.tsx": {
-    "mtime": 1779689874.6656897,
-    "ast_hash": "8623562f55506e44ace1885e83082bcf",
-    "semantic_hash": "8623562f55506e44ace1885e83082bcf"
+    "mtime": 1779724159.2440464,
+    "ast_hash": "b2b9d415c7122e8ffabae6911cdeb40d",
+    "semantic_hash": ""
   },
   "/Users/pornchai/Documents/HostGate.app/components/Reveal.tsx": {
     "mtime": 1779690001.4448013,
@@ -215,9 +215,9 @@
     "semantic_hash": "250cf242ffc098cbd02c7042f25fb840"
   },
   "/Users/pornchai/Documents/HostGate.app/components/Screenshots.tsx": {
-    "mtime": 1779716475.1228826,
-    "ast_hash": "96ec5ab31a266491c8498a42aa906496",
-    "semantic_hash": "96ec5ab31a266491c8498a42aa906496"
+    "mtime": 1779724154.5884197,
+    "ast_hash": "bbec0a67220d33f61389e17b4855ec07",
+    "semantic_hash": ""
   },
   "/Users/pornchai/Documents/HostGate.app/lib/blog.ts": {
     "mtime": 1779646723.9487693,
@@ -248,5 +248,50 @@
     "mtime": 1779646807.9194536,
     "ast_hash": "bdf5caab3a43ba4e27e6420503a2a70c",
     "semantic_hash": "bdf5caab3a43ba4e27e6420503a2a70c"
+  },
+  "/Users/pornchai/Documents/HostGate.app/.claude/settings.json": {
+    "mtime": 1779722972.4734807,
+    "ast_hash": "87f0d903477984d0587a02f8fe185263",
+    "semantic_hash": ""
+  },
+  "/Users/pornchai/Documents/HostGate.app/components/IpadFrame.tsx": {
+    "mtime": 1779718496.7488534,
+    "ast_hash": "1349acedbe8880f17df253eea46e3112",
+    "semantic_hash": ""
+  },
+  "/Users/pornchai/Documents/HostGate.app/components/FeatureBreakdown.tsx": {
+    "mtime": 1779719150.18339,
+    "ast_hash": "c8cd45d1e9fbe75ba3b438b874514ec7",
+    "semantic_hash": ""
+  },
+  "/Users/pornchai/Documents/HostGate.app/components/StudioDisplay.tsx": {
+    "mtime": 1779722752.8016095,
+    "ast_hash": "8b886b9939fd5d8dde61c8454d279699",
+    "semantic_hash": ""
+  },
+  "/Users/pornchai/Documents/HostGate.app/components/scenes/MonthlyRentalScene.tsx": {
+    "mtime": 1779718534.757152,
+    "ast_hash": "f4e9b58a5faf9ecfc06456a40e9e476c",
+    "semantic_hash": ""
+  },
+  "/Users/pornchai/Documents/HostGate.app/components/scenes/GuestCRMScene.tsx": {
+    "mtime": 1779718602.9513476,
+    "ast_hash": "478ceb9ed7b754adba8962c61621cb3a",
+    "semantic_hash": ""
+  },
+  "/Users/pornchai/Documents/HostGate.app/components/scenes/HousekeepingScene.tsx": {
+    "mtime": 1779718583.348576,
+    "ast_hash": "dd39ad62c3ef661809bab782cb8250ec",
+    "semantic_hash": ""
+  },
+  "/Users/pornchai/Documents/HostGate.app/components/scenes/PaymentScene.tsx": {
+    "mtime": 1779718561.794104,
+    "ast_hash": "9c812ba71f62a98b53e0ebe99735eb28",
+    "semantic_hash": ""
+  },
+  "/Users/pornchai/Documents/HostGate.app/CLAUDE.md": {
+    "mtime": 1779722972.4731297,
+    "ast_hash": "82efb97a359f5c7290bf2513d14686be",
+    "semantic_hash": ""
   }
 }

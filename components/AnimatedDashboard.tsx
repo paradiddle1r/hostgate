@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePauseWhenHidden } from "@/lib/useReveal";
 
 /**
  * Animated dashboard mockup that cycles through 4 scenes:
@@ -11,20 +12,30 @@ import { useEffect, useState } from "react";
  *
  * If `phase` is provided, the dashboard locks to that phase.
  * Otherwise it cycles automatically every 4.5 seconds.
+ *
+ * On mobile there can be 5+ of these mounted at once — we pause the cycle
+ * interval AND infinite CSS animations (via data-paused) when the component
+ * is off-screen, otherwise iOS Safari evicts the tab from memory.
  */
 export default function AnimatedDashboard({ phase }: { phase?: number }) {
   const [auto, setAuto] = useState(0);
+  const { ref, active } = usePauseWhenHidden<HTMLDivElement>();
 
   useEffect(() => {
     if (phase !== undefined) return;
+    if (!active) return; // pause cycle when off-screen
     const id = setInterval(() => setAuto((p) => (p + 1) % 4), 4500);
     return () => clearInterval(id);
-  }, [phase]);
+  }, [phase, active]);
 
   const p = phase ?? auto;
 
   return (
-    <div className="relative flex h-full w-full overflow-hidden bg-white text-zinc-900">
+    <div
+      ref={ref}
+      data-paused={active ? undefined : "true"}
+      className="relative flex h-full w-full overflow-hidden bg-white text-zinc-900 hg-anim-root"
+    >
       {/* Sidebar */}
       <aside className="hidden w-[150px] flex-none border-r border-zinc-100 bg-zinc-50/60 px-3 py-4 md:block">
         <div className="mb-5 flex items-center gap-2 px-2">
@@ -56,7 +67,7 @@ export default function AnimatedDashboard({ phase }: { phase?: number }) {
       {/* Main content — render scene based on phase */}
       <div className="relative flex-1 overflow-hidden">
         <Scene visible={p === 0}>
-          <OverviewScene />
+          <OverviewScene active={active && p === 0} />
         </Scene>
         <Scene visible={p === 1}>
           <CalendarScene />
@@ -87,17 +98,18 @@ function Scene({ visible, children }: { visible: boolean; children: React.ReactN
 /* ============================================================
    Scene 0 — Overview with ticking KPIs
    ============================================================ */
-function OverviewScene() {
+function OverviewScene({ active = true }: { active?: boolean }) {
   const [revenue, setRevenue] = useState(42800);
   const [occ, setOcc] = useState(87);
 
   useEffect(() => {
+    if (!active) return; // pause ticking when scene is off-screen / hidden
     const id = setInterval(() => {
       setRevenue((r) => r + Math.floor(Math.random() * 250));
       setOcc((o) => Math.min(99, o + (Math.random() > 0.5 ? 1 : 0)));
     }, 1200);
     return () => clearInterval(id);
-  }, []);
+  }, [active]);
 
   return (
     <>

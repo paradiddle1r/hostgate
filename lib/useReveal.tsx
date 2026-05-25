@@ -47,6 +47,56 @@ export function useReveal<T extends HTMLElement = HTMLDivElement>(
 }
 
 /**
+ * Returns a ref + `active` boolean — true when the element is in (or near) the
+ * viewport, false when scrolled away or the tab is hidden.
+ *
+ * Use this to gate expensive setIntervals / requestAnimationFrame loops in
+ * decorative components (animated mockups, counters) so they stop draining
+ * battery and GPU when the user isn't looking.
+ */
+export function usePauseWhenHidden<T extends HTMLElement = HTMLDivElement>(
+  rootMargin = "200px"
+) {
+  const ref = useRef<T | null>(null);
+  const [active, setActive] = useState(true);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+
+    let inView = true;
+    let tabVisible =
+      typeof document === "undefined" ? true : !document.hidden;
+
+    const apply = () => setActive(inView && tabVisible);
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          inView = entry.isIntersecting;
+        }
+        apply();
+      },
+      { rootMargin }
+    );
+    observer.observe(el);
+
+    const onVis = () => {
+      tabVisible = !document.hidden;
+      apply();
+    };
+    document.addEventListener("visibilitychange", onVis);
+
+    return () => {
+      observer.disconnect();
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [rootMargin]);
+
+  return { ref, active } as const;
+}
+
+/**
  * Track normalized scroll progress through a section (0-1).
  * Useful for parallax/scrub animations.
  */

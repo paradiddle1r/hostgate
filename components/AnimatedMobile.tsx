@@ -1,33 +1,47 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { usePauseWhenHidden } from "@/lib/useReveal";
 
 /**
  * Animated mobile view — shows live KPI ticking + a new-booking toast that
- * fires periodically.
+ * fires periodically. Pauses both timers + infinite CSS animations when the
+ * component is off-screen (multiple copies are mounted on the landing page).
  */
 export default function AnimatedMobile() {
   const [revenue, setRevenue] = useState(42800);
   const [toast, setToast] = useState(false);
+  const { ref, active } = usePauseWhenHidden<HTMLDivElement>();
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    if (!active) return;
     const tick = setInterval(() => {
       setRevenue((r) => r + Math.floor(Math.random() * 200));
     }, 1500);
 
     const toastLoop = setInterval(() => {
       setToast(true);
-      setTimeout(() => setToast(false), 2200);
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+      toastTimeoutRef.current = setTimeout(() => setToast(false), 2200);
     }, 4500);
 
     return () => {
       clearInterval(tick);
       clearInterval(toastLoop);
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+        toastTimeoutRef.current = null;
+      }
     };
-  }, []);
+  }, [active]);
 
   return (
-    <div className="relative flex h-full w-full flex-col bg-white px-4 pt-1 text-zinc-900">
+    <div
+      ref={ref}
+      data-paused={active ? undefined : "true"}
+      className="relative flex h-full w-full flex-col bg-white px-4 pt-1 text-zinc-900 hg-anim-root"
+    >
       {/* Toast — appears + disappears periodically */}
       <div
         className={`pointer-events-none absolute left-3 right-3 top-1 z-30 flex items-center gap-2 rounded-xl border border-zinc-200 bg-white p-2 shadow-lg transition-all duration-500 ${

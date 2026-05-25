@@ -30,13 +30,16 @@ export default function StudioDisplay({
         </div>
       </div>
 
-      {/* Aluminum stand — arm */}
+      {/* Aluminum stand — arm. Each piece keeps its own light-to-dark
+          gradient so the arm and base read as two distinct components.
+          The only change vs original: no rounded-b-* on the arm, so the
+          joint with the base is a clean square junction. */}
       <div
-        className="relative mx-auto mt-[2px] w-[26%] rounded-b-md bg-gradient-to-b from-[#a1a1aa] via-[#8d9196] to-[#71717a]"
+        className="relative mx-auto mt-[2px] w-[26%] bg-gradient-to-b from-[#a1a1aa] via-[#8d9196] to-[#71717a]"
         style={{ aspectRatio: "26 / 6" }}
       />
 
-      {/* Stand base */}
+      {/* Stand base — independent gradient (own highlight at the top). */}
       <div
         className="relative mx-auto w-[42%] rounded-b-[8px] bg-gradient-to-b from-[#a1a1aa] via-[#71717a] to-[#52525b]"
         style={{ aspectRatio: "42 / 3.5" }}

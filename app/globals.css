@@ -8,7 +8,11 @@
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-html { scroll-behavior: smooth; }
+/* Smooth scroll only on desktop — on iOS the JS-orchestrated scroll fights with
+   the URL bar collapse and causes viewport resize storms. */
+@media (min-width: 1024px) {
+  html { scroll-behavior: smooth; }
+}
 
 body {
   background: #ffffff;
@@ -44,6 +48,23 @@ h1, h2 { letter-spacing: -0.028em; }
   filter: blur(90px);
   opacity: 0.5;
   will-change: transform;
+}
+
+/* Mobile: cheaper background — fewer layers, smaller blur, no will-change so the
+   GPU doesn't allocate 5 full-viewport composite layers. Without this, iOS Safari
+   evicts the tab from memory mid-scroll and the page silently reloads. */
+@media (max-width: 1023px) {
+  .mesh-bg .blob {
+    filter: blur(40px);
+    opacity: 0.35;
+    will-change: auto;
+    /* Pause the drift animations — static gradient is plenty on a phone screen. */
+    animation: none !important;
+  }
+  /* Hide three of the five blobs on mobile. */
+  .mesh-bg .b3,
+  .mesh-bg .b4,
+  .mesh-bg .b5 { display: none; }
 }
 .mesh-bg .b1 {
   width: 560px; height: 560px;
@@ -240,6 +261,16 @@ h1, h2 { letter-spacing: -0.028em; }
 .divider-line {
   height: 1px;
   background: linear-gradient(to right, transparent, rgba(0, 0, 0, 0.08), transparent);
+}
+
+/* Pause all CSS animations inside an animated mockup (AnimatedDashboard /
+   AnimatedMobile) when it's been marked off-screen by usePauseWhenHidden.
+   This includes Tailwind's animate-ping/animate-pulse + the inline
+   style-jsx keyframes (dragBlock, pulse, dotFlow, slideInLeft, fadeUp,
+   toastIn, popupIn, slideRight, slideUp). */
+.hg-anim-root[data-paused="true"],
+.hg-anim-root[data-paused="true"] * {
+  animation-play-state: paused !important;
 }
 
 /* Reduce motion */
