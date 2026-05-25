@@ -3,6 +3,7 @@
 import { useI18n, pick } from "@/lib/i18n";
 import { SectionHeader } from "./Features";
 import Reveal from "./Reveal";
+import AnimatedCounter from "./AnimatedCounter";
 
 export default function Testimonials() {
   const { locale, t } = useI18n();
@@ -48,17 +49,10 @@ export default function Testimonials() {
 
         <Reveal variant="scale" delay={150}>
           <div className="mt-16 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-200 md:grid-cols-4">
-            {[
-              { v: "2,400+", l: locale === "th" ? "ที่พักใช้งาน" : "Properties" },
-              { v: "1.2M+", l: locale === "th" ? "การจอง" : "Bookings" },
-              { v: "99.99%", l: locale === "th" ? "Uptime" : "Uptime" },
-              { v: "4.9", l: locale === "th" ? "คะแนนเฉลี่ย" : "Rating" },
-            ].map((s) => (
-              <div key={s.l} className="bg-white p-8 text-center">
-                <div className="text-4xl font-semibold tracking-[-0.03em] text-zinc-900 sm:text-5xl">{s.v}</div>
-                <div className="mt-2 text-xs text-zinc-500">{s.l}</div>
-              </div>
-            ))}
+            <StatCell value={2400} suffix="+" label={locale === "th" ? "ที่พักใช้งาน" : "Properties"} />
+            <StatCell value={1.2} suffix="M+" decimals={1} label={locale === "th" ? "การจอง" : "Bookings"} />
+            <StatCell value={99.99} suffix="%" decimals={2} label={locale === "th" ? "Uptime" : "Uptime"} />
+            <StatCell value={4.9} decimals={1} label={locale === "th" ? "คะแนนเฉลี่ย" : "Rating"} />
           </div>
         </Reveal>
       </div>
@@ -72,3 +66,24 @@ const avatarBg = [
   "bg-amber-600",
   "bg-indigo-600",
 ];
+
+function StatCell({
+  value,
+  suffix = "",
+  decimals = 0,
+  label,
+}: {
+  value: number;
+  suffix?: string;
+  decimals?: number;
+  label: string;
+}) {
+  return (
+    <div className="bg-white p-8 text-center">
+      <div className="text-4xl font-semibold tracking-[-0.03em] text-zinc-900 sm:text-5xl">
+        <AnimatedCounter value={value} suffix={suffix} decimals={decimals} />
+      </div>
+      <div className="mt-2 text-xs text-zinc-500">{label}</div>
+    </div>
+  );
+}

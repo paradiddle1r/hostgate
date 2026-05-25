@@ -11,35 +11,35 @@ export default function Hero() {
   const { locale, t } = useI18n();
 
   return (
-    <section className="relative isolate overflow-hidden pt-32 pb-16 lg:pt-44 lg:pb-24">
-      {/* Soft background wash */}
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute left-1/2 top-0 h-[600px] w-[1100px] -translate-x-1/2 spotlight" />
+    <section className="relative isolate overflow-hidden pt-32 pb-16 lg:pt-48 lg:pb-28">
+      {/* Animated mesh gradient background */}
+      <div className="mesh-bg">
+        <div className="blob" />
       </div>
 
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
         <div className="mx-auto max-w-4xl text-center">
           {/* Eyebrow */}
           <p
-            className="hero-anim text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600"
+            className="hero-anim text-xs font-semibold uppercase tracking-[0.25em] text-indigo-600"
             style={{ animationDelay: "0.05s" }}
           >
             {pick(t.hero.badge, locale)}
           </p>
 
-          {/* Headline — Apple-scale typography */}
+          {/* Headline — Apple-scale */}
           <h1
-            className="hero-anim mt-5 text-5xl font-semibold leading-[1.02] tracking-[-0.04em] text-zinc-900 sm:text-6xl lg:text-[5.5rem]"
+            className="hero-anim mt-5 text-5xl font-semibold leading-[1.02] tracking-[-0.045em] text-zinc-900 sm:text-7xl lg:text-[6.5rem]"
             style={{ animationDelay: "0.15s" }}
           >
             {pick(t.hero.title1, locale)}
             <br />
-            <span className="text-zinc-400">{pick(t.hero.title2, locale)}</span>
+            <span className="italic text-zinc-400">{pick(t.hero.title2, locale)}</span>
           </h1>
 
           {/* Subtitle */}
           <p
-            className="hero-anim mx-auto mt-6 max-w-xl text-lg text-zinc-600 sm:text-xl"
+            className="hero-anim mx-auto mt-7 max-w-xl text-lg text-zinc-600 sm:text-xl"
             style={{ animationDelay: "0.25s" }}
           >
             {pick(t.hero.subtitle, locale)}
@@ -47,12 +47,12 @@ export default function Hero() {
 
           {/* CTAs */}
           <div
-            className="hero-anim mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row"
+            className="hero-anim mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row"
             style={{ animationDelay: "0.35s" }}
           >
             <Link
               href="#pricing"
-              className="group inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-zinc-900 px-6 py-3 text-sm font-medium text-white transition hover:bg-zinc-800 sm:w-auto"
+              className="group inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-zinc-900 px-6 py-3 text-sm font-medium text-white shadow-[0_8px_30px_-10px_rgba(0,0,0,0.3)] transition hover:bg-zinc-800 hover:shadow-[0_12px_36px_-10px_rgba(0,0,0,0.4)] sm:w-auto"
             >
               {pick(t.hero.ctaPrimary, locale)}
               <svg viewBox="0 0 16 16" className="h-3 w-3 transition group-hover:translate-x-0.5" fill="none" stroke="currentColor" strokeWidth="2">
@@ -63,7 +63,7 @@ export default function Hero() {
               href="#screenshots"
               className="group inline-flex w-full items-center justify-center gap-1.5 text-sm font-medium text-indigo-600 transition hover:text-indigo-700 sm:w-auto"
             >
-              {pick(t.hero.ctaSecondary, locale)}
+              <span className="link-underline">{pick(t.hero.ctaSecondary, locale)}</span>
               <svg viewBox="0 0 16 16" className="h-3 w-3 transition group-hover:translate-x-0.5" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M3 8h10M9 4l4 4-4 4" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -75,20 +75,19 @@ export default function Hero() {
           </p>
         </div>
 
-        {/* Device composition — MacBook + iPhone */}
+        {/* Device composition */}
         <div
-          className="hero-anim relative mx-auto mt-16 max-w-5xl"
-          style={{ animationDelay: "0.55s" }}
+          className="hero-anim relative mx-auto mt-20 max-w-5xl lg:mt-24"
+          style={{ animationDelay: "0.6s" }}
         >
-          {/* MacBook */}
           <div className="tilt mx-auto">
             <MacBookFrame>
               <DashboardMock />
             </MacBookFrame>
           </div>
 
-          {/* iPhone — floating bottom-right on desktop, hidden on mobile */}
-          <div className="absolute -right-2 -bottom-4 hidden w-[180px] sm:right-4 sm:-bottom-8 sm:block md:right-12 md:-bottom-10 md:w-[220px] lg:right-20 lg:-bottom-16 lg:w-[260px]">
+          {/* iPhone — floating bottom-right, hidden on mobile */}
+          <div className="absolute right-2 -bottom-6 hidden w-[160px] float sm:right-4 sm:-bottom-10 sm:block md:right-12 md:-bottom-12 md:w-[200px] lg:right-20 lg:-bottom-16 lg:w-[240px]">
             <div className="tilt">
               <IPhoneFrame>
                 <MobileMock />
@@ -96,9 +95,9 @@ export default function Hero() {
             </div>
           </div>
 
-          {/* Mobile-only iPhone (centered, below MacBook) */}
-          <div className="mt-8 flex justify-center sm:hidden">
-            <div className="w-[200px]">
+          {/* Mobile-only iPhone */}
+          <div className="mt-12 flex justify-center sm:hidden">
+            <div className="w-[220px]">
               <IPhoneFrame>
                 <MobileMock />
               </IPhoneFrame>
