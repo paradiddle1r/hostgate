@@ -3,12 +3,13 @@
 import { ReactNode } from "react";
 
 /**
- * iPhone 15 Pro-inspired frame — pure CSS, fully responsive.
+ * iPhone 15 Pro-inspired frame — pure CSS.
  *
- * Sizing strategy:
- *   - All inner elements (notch, frame, buttons) use % values relative to
- *     the device width, so the device looks correct at any size.
- *   - Use `style.width` (px) via wrapper, or `w-full max-w-[Xpx]`.
+ * Strategy: fixed-pixel border-radius and paddings so corners stay circular
+ * (percentage radii would produce ovals on rectangular elements).
+ * Side button positions use % of container height so they stay in proportion.
+ *
+ * Designed for widths ~180px – 280px.
  */
 export default function IPhoneFrame({
   children,
@@ -18,20 +19,20 @@ export default function IPhoneFrame({
   className?: string;
 }) {
   return (
-    <div className={`relative mx-auto w-full max-w-[280px] device-shadow ${className}`}>
+    <div className={`relative mx-auto w-full max-w-[260px] device-shadow ${className}`}>
       {/* Titanium outer frame */}
-      <div className="relative rounded-[18%] bg-gradient-to-br from-[#d4d4d8] via-[#a1a1aa] to-[#71717a] p-[1.1%]">
+      <div className="relative rounded-[42px] bg-gradient-to-br from-[#d4d4d8] via-[#a1a1aa] to-[#71717a] p-[3px]">
         {/* Mid-frame dark bezel */}
-        <div className="relative rounded-[17%] bg-gradient-to-b from-[#3f3f46] to-[#18181b] p-[0.7%]">
+        <div className="relative rounded-[40px] bg-gradient-to-b from-[#3f3f46] to-[#18181b] p-[2px]">
           {/* Inner black bezel */}
-          <div className="relative rounded-[16%] bg-black p-[2.6%]">
+          <div className="relative rounded-[38px] bg-black p-[7px]">
             {/* Screen */}
-            <div className="relative overflow-hidden rounded-[14%] bg-white">
-              {/* Dynamic Island — ~28% of screen width */}
-              <div className="pointer-events-none absolute left-1/2 top-[2%] z-30 h-[3.5%] w-[28%] -translate-x-1/2 rounded-full bg-black" />
+            <div className="relative overflow-hidden rounded-[32px] bg-white">
+              {/* Dynamic Island — ~28% width */}
+              <div className="pointer-events-none absolute left-1/2 top-[7px] z-30 h-[20px] w-[28%] max-w-[76px] -translate-x-1/2 rounded-full bg-black" />
 
               {/* Status bar */}
-              <div className="relative z-20 flex h-[5.5%] items-center justify-between px-[8%] pt-[1%] text-[10px] font-semibold text-zinc-900">
+              <div className="relative z-20 flex h-[30px] items-center justify-between px-6 pt-1 text-[10px] font-semibold text-zinc-900">
                 <span>9:41</span>
                 <span className="flex items-center gap-1">
                   <svg viewBox="0 0 16 10" className="h-2.5 w-3" fill="currentColor">
@@ -55,19 +56,19 @@ export default function IPhoneFrame({
               <div className="aspect-[9/19.5] w-full bg-white">{children}</div>
 
               {/* Home indicator */}
-              <div className="pointer-events-none absolute inset-x-0 bottom-[1%] z-30 flex justify-center">
-                <span className="h-[0.6%] min-h-[3px] w-[36%] rounded-full bg-zinc-900" />
+              <div className="pointer-events-none absolute inset-x-0 bottom-1.5 z-30 flex justify-center">
+                <span className="h-[4px] w-[90px] rounded-full bg-zinc-900" />
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Side buttons — percentage positioning so they stay in proportion */}
-      <span className="absolute -left-[1%] top-[16%] h-[5%] w-[1%] min-w-[2px] rounded-l-sm bg-gradient-to-r from-[#71717a] to-[#a1a1aa]" />
-      <span className="absolute -left-[1%] top-[23%] h-[7%] w-[1%] min-w-[2px] rounded-l-sm bg-gradient-to-r from-[#71717a] to-[#a1a1aa]" />
-      <span className="absolute -left-[1%] top-[32%] h-[7%] w-[1%] min-w-[2px] rounded-l-sm bg-gradient-to-r from-[#71717a] to-[#a1a1aa]" />
-      <span className="absolute -right-[1%] top-[20.5%] h-[10.5%] w-[1%] min-w-[2px] rounded-r-sm bg-gradient-to-l from-[#71717a] to-[#a1a1aa]" />
+      {/* Side buttons — vertical position in %, width in px (so they keep a real button thickness) */}
+      <span className="absolute -left-[2px] top-[16%] h-[5%] w-[2px] rounded-l-sm bg-gradient-to-r from-[#71717a] to-[#a1a1aa]" />
+      <span className="absolute -left-[2px] top-[23%] h-[7%] w-[2px] rounded-l-sm bg-gradient-to-r from-[#71717a] to-[#a1a1aa]" />
+      <span className="absolute -left-[2px] top-[32%] h-[7%] w-[2px] rounded-l-sm bg-gradient-to-r from-[#71717a] to-[#a1a1aa]" />
+      <span className="absolute -right-[2px] top-[20.5%] h-[10.5%] w-[2px] rounded-r-sm bg-gradient-to-l from-[#71717a] to-[#a1a1aa]" />
     </div>
   );
 }
