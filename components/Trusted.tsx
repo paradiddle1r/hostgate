@@ -16,7 +16,7 @@ const logos = [
 export default function Trusted() {
   const { locale, t } = useI18n();
   return (
-    <section className="relative bg-white py-12">
+    <section className="relative py-12">
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
         <p className="text-center text-xs uppercase tracking-[0.25em] text-zinc-500">
           {pick(t.trusted.title, locale)}
@@ -24,8 +24,8 @@ export default function Trusted() {
 
         {/* Marquee track */}
         <div className="relative mt-8 overflow-hidden">
-          <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-24 bg-gradient-to-r from-white to-transparent" />
-          <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-24 bg-gradient-to-l from-white to-transparent" />
+          <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-16 bg-gradient-to-r from-white/80 to-transparent" />
+          <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-16 bg-gradient-to-l from-white/80 to-transparent" />
           <div className="marquee flex gap-6 whitespace-nowrap">
             {[...logos, ...logos].map((logo, i) => (
               <div

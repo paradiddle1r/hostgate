@@ -11,12 +11,7 @@ export default function Hero() {
   const { locale, t } = useI18n();
 
   return (
-    <section className="relative isolate overflow-hidden pt-28 pb-12 sm:pt-32 sm:pb-16 lg:pt-48 lg:pb-28">
-      {/* Animated mesh gradient */}
-      <div className="mesh-bg">
-        <div className="blob" />
-      </div>
-
+    <section className="relative pt-28 pb-12 sm:pt-32 sm:pb-16 lg:pt-48 lg:pb-28">
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
         <div className="mx-auto max-w-4xl text-center">
           <p

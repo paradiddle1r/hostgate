@@ -22,7 +22,7 @@ const integrations = [
 export default function Integrations() {
   const { locale, t } = useI18n();
   return (
-    <section className="relative bg-zinc-50/60 py-24 lg:py-36">
+    <section className="relative py-24 lg:py-36">
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
         <Reveal>
           <SectionHeader

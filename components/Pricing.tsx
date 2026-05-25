@@ -11,7 +11,7 @@ export default function Pricing() {
   const [yearly, setYearly] = useState(false);
 
   return (
-    <section id="pricing" className="relative bg-zinc-50/60 py-24 lg:py-36">
+    <section id="pricing" className="relative py-24 lg:py-36">
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
         <Reveal>
           <SectionHeader

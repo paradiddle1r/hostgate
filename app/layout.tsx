@@ -46,6 +46,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className="min-h-screen overflow-x-hidden bg-white text-zinc-900">
+        {/* Global animated mesh gradient — fixed background that drifts */}
+        <div className="mesh-bg" aria-hidden>
+          <div className="blob b1" />
+          <div className="blob b2" />
+          <div className="blob b3" />
+          <div className="blob b4" />
+          <div className="blob b5" />
+        </div>
         <I18nProvider>
           <div className="relative">
             <Navbar />

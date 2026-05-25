@@ -30,54 +30,76 @@ h1, h2 { letter-spacing: -0.028em; }
   color: transparent;
 }
 
-/* Animated mesh gradient — three slowly moving blobs */
+/* Global animated mesh gradient — fixed in viewport, drifts forever */
 .mesh-bg {
-  position: absolute;
+  position: fixed;
   inset: 0;
   overflow: hidden;
   pointer-events: none;
-  z-index: -10;
+  z-index: -1;
 }
-.mesh-bg::before,
-.mesh-bg::after,
-.mesh-bg > .blob {
-  content: "";
+.mesh-bg .blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(80px);
+  filter: blur(90px);
   opacity: 0.5;
   will-change: transform;
 }
-.mesh-bg::before {
-  width: 600px; height: 600px;
+.mesh-bg .b1 {
+  width: 560px; height: 560px;
   background: radial-gradient(circle, #c7d2fe 0%, transparent 70%);
-  top: -200px; left: -100px;
-  animation: blob-1 24s var(--ease-apple) infinite;
+  top: -180px; left: -100px;
+  animation: drift-1 32s var(--ease-apple) infinite;
 }
-.mesh-bg::after {
+.mesh-bg .b2 {
   width: 500px; height: 500px;
   background: radial-gradient(circle, #fbcfe8 0%, transparent 70%);
-  top: 100px; right: -100px;
-  animation: blob-2 26s var(--ease-apple) infinite;
+  top: 10%; right: -120px;
+  animation: drift-2 36s var(--ease-apple) infinite;
 }
-.mesh-bg > .blob {
-  width: 400px; height: 400px;
+.mesh-bg .b3 {
+  width: 460px; height: 460px;
   background: radial-gradient(circle, #a5f3fc 0%, transparent 70%);
-  bottom: -100px; left: 30%;
-  animation: blob-3 28s var(--ease-apple) infinite;
+  top: 40%; left: 20%;
+  animation: drift-3 40s var(--ease-apple) infinite;
+}
+.mesh-bg .b4 {
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, #ddd6fe 0%, transparent 70%);
+  bottom: 5%; left: -120px;
+  animation: drift-4 34s var(--ease-apple) infinite;
+}
+.mesh-bg .b5 {
+  width: 540px; height: 540px;
+  background: radial-gradient(circle, #fed7aa 0%, transparent 70%);
+  bottom: -160px; right: 10%;
+  animation: drift-5 38s var(--ease-apple) infinite;
 }
 
-@keyframes blob-1 {
+@keyframes drift-1 {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(80px, 60px) scale(1.1); }
+  33% { transform: translate(80px, 80px) scale(1.1); }
+  66% { transform: translate(40px, 140px) scale(0.95); }
 }
-@keyframes blob-2 {
+@keyframes drift-2 {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(-60px, 80px) scale(1.15); }
+  33% { transform: translate(-80px, 90px) scale(1.15); }
+  66% { transform: translate(-40px, 60px) scale(1.05); }
 }
-@keyframes blob-3 {
+@keyframes drift-3 {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(40px, -50px) scale(1.05); }
+  33% { transform: translate(60px, -40px) scale(1.08); }
+  66% { transform: translate(-50px, 50px) scale(1); }
+}
+@keyframes drift-4 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(100px, -60px) scale(1.1); }
+  66% { transform: translate(60px, -120px) scale(0.95); }
+}
+@keyframes drift-5 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-80px, -80px) scale(1.05); }
+  66% { transform: translate(-100px, -40px) scale(1.15); }
 }
 
 /* Dotted grid (subtle) */
@@ -222,7 +244,7 @@ h1, h2 { letter-spacing: -0.028em; }
 
 /* Reduce motion */
 @media (prefers-reduced-motion: reduce) {
-  .fade-up, .scale-up, .stagger > *, .hero-anim, .float, .marquee, .mesh-bg::before, .mesh-bg::after, .mesh-bg > .blob, .shimmer-text {
+  .fade-up, .scale-up, .stagger > *, .hero-anim, .float, .marquee, .mesh-bg .blob, .shimmer-text {
     animation: none !important;
     transition: none !important;
     opacity: 1 !important;

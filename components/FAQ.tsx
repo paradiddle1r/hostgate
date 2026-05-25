@@ -10,7 +10,7 @@ export default function FAQ() {
   const [open, setOpen] = useState<number | null>(0);
 
   return (
-    <section id="faq" className="relative bg-zinc-50/60 py-24 lg:py-36">
+    <section id="faq" className="relative py-24 lg:py-36">
       <div className="mx-auto max-w-4xl px-5 lg:px-8">
         <Reveal>
           <SectionHeader

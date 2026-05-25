@@ -14,7 +14,7 @@ export default function Screenshots() {
   const { locale, t } = useI18n();
 
   return (
-    <section id="screenshots" className="relative bg-zinc-50/60 py-20 lg:py-36">
+    <section id="screenshots" className="relative py-20 lg:py-36">
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
         <Reveal>
           <SectionHeader
