@@ -3,6 +3,7 @@ import Trusted from "@/components/Trusted";
 import Features from "@/components/Features";
 import HowItWorks from "@/components/HowItWorks";
 import Showcase from "@/components/Showcase";
+import FeatureBreakdown from "@/components/FeatureBreakdown";
 import Screenshots from "@/components/Screenshots";
 import Integrations from "@/components/Integrations";
 import Comparison from "@/components/Comparison";
@@ -19,6 +20,7 @@ export default function HomePage() {
       <Features />
       <HowItWorks />
       <Showcase />
+      <FeatureBreakdown />
       <Screenshots />
       <Integrations />
       <Comparison />

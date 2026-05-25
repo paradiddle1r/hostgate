@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useI18n, pick } from "@/lib/i18n";
-import MacBookFrame from "./MacBookFrame";
+import StudioDisplay from "./StudioDisplay";
 import IPhoneFrame from "./IPhoneFrame";
 import AnimatedDashboard from "./AnimatedDashboard";
 import AnimatedMobile from "./AnimatedMobile";
@@ -12,14 +12,13 @@ export default function Hero() {
 
   return (
     <section className="relative isolate overflow-hidden pt-32 pb-16 lg:pt-48 lg:pb-28">
-      {/* Animated mesh gradient background */}
+      {/* Animated mesh gradient */}
       <div className="mesh-bg">
         <div className="blob" />
       </div>
 
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
         <div className="mx-auto max-w-4xl text-center">
-          {/* Eyebrow */}
           <p
             className="hero-anim text-xs font-semibold uppercase tracking-[0.25em] text-indigo-600"
             style={{ animationDelay: "0.05s" }}
@@ -27,7 +26,6 @@ export default function Hero() {
             {pick(t.hero.badge, locale)}
           </p>
 
-          {/* Headline — Apple-scale */}
           <h1
             className="hero-anim mt-5 text-5xl font-semibold leading-[1.02] tracking-[-0.045em] text-zinc-900 sm:text-7xl lg:text-[6.5rem]"
             style={{ animationDelay: "0.15s" }}
@@ -37,7 +35,6 @@ export default function Hero() {
             <span className="italic text-zinc-400">{pick(t.hero.title2, locale)}</span>
           </h1>
 
-          {/* Subtitle */}
           <p
             className="hero-anim mx-auto mt-7 max-w-xl text-lg text-zinc-600 sm:text-xl"
             style={{ animationDelay: "0.25s" }}
@@ -45,7 +42,6 @@ export default function Hero() {
             {pick(t.hero.subtitle, locale)}
           </p>
 
-          {/* CTAs */}
           <div
             className="hero-anim mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row"
             style={{ animationDelay: "0.35s" }}
@@ -75,19 +71,19 @@ export default function Hero() {
           </p>
         </div>
 
-        {/* Device composition */}
+        {/* Studio Display + iPhone composition */}
         <div
           className="hero-anim relative mx-auto mt-20 max-w-5xl lg:mt-24"
           style={{ animationDelay: "0.6s" }}
         >
           <div className="tilt mx-auto">
-            <MacBookFrame>
+            <StudioDisplay>
               <AnimatedDashboard />
-            </MacBookFrame>
+            </StudioDisplay>
           </div>
 
-          {/* iPhone — floating bottom-right, hidden on mobile */}
-          <div className="absolute right-2 -bottom-6 hidden w-[160px] float sm:right-4 sm:-bottom-10 sm:block md:right-12 md:-bottom-12 md:w-[200px] lg:right-20 lg:-bottom-16 lg:w-[240px]">
+          {/* iPhone floats bottom-right */}
+          <div className="absolute right-2 bottom-2 hidden w-[160px] float sm:right-4 sm:bottom-8 sm:block md:right-8 md:bottom-12 md:w-[200px] lg:right-16 lg:bottom-16 lg:w-[240px]">
             <div className="tilt">
               <IPhoneFrame>
                 <AnimatedMobile />

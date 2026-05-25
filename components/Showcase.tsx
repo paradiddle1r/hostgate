@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useI18n, pick } from "@/lib/i18n";
 import { SectionHeader } from "./Features";
 import Reveal from "./Reveal";
-import MacBookFrame from "./MacBookFrame";
+import StudioDisplay from "./StudioDisplay";
 import AnimatedDashboard from "./AnimatedDashboard";
 
 /**
@@ -93,11 +93,11 @@ export default function Showcase() {
       >
         <div className="sticky top-0 flex h-screen items-center">
           <div className="mx-auto grid w-full max-w-7xl grid-cols-2 items-center gap-12 px-5 lg:px-8">
-            {/* Left: MacBook (pinned) — shows phase synced to scroll */}
+            {/* Left: Studio Display (pinned) — shows phase synced to scroll */}
             <div className="float">
-              <MacBookFrame>
+              <StudioDisplay>
                 <AnimatedDashboard phase={features[active]?.phase} />
-              </MacBookFrame>
+              </StudioDisplay>
             </div>
 
             {/* Right: feature text (changes with scroll) */}
