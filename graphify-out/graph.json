@@ -4,220 +4,418 @@
   "graph": {},
   "nodes": [
     {
+      "label": "2026-06-12-pms-v1-design.md",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L1",
+      "id": "docs_superpowers_specs_2026_06_12_pms_v1_design_md",
+      "community": 8,
+      "norm_label": "2026-06-12-pms-v1-design.md"
+    },
+    {
+      "label": "HostGate PMS v1 \u2014 Design",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L1",
+      "id": "specs_2026_06_12_pms_v1_design_hostgate_pms_v1_design",
+      "community": 8,
+      "norm_label": "hostgate pms v1 \u2014 design"
+    },
+    {
+      "label": "Goal",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L5",
+      "id": "specs_2026_06_12_pms_v1_design_goal",
+      "community": 8,
+      "norm_label": "goal"
+    },
+    {
+      "label": "Existing foundation (build ON this, don't replace)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L28",
+      "id": "specs_2026_06_12_pms_v1_design_existing_foundation_build_on_this_don_t_replace",
+      "community": 8,
+      "norm_label": "existing foundation (build on this, don't replace)"
+    },
+    {
+      "label": "Architecture",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L45",
+      "id": "specs_2026_06_12_pms_v1_design_architecture",
+      "community": 8,
+      "norm_label": "architecture"
+    },
+    {
+      "label": "1. Tenant isolation (RLS, single DB)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L47",
+      "id": "specs_2026_06_12_pms_v1_design_1_tenant_isolation_rls_single_db",
+      "community": 8,
+      "norm_label": "1. tenant isolation (rls, single db)"
+    },
+    {
+      "label": "code:sql (create function public.auth_tenant_ids() returns setof uuid)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L53",
+      "id": "specs_2026_06_12_pms_v1_design_codeblock_1",
+      "community": 8,
+      "norm_label": "code:sql (create function public.auth_tenant_ids() returns setof uuid)"
+    },
+    {
+      "label": "code:sql (create policy \"<t>_tenant_rw\" on public.<t> for all to authe)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L61",
+      "id": "specs_2026_06_12_pms_v1_design_codeblock_2",
+      "community": 8,
+      "norm_label": "code:sql (create policy \"<t>_tenant_rw\" on public.<t> for all to authe)"
+    },
+    {
+      "label": "2. Plan limits (pro = premium)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L74",
+      "id": "specs_2026_06_12_pms_v1_design_2_plan_limits_pro_premium",
+      "community": 8,
+      "norm_label": "2. plan limits (pro = premium)"
+    },
+    {
+      "label": "code:ts (export const PLAN_LIMITS = {)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L77",
+      "id": "specs_2026_06_12_pms_v1_design_codeblock_3",
+      "community": 8,
+      "norm_label": "code:ts (export const plan_limits = {)"
+    },
+    {
+      "label": "3. Property codes",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L92",
+      "id": "specs_2026_06_12_pms_v1_design_3_property_codes",
+      "community": 8,
+      "norm_label": "3. property codes"
+    },
+    {
+      "label": "4. Error-code system (debuggability)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L100",
+      "id": "specs_2026_06_12_pms_v1_design_4_error_code_system_debuggability",
+      "community": 8,
+      "norm_label": "4. error-code system (debuggability)"
+    },
+    {
+      "label": "code:ts (export type HGErrorCode =)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L103",
+      "id": "specs_2026_06_12_pms_v1_design_codeblock_4",
+      "community": 8,
+      "norm_label": "code:ts (export type hgerrorcode =)"
+    },
+    {
+      "label": "5. App shell (`/app`)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L126",
+      "id": "specs_2026_06_12_pms_v1_design_5_app_shell_app",
+      "community": 8,
+      "norm_label": "5. app shell (`/app`)"
+    },
+    {
+      "label": "code:block5 (app/app/)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L140",
+      "id": "specs_2026_06_12_pms_v1_design_codeblock_5",
+      "community": 8,
+      "norm_label": "code:block5 (app/app/)"
+    },
+    {
+      "label": "6. Theming",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L150",
+      "id": "specs_2026_06_12_pms_v1_design_6_theming",
+      "community": 8,
+      "norm_label": "6. theming"
+    },
+    {
+      "label": "7. Data model (new tables)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L161",
+      "id": "specs_2026_06_12_pms_v1_design_7_data_model_new_tables",
+      "community": 8,
+      "norm_label": "7. data model (new tables)"
+    },
+    {
+      "label": "8. Calendar (flagship)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L188",
+      "id": "specs_2026_06_12_pms_v1_design_8_calendar_flagship",
+      "community": 8,
+      "norm_label": "8. calendar (flagship)"
+    },
+    {
+      "label": "Data-access layer",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L205",
+      "id": "specs_2026_06_12_pms_v1_design_data_access_layer",
+      "community": 8,
+      "norm_label": "data-access layer"
+    },
+    {
+      "label": "Out of scope for v1 (later phases)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L217",
+      "id": "specs_2026_06_12_pms_v1_design_out_of_scope_for_v1_later_phases",
+      "community": 8,
+      "norm_label": "out of scope for v1 (later phases)"
+    },
+    {
+      "label": "Testing & verification",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L225",
+      "id": "specs_2026_06_12_pms_v1_design_testing_verification",
+      "community": 8,
+      "norm_label": "testing & verification"
+    },
+    {
+      "label": "Build order (for the implementation plan)",
+      "file_type": "document",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L237",
+      "id": "specs_2026_06_12_pms_v1_design_build_order_for_the_implementation_plan",
+      "community": 8,
+      "norm_label": "build order (for the implementation plan)"
+    },
+    {
       "label": "settings.json",
       "file_type": "code",
       "source_file": ".claude/settings.json",
       "source_location": "L1",
-      "id": "claude_settings_json",
       "community": 18,
-      "norm_label": "settings.json"
+      "norm_label": "settings.json",
+      "id": "claude_settings_json"
     },
     {
       "label": "hooks",
       "file_type": "code",
       "source_file": ".claude/settings.json",
       "source_location": "L2",
-      "id": "claude_settings_hooks",
       "community": 18,
-      "norm_label": "hooks"
+      "norm_label": "hooks",
+      "id": "claude_settings_hooks"
     },
     {
       "label": "PreToolUse",
       "file_type": "code",
       "source_file": ".claude/settings.json",
       "source_location": "L3",
-      "id": "claude_settings_hooks_pretooluse",
       "community": 18,
-      "norm_label": "pretooluse"
+      "norm_label": "pretooluse",
+      "id": "claude_settings_hooks_pretooluse"
     },
     {
       "label": "CLAUDE.md",
       "file_type": "document",
       "source_file": "CLAUDE.md",
       "source_location": "L1",
-      "id": "claude_md",
       "community": 19,
-      "norm_label": "claude.md"
+      "norm_label": "claude.md",
+      "id": "claude_md"
     },
     {
       "label": "graphify",
       "file_type": "document",
       "source_file": "CLAUDE.md",
       "source_location": "L1",
-      "id": "hostgate_app_claude_graphify",
       "community": 19,
-      "norm_label": "graphify"
+      "norm_label": "graphify",
+      "id": "hostgate_app_claude_graphify"
     },
     {
       "label": "layout.tsx",
       "file_type": "code",
       "source_file": "app/layout.tsx",
       "source_location": "L1",
-      "id": "app_layout_tsx",
       "community": 6,
-      "norm_label": "layout.tsx"
+      "norm_label": "layout.tsx",
+      "id": "app_layout_tsx"
     },
     {
       "label": "metadata",
       "file_type": "code",
       "source_file": "app/layout.tsx",
       "source_location": "L7",
-      "id": "app_layout_metadata",
       "community": 6,
-      "norm_label": "metadata"
+      "norm_label": "metadata",
+      "id": "app_layout_metadata"
     },
     {
       "label": "RootLayout()",
       "file_type": "code",
       "source_file": "app/layout.tsx",
       "source_location": "L45",
-      "id": "app_layout_rootlayout",
       "community": 6,
-      "norm_label": "rootlayout()"
+      "norm_label": "rootlayout()",
+      "id": "app_layout_rootlayout"
     },
     {
       "label": "FAQ.tsx",
       "file_type": "code",
       "source_file": "components/FAQ.tsx",
       "source_location": "L1",
-      "id": "components_faq_tsx",
       "community": 0,
-      "norm_label": "faq.tsx"
+      "norm_label": "faq.tsx",
+      "id": "components_faq_tsx"
     },
     {
       "label": "FAQ()",
       "file_type": "code",
       "source_file": "components/FAQ.tsx",
       "source_location": "L8",
-      "id": "components_faq_faq",
       "community": 0,
-      "norm_label": "faq()"
+      "norm_label": "faq()",
+      "id": "components_faq_faq"
     },
     {
       "label": "Footer.tsx",
       "file_type": "code",
       "source_file": "components/Footer.tsx",
       "source_location": "L1",
-      "id": "components_footer_tsx",
       "community": 6,
-      "norm_label": "footer.tsx"
+      "norm_label": "footer.tsx",
+      "id": "components_footer_tsx"
     },
     {
       "label": "Footer()",
       "file_type": "code",
       "source_file": "components/Footer.tsx",
       "source_location": "L7",
-      "id": "components_footer_footer",
       "community": 6,
-      "norm_label": "footer()"
+      "norm_label": "footer()",
+      "id": "components_footer_footer"
     },
     {
       "label": "SocialIcon()",
       "file_type": "code",
       "source_file": "components/Footer.tsx",
       "source_location": "L103",
-      "id": "components_footer_socialicon",
       "community": 6,
-      "norm_label": "socialicon()"
+      "norm_label": "socialicon()",
+      "id": "components_footer_socialicon"
     },
     {
       "label": "Hero.tsx",
       "file_type": "code",
       "source_file": "components/Hero.tsx",
       "source_location": "L1",
-      "id": "components_hero_tsx",
       "community": 2,
-      "norm_label": "hero.tsx"
+      "norm_label": "hero.tsx",
+      "id": "components_hero_tsx"
     },
     {
       "label": "Hero()",
       "file_type": "code",
       "source_file": "components/Hero.tsx",
       "source_location": "L10",
-      "id": "components_hero_hero",
       "community": 2,
-      "norm_label": "hero()"
+      "norm_label": "hero()",
+      "id": "components_hero_hero"
     },
     {
       "label": "Integrations.tsx",
       "file_type": "code",
       "source_file": "components/Integrations.tsx",
       "source_location": "L1",
-      "id": "components_integrations_tsx",
       "community": 0,
-      "norm_label": "integrations.tsx"
+      "norm_label": "integrations.tsx",
+      "id": "components_integrations_tsx"
     },
     {
       "label": "Integrations",
       "file_type": "code",
       "source_file": "components/Integrations.tsx",
       "source_location": "L22",
-      "id": "components_integrations_integrations",
       "community": 0,
-      "norm_label": "integrations"
+      "norm_label": "integrations",
+      "id": "components_integrations_integrations"
     },
     {
       "label": "Pricing.tsx",
       "file_type": "code",
       "source_file": "components/Pricing.tsx",
       "source_location": "L1",
-      "id": "components_pricing_tsx",
       "community": 0,
-      "norm_label": "pricing.tsx"
+      "norm_label": "pricing.tsx",
+      "id": "components_pricing_tsx"
     },
     {
       "label": "Pricing()",
       "file_type": "code",
       "source_file": "components/Pricing.tsx",
       "source_location": "L9",
-      "id": "components_pricing_pricing",
       "community": 0,
-      "norm_label": "pricing()"
+      "norm_label": "pricing()",
+      "id": "components_pricing_pricing"
     },
     {
       "label": "Screenshots.tsx",
       "file_type": "code",
       "source_file": "components/Screenshots.tsx",
       "source_location": "L1",
-      "id": "components_screenshots_tsx",
       "community": 2,
-      "norm_label": "screenshots.tsx"
+      "norm_label": "screenshots.tsx",
+      "id": "components_screenshots_tsx"
     },
     {
       "label": "Screenshots()",
       "file_type": "code",
       "source_file": "components/Screenshots.tsx",
       "source_location": "L13",
-      "id": "components_screenshots_screenshots",
       "community": 2,
-      "norm_label": "screenshots()"
+      "norm_label": "screenshots()",
+      "id": "components_screenshots_screenshots"
     },
     {
       "label": "Trusted.tsx",
       "file_type": "code",
       "source_file": "components/Trusted.tsx",
       "source_location": "L1",
-      "id": "components_trusted_tsx",
       "community": 0,
-      "norm_label": "trusted.tsx"
+      "norm_label": "trusted.tsx",
+      "id": "components_trusted_tsx"
     },
     {
       "label": "logos",
       "file_type": "code",
       "source_file": "components/Trusted.tsx",
       "source_location": "L5",
-      "id": "components_trusted_logos",
       "community": 0,
-      "norm_label": "logos"
+      "norm_label": "logos",
+      "id": "components_trusted_logos"
     },
     {
       "label": "Trusted()",
       "file_type": "code",
       "source_file": "components/Trusted.tsx",
       "source_location": "L16",
-      "id": "components_trusted_trusted",
       "community": 0,
-      "norm_label": "trusted()"
+      "norm_label": "trusted()",
+      "id": "components_trusted_trusted"
     },
     {
       "label": "next.config.mjs",
@@ -1232,7 +1430,7 @@
       "file_type": "code",
       "source_file": "components/AnimatedCounter.tsx",
       "source_location": "L1",
-      "community": 8,
+      "community": 0,
       "norm_label": "animatedcounter.tsx",
       "id": "components_animatedcounter_tsx"
     },
@@ -1241,7 +1439,7 @@
       "file_type": "code",
       "source_file": "components/AnimatedCounter.tsx",
       "source_location": "L10",
-      "community": 8,
+      "community": 0,
       "norm_label": "animatedcounter()",
       "id": "components_animatedcounter_animatedcounter"
     },
@@ -1538,7 +1736,7 @@
       "file_type": "code",
       "source_file": "components/Reveal.tsx",
       "source_location": "L1",
-      "community": 8,
+      "community": 0,
       "norm_label": "reveal.tsx",
       "id": "components_reveal_tsx"
     },
@@ -1547,7 +1745,7 @@
       "file_type": "code",
       "source_file": "components/Reveal.tsx",
       "source_location": "L6",
-      "community": 8,
+      "community": 0,
       "norm_label": "variant",
       "id": "components_reveal_variant"
     },
@@ -1556,7 +1754,7 @@
       "file_type": "code",
       "source_file": "components/Reveal.tsx",
       "source_location": "L11",
-      "community": 8,
+      "community": 0,
       "norm_label": "reveal()",
       "id": "components_reveal_reveal"
     },
@@ -1718,7 +1916,7 @@
       "file_type": "code",
       "source_file": "lib/useReveal.tsx",
       "source_location": "L1",
-      "community": 8,
+      "community": 0,
       "norm_label": "usereveal.tsx",
       "id": "lib_usereveal_tsx"
     },
@@ -1727,7 +1925,7 @@
       "file_type": "code",
       "source_file": "lib/useReveal.tsx",
       "source_location": "L13",
-      "community": 8,
+      "community": 0,
       "norm_label": "usereveal()",
       "id": "lib_usereveal_usereveal"
     },
@@ -1736,7 +1934,7 @@
       "file_type": "code",
       "source_file": "lib/useReveal.tsx",
       "source_location": "L53",
-      "community": 8,
+      "community": 0,
       "norm_label": "usescrollprogress()",
       "id": "lib_usereveal_usescrollprogress"
     }
@@ -1745,12 +1943,222 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "docs_superpowers_specs_2026_06_12_pms_v1_design_md",
+      "target": "specs_2026_06_12_pms_v1_design_hostgate_pms_v1_design",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "specs_2026_06_12_pms_v1_design_hostgate_pms_v1_design",
+      "target": "specs_2026_06_12_pms_v1_design_goal",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L28",
+      "weight": 1.0,
+      "source": "specs_2026_06_12_pms_v1_design_hostgate_pms_v1_design",
+      "target": "specs_2026_06_12_pms_v1_design_existing_foundation_build_on_this_don_t_replace",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L45",
+      "weight": 1.0,
+      "source": "specs_2026_06_12_pms_v1_design_hostgate_pms_v1_design",
+      "target": "specs_2026_06_12_pms_v1_design_architecture",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L217",
+      "weight": 1.0,
+      "source": "specs_2026_06_12_pms_v1_design_hostgate_pms_v1_design",
+      "target": "specs_2026_06_12_pms_v1_design_out_of_scope_for_v1_later_phases",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L225",
+      "weight": 1.0,
+      "source": "specs_2026_06_12_pms_v1_design_hostgate_pms_v1_design",
+      "target": "specs_2026_06_12_pms_v1_design_testing_verification",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L237",
+      "weight": 1.0,
+      "source": "specs_2026_06_12_pms_v1_design_hostgate_pms_v1_design",
+      "target": "specs_2026_06_12_pms_v1_design_build_order_for_the_implementation_plan",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L47",
+      "weight": 1.0,
+      "source": "specs_2026_06_12_pms_v1_design_architecture",
+      "target": "specs_2026_06_12_pms_v1_design_1_tenant_isolation_rls_single_db",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L74",
+      "weight": 1.0,
+      "source": "specs_2026_06_12_pms_v1_design_architecture",
+      "target": "specs_2026_06_12_pms_v1_design_2_plan_limits_pro_premium",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L92",
+      "weight": 1.0,
+      "source": "specs_2026_06_12_pms_v1_design_architecture",
+      "target": "specs_2026_06_12_pms_v1_design_3_property_codes",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L100",
+      "weight": 1.0,
+      "source": "specs_2026_06_12_pms_v1_design_architecture",
+      "target": "specs_2026_06_12_pms_v1_design_4_error_code_system_debuggability",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L126",
+      "weight": 1.0,
+      "source": "specs_2026_06_12_pms_v1_design_architecture",
+      "target": "specs_2026_06_12_pms_v1_design_5_app_shell_app",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L150",
+      "weight": 1.0,
+      "source": "specs_2026_06_12_pms_v1_design_architecture",
+      "target": "specs_2026_06_12_pms_v1_design_6_theming",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L161",
+      "weight": 1.0,
+      "source": "specs_2026_06_12_pms_v1_design_architecture",
+      "target": "specs_2026_06_12_pms_v1_design_7_data_model_new_tables",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L188",
+      "weight": 1.0,
+      "source": "specs_2026_06_12_pms_v1_design_architecture",
+      "target": "specs_2026_06_12_pms_v1_design_8_calendar_flagship",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L205",
+      "weight": 1.0,
+      "source": "specs_2026_06_12_pms_v1_design_architecture",
+      "target": "specs_2026_06_12_pms_v1_design_data_access_layer",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L53",
+      "weight": 1.0,
+      "source": "specs_2026_06_12_pms_v1_design_1_tenant_isolation_rls_single_db",
+      "target": "specs_2026_06_12_pms_v1_design_codeblock_1",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L61",
+      "weight": 1.0,
+      "source": "specs_2026_06_12_pms_v1_design_1_tenant_isolation_rls_single_db",
+      "target": "specs_2026_06_12_pms_v1_design_codeblock_2",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L77",
+      "weight": 1.0,
+      "source": "specs_2026_06_12_pms_v1_design_2_plan_limits_pro_premium",
+      "target": "specs_2026_06_12_pms_v1_design_codeblock_3",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L103",
+      "weight": 1.0,
+      "source": "specs_2026_06_12_pms_v1_design_4_error_code_system_debuggability",
+      "target": "specs_2026_06_12_pms_v1_design_codeblock_4",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/superpowers/specs/2026-06-12-pms-v1-design.md",
+      "source_location": "L140",
+      "weight": 1.0,
+      "source": "specs_2026_06_12_pms_v1_design_5_app_shell_app",
+      "target": "specs_2026_06_12_pms_v1_design_codeblock_5",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": ".claude/settings.json",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "claude_settings_json",
-      "target": "claude_settings_hooks",
-      "confidence_score": 1.0
+      "target": "claude_settings_hooks"
     },
     {
       "relation": "contains",
@@ -1758,9 +2166,9 @@
       "source_file": ".claude/settings.json",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "claude_settings_hooks",
-      "target": "claude_settings_hooks_pretooluse",
-      "confidence_score": 1.0
+      "target": "claude_settings_hooks_pretooluse"
     },
     {
       "relation": "contains",
@@ -1768,9 +2176,9 @@
       "source_file": "CLAUDE.md",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "claude_md",
-      "target": "hostgate_app_claude_graphify",
-      "confidence_score": 1.0
+      "target": "hostgate_app_claude_graphify"
     },
     {
       "relation": "imports",
@@ -5066,5 +5474,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "a8ca88ca5f66d07e40a512b0f1761c4a4e4be3cd"
+  "built_at_commit": "f8ef03afddf6f35ea0d8e1cdda845b0a8842e66c"
 }

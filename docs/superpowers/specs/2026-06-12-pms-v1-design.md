@@ -162,10 +162,25 @@ non-pro. Theme applied in `app/app/layout.tsx` via `data-theme` on the shell.
 
 All carry `id uuid pk`, `tenant_id`, `property_id`, `created_at`, RLS as §1.
 
-- **`rooms`** — individual unit. `(room_type_id, number text, floor int null,
-  status text default 'active' check active|inactive, sort_order)`. Unique
-  `(property_id, number)`. Auto-generated from a room_type's `quantity` via a
-  "Generate rooms" action (e.g. floor-based 101–110) but fully editable.
+- **`rooms`** — individual unit. `(room_type_id uuid null, number text,
+  floor int, status text default 'active' check active|inactive, sort_order)`.
+  Unique `(property_id, number)`. `room_type_id` is nullable so rooms can be
+  generated first and typed after.
+
+  **Floor-based room generator (the room-setup flow):** the user enters the
+  number of **floors** and, per floor, **how many rooms** that floor has
+  (e.g. floor 1 → 10 rooms, floor 2 → 8). "Generate" produces room numbers by
+  the convention `floor*100 + n` (101–110, 201–208, …) — the standard hotel
+  numbering, editable before commit. The generated rooms then land in a
+  **bulk type-assignment grid**: every room shows with a room-type dropdown so
+  the user assigns types to all rooms **in one pass** (with "apply to whole
+  floor" / "apply to rest" shortcuts so a 40-room property is a few clicks, not
+  40). Saving inserts all rooms + their `room_type_id` together.
+
+  This flow is reachable **(a)** as a step in onboarding right after room-types
+  are defined, and **(b)** anytime from the Rooms management page (add a floor,
+  add rooms, re-assign types). Room types still come from `room_types`
+  (name + rates); this flow maps physical rooms onto them.
 - **`guests`** — `(full_name, phone, email, id_number, nationality, notes)`.
   Property-scoped. Indexed on phone + lower(full_name) for front-desk search.
 - **`bookings`** — the reservation:
@@ -245,7 +260,9 @@ these bolt on without migration pain.
    Skeleton — TS analogues of the hotel-pms ones).
 3. **App shell** — `app/app/layout.tsx` sidebar + topbar + property switcher +
    settings (theme/locale/plan/property details).
-4. **Rooms** — management page + generate-from-room-type.
+4. **Rooms** — floor-based generator (floors × rooms-per-floor → `floor*100+n`
+   numbers) + bulk type-assignment grid (assign room_type per room in one pass,
+   with per-floor / apply-to-rest shortcuts); management page to edit later.
 5. **Guests** — list + search + create/edit.
 6. **Calendar** — grid + today panel + new/edit booking modal + check-in/out +
    mobile list.
