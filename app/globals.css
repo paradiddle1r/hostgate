@@ -285,3 +285,127 @@ h1, h2 { letter-spacing: -0.028em; }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ============================================================================
+   PMS APP THEME SYSTEM
+   ----------------------------------------------------------------------------
+   Scoped entirely under [data-theme] so it CANNOT leak into the marketing
+   pages above. Four themes — light / dark / light-glass / dark-glass — driven
+   by a [data-theme] attribute on the app shell. The two "-glass" variants are
+   Apple-liquid-glass: translucent surfaces + a backdrop blur.
+
+   Tokens (set per theme):
+     --app-bg          page background
+     --app-surface     primary card/panel surface
+     --app-surface-2   secondary / nested surface
+     --app-fg          primary text
+     --app-fg-muted    secondary / muted text
+     --app-border      hairline borders
+     --app-accent      brand indigo (#6366f1)
+     --app-accent-fg   text/icon on accent (#fff)
+     --app-danger      destructive (#dc2626)
+     --app-success     positive (#16a34a)
+     --app-glass-blur  backdrop blur radius (glass themes only)
+   ============================================================================ */
+
+[data-theme="light"] {
+  --app-bg: #f7f7fb;
+  --app-surface: #ffffff;
+  --app-surface-2: #f1f1f6;
+  --app-fg: #18181b;
+  --app-fg-muted: #6b7280;
+  --app-border: #e5e7eb;
+  --app-accent: #6366f1;
+  --app-accent-fg: #ffffff;
+  --app-danger: #dc2626;
+  --app-success: #16a34a;
+}
+
+[data-theme="dark"] {
+  --app-bg: #0a0a0f;
+  --app-surface: #16161d;
+  --app-surface-2: #1f1f29;
+  --app-fg: #f4f4f5;
+  --app-fg-muted: #9ca3af;
+  --app-border: #2a2a35;
+  --app-accent: #6366f1;
+  --app-accent-fg: #ffffff;
+  --app-danger: #dc2626;
+  --app-success: #16a34a;
+}
+
+[data-theme="light-glass"] {
+  --app-bg: #eef0fb;
+  --app-surface: rgba(255, 255, 255, 0.6);
+  --app-surface-2: rgba(255, 255, 255, 0.45);
+  --app-fg: #18181b;
+  --app-fg-muted: #5b6170;
+  --app-border: rgba(255, 255, 255, 0.55);
+  --app-accent: #6366f1;
+  --app-accent-fg: #ffffff;
+  --app-danger: #dc2626;
+  --app-success: #16a34a;
+  --app-glass-blur: 16px;
+}
+
+[data-theme="dark-glass"] {
+  --app-bg: #08080d;
+  --app-surface: rgba(30, 30, 42, 0.6);
+  --app-surface-2: rgba(40, 40, 56, 0.45);
+  --app-fg: #f4f4f5;
+  --app-fg-muted: #a1a1b2;
+  --app-border: rgba(255, 255, 255, 0.12);
+  --app-accent: #6366f1;
+  --app-accent-fg: #ffffff;
+  --app-danger: #dc2626;
+  --app-success: #16a34a;
+  --app-glass-blur: 16px;
+}
+
+/* App shell base — paints the page in theme colors. */
+[data-theme].app-shell,
+[data-theme] .app-shell {
+  background: var(--app-bg);
+  color: var(--app-fg);
+}
+
+/* Surface utility — opaque on flat themes, frosted glass on the -glass ones. */
+[data-theme] .app-surface {
+  background: var(--app-surface);
+}
+[data-theme$="-glass"] .app-surface {
+  backdrop-filter: blur(var(--app-glass-blur));
+  -webkit-backdrop-filter: blur(var(--app-glass-blur));
+}
+
+/* Toast slide-in (used by components/app/ui/Toast.tsx) */
+@keyframes app-toast-in {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+[data-theme] .app-toast-in {
+  animation: app-toast-in 0.24s var(--ease-apple, cubic-bezier(0.4, 0, 0.2, 1)) both;
+}
+
+/* Skeleton shimmer (used by components/app/ui/Skeleton.tsx) */
+@keyframes app-skeleton-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+[data-theme] .app-skeleton {
+  background-image: linear-gradient(
+    90deg,
+    var(--app-surface-2) 0%,
+    var(--app-border) 50%,
+    var(--app-surface-2) 100%
+  );
+  background-size: 200% 100%;
+  animation: app-skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-theme] .app-toast-in,
+  [data-theme] .app-skeleton {
+    animation: none !important;
+  }
+}
