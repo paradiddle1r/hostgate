@@ -1,0 +1,101 @@
+"use client";
+
+// Small bilingual string table for the PMS shell, keyed off the marketing
+// site's existing locale (useI18n().locale). Kept separate from lib/i18n.tsx's
+// giant marketing `translations` object so the app strings stay legible and
+// edits here can't disturb the landing page.
+
+import { useI18n } from "./i18n";
+
+const STR: Record<"th" | "en", Record<string, string>> = {
+  th: {
+    "nav.calendar": "ปฏิทิน",
+    "nav.guests": "แขก",
+    "nav.rooms": "ห้องพัก",
+    "nav.settings": "ตั้งค่า",
+    "nav.home": "ภาพรวม",
+    "shell.signOut": "ออกจากระบบ",
+    "shell.addProperty": "เพิ่มที่พัก",
+    "shell.upgradeForMore": "อัปเกรดเป็น Pro เพื่อเพิ่มที่พักหลายแห่ง",
+    "shell.theme": "ธีม",
+    "shell.language": "ภาษา",
+    "theme.light": "สว่าง",
+    "theme.dark": "มืด",
+    "theme.light-glass": "สว่าง (กระจก)",
+    "theme.dark-glass": "มืด (กระจก)",
+    "theme.proOnly": "เฉพาะ Pro",
+    "home.title": "ภาพรวม",
+    "home.welcome": "ยินดีต้อนรับ",
+    "home.quickRooms": "จัดการห้องพัก",
+    "home.quickGuests": "ข้อมูลแขก",
+    "home.quickCalendar": "เปิดปฏิทินจอง",
+    "home.rooms": "ห้องพัก",
+    "home.guests": "แขก",
+    "home.bookingsToday": "เข้าพักวันนี้",
+    "settings.title": "ตั้งค่า",
+    "settings.property": "ข้อมูลที่พัก",
+    "settings.appearance": "การแสดงผล",
+    "settings.plan": "แพ็กเกจ",
+    "settings.name": "ชื่อที่พัก",
+    "settings.address": "ที่อยู่",
+    "settings.city": "เมือง/จังหวัด",
+    "settings.currency": "สกุลเงิน",
+    "settings.timezone": "เขตเวลา",
+    "settings.save": "บันทึก",
+    "settings.saved": "บันทึกแล้ว",
+    "settings.code": "รหัสที่พัก",
+    "settings.properties": "ที่พัก",
+    "common.loading": "กำลังโหลด…",
+    "common.cancel": "ยกเลิก",
+    "common.comingSoon": "กำลังพัฒนา",
+    "common.comingSoonHint": "ฟีเจอร์นี้กำลังจะมาในเร็ว ๆ นี้",
+  },
+  en: {
+    "nav.calendar": "Calendar",
+    "nav.guests": "Guests",
+    "nav.rooms": "Rooms",
+    "nav.settings": "Settings",
+    "nav.home": "Overview",
+    "shell.signOut": "Sign out",
+    "shell.addProperty": "Add property",
+    "shell.upgradeForMore": "Upgrade to Pro for multiple properties",
+    "shell.theme": "Theme",
+    "shell.language": "Language",
+    "theme.light": "Light",
+    "theme.dark": "Dark",
+    "theme.light-glass": "Light glass",
+    "theme.dark-glass": "Dark glass",
+    "theme.proOnly": "Pro only",
+    "home.title": "Overview",
+    "home.welcome": "Welcome",
+    "home.quickRooms": "Manage rooms",
+    "home.quickGuests": "Guest directory",
+    "home.quickCalendar": "Open booking calendar",
+    "home.rooms": "Rooms",
+    "home.guests": "Guests",
+    "home.bookingsToday": "Arrivals today",
+    "settings.title": "Settings",
+    "settings.property": "Property details",
+    "settings.appearance": "Appearance",
+    "settings.plan": "Plan",
+    "settings.name": "Property name",
+    "settings.address": "Address",
+    "settings.city": "City / province",
+    "settings.currency": "Currency",
+    "settings.timezone": "Timezone",
+    "settings.save": "Save",
+    "settings.saved": "Saved",
+    "settings.code": "Property code",
+    "settings.properties": "properties",
+    "common.loading": "Loading…",
+    "common.cancel": "Cancel",
+    "common.comingSoon": "Coming soon",
+    "common.comingSoonHint": "This feature is on the way.",
+  },
+};
+
+export function useAppT(): (key: string) => string {
+  const { locale } = useI18n();
+  const l = locale === "en" ? "en" : "th";
+  return (key: string) => STR[l][key] ?? STR.en[key] ?? key;
+}

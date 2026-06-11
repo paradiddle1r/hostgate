@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { I18nProvider } from "@/lib/i18n";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import MarketingChrome from "@/components/MarketingChrome";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://hostgate.app"),
@@ -46,20 +45,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className="min-h-screen overflow-x-hidden bg-white text-zinc-900">
-        {/* Global animated mesh gradient — fixed background that drifts */}
-        <div className="mesh-bg" aria-hidden>
-          <div className="blob b1" />
-          <div className="blob b2" />
-          <div className="blob b3" />
-          <div className="blob b4" />
-          <div className="blob b5" />
-        </div>
         <I18nProvider>
-          <div className="relative">
-            <Navbar />
-            <main>{children}</main>
-            <Footer />
-          </div>
+          <MarketingChrome>{children}</MarketingChrome>
         </I18nProvider>
       </body>
     </html>
