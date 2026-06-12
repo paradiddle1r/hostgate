@@ -79,25 +79,56 @@ export default function AppShell({
       <ToastProvider>
         <div
           data-theme={theme}
-          className="app-shell flex min-h-screen"
+          className="app-shell relative flex min-h-screen flex-col"
           style={{ background: "var(--app-bg)", color: "var(--app-fg)" }}
         >
-          {/* Desktop sidebar */}
-          <aside className="hidden w-60 shrink-0 border-r border-[var(--app-border)] lg:block">
-            <div className="flex h-16 items-center gap-2 px-5 text-lg font-semibold tracking-tight">
+          {/* Liquid mesh — visible only on the Pro glass tiers (CSS-gated). */}
+          <div className="app-mesh" aria-hidden>
+            <i /><i /><i /><i />
+          </div>
+
+          {/* Top bar — horizontal nav, like the real hotel-pms desktop. */}
+          <header className="relative z-20 flex h-14 flex-none items-center gap-2 border-b border-[var(--app-border)] px-3 md:px-4">
+            <button className="lg:hidden" onClick={() => setDrawer(true)} aria-label="Open menu">
+              <Menu size={22} />
+            </button>
+            <Link href="/app" className="flex flex-none items-center gap-1 pr-1 text-[17px] font-semibold tracking-tight">
               <span>Stay</span>
               <span className="text-[var(--app-accent)]">MAYB</span>
+            </Link>
+            <nav className="hidden min-w-0 items-center gap-0.5 lg:flex">
+              {NAV.map(({ href, icon: Icon, key, exact }) => {
+                const on = isActive(href, exact);
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={`flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-medium transition ${
+                      on
+                        ? "bg-[var(--app-accent)] text-[var(--app-accent-fg)]"
+                        : "text-[var(--app-fg-muted)] hover:bg-[var(--app-surface-2)] hover:text-[var(--app-fg)]"
+                    }`}
+                  >
+                    <Icon size={15} /> {t(key)}
+                  </Link>
+                );
+              })}
+            </nav>
+            <div className="ml-auto flex flex-none items-center gap-2">
+              <PropertySwitcher />
+              <LocaleToggle />
+              <ThemeToggle theme={theme} plan={plan} onChange={setTheme} />
+              <SignOutButton />
             </div>
-            {nav}
-          </aside>
+          </header>
 
           {/* Mobile drawer */}
           {drawer && (
             <div className="fixed inset-0 z-40 lg:hidden">
               <div className="absolute inset-0 bg-black/40" onClick={() => setDrawer(false)} aria-hidden />
               <aside className="app-surface absolute left-0 top-0 h-full w-64 border-r border-[var(--app-border)]">
-                <div className="flex h-16 items-center justify-between px-5">
-                  <span className="text-lg font-semibold">Stay <span className="text-[var(--app-accent)]">MAYB</span></span>
+                <div className="flex h-14 items-center justify-between px-5">
+                  <span className="text-base font-semibold">Stay <span className="text-[var(--app-accent)]">MAYB</span></span>
                   <button onClick={() => setDrawer(false)} aria-label="Close menu">
                     <X size={20} />
                   </button>
@@ -107,25 +138,8 @@ export default function AppShell({
             </div>
           )}
 
-          {/* Main column */}
-          <div className="flex min-w-0 flex-1 flex-col">
-            <header className="flex h-16 items-center gap-3 border-b border-[var(--app-border)] px-4">
-              <button
-                className="lg:hidden"
-                onClick={() => setDrawer(true)}
-                aria-label="Open menu"
-              >
-                <Menu size={22} />
-              </button>
-              <PropertySwitcher />
-              <div className="ml-auto flex items-center gap-2">
-                <LocaleToggle />
-                <ThemeToggle theme={theme} plan={plan} onChange={setTheme} />
-                <SignOutButton />
-              </div>
-            </header>
-            <main className="min-w-0 flex-1 overflow-x-hidden p-4 md:p-6">{children}</main>
-          </div>
+          {/* Content */}
+          <main className="relative z-10 min-w-0 flex-1 overflow-x-hidden p-4 md:p-6">{children}</main>
         </div>
       </ToastProvider>
     </ActivePropertyProvider>

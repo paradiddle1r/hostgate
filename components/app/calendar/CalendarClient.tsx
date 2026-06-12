@@ -305,8 +305,10 @@ function Row({
               left: s * COL + 2,
               width: (e - s) * COL - 4,
               background: STATUS_BG[b.status],
+              // @ts-expect-error CSS var consumed by .app-cal-bar's frosted recipe
+              "--bc": STATUS_BG[b.status],
             }}
-            className="absolute top-1 h-[30px] truncate rounded-md px-2 text-left text-xs font-medium text-white shadow-sm"
+            className="app-cal-bar absolute top-1 h-[30px] truncate px-2.5 text-left text-xs font-medium text-white shadow-sm"
           >
             {b.guest_name}
           </button>

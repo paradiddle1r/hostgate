@@ -308,40 +308,45 @@ h1, h2 { letter-spacing: -0.028em; }
      --app-glass-blur  backdrop blur radius (glass themes only)
    ============================================================================ */
 
+/* Palettes mirror the real hotel-pms "liquid light / dark" themes so the
+   product looks the same as the system it productizes. Free tier = the two
+   FLAT variants (opaque surfaces, no mesh); Pro tier = the two -glass variants
+   (translucent + backdrop blur + the animated liquid mesh). Accent is Apple
+   blue on light (#0a84ff) and Apple cyan on dark (#64d2ff). */
 [data-theme="light"] {
-  --app-bg: #f7f7fb;
+  --app-bg: #eaf1fb;
   --app-surface: #ffffff;
-  --app-surface-2: #f1f1f6;
-  --app-fg: #18181b;
-  --app-fg-muted: #6b7280;
-  --app-border: #e5e7eb;
-  --app-accent: #6366f1;
+  --app-surface-2: #eef3fb;
+  --app-fg: #0b1220;
+  --app-fg-muted: #5a6678;
+  --app-border: rgba(71, 85, 105, 0.16);
+  --app-accent: #0a84ff;
   --app-accent-fg: #ffffff;
   --app-danger: #dc2626;
   --app-success: #16a34a;
 }
 
 [data-theme="dark"] {
-  --app-bg: #0a0a0f;
-  --app-surface: #16161d;
-  --app-surface-2: #1f1f29;
-  --app-fg: #f4f4f5;
-  --app-fg-muted: #9ca3af;
-  --app-border: #2a2a35;
-  --app-accent: #6366f1;
-  --app-accent-fg: #ffffff;
-  --app-danger: #dc2626;
-  --app-success: #16a34a;
+  --app-bg: #0a0e14;
+  --app-surface: #141a26;
+  --app-surface-2: #1b2230;
+  --app-fg: #f2f6fc;
+  --app-fg-muted: #9aa6b8;
+  --app-border: rgba(255, 255, 255, 0.1);
+  --app-accent: #64d2ff;
+  --app-accent-fg: #06121c;
+  --app-danger: #f87171;
+  --app-success: #34d399;
 }
 
 [data-theme="light-glass"] {
-  --app-bg: #eef0fb;
-  --app-surface: rgba(255, 255, 255, 0.6);
-  --app-surface-2: rgba(255, 255, 255, 0.45);
-  --app-fg: #18181b;
-  --app-fg-muted: #5b6170;
-  --app-border: rgba(255, 255, 255, 0.55);
-  --app-accent: #6366f1;
+  --app-bg: #eaf1fb;
+  --app-surface: rgba(255, 255, 255, 0.55);
+  --app-surface-2: rgba(247, 250, 255, 0.42);
+  --app-fg: #0b1220;
+  --app-fg-muted: #5a6678;
+  --app-border: rgba(255, 255, 255, 0.5);
+  --app-accent: #0a84ff;
   --app-accent-fg: #ffffff;
   --app-danger: #dc2626;
   --app-success: #16a34a;
@@ -349,16 +354,16 @@ h1, h2 { letter-spacing: -0.028em; }
 }
 
 [data-theme="dark-glass"] {
-  --app-bg: #08080d;
-  --app-surface: rgba(30, 30, 42, 0.6);
-  --app-surface-2: rgba(40, 40, 56, 0.45);
-  --app-fg: #f4f4f5;
-  --app-fg-muted: #a1a1b2;
+  --app-bg: #0a0e14;
+  --app-surface: rgba(28, 34, 52, 0.5);
+  --app-surface-2: rgba(40, 48, 68, 0.4);
+  --app-fg: #f2f6fc;
+  --app-fg-muted: #9aa6b8;
   --app-border: rgba(255, 255, 255, 0.12);
-  --app-accent: #6366f1;
-  --app-accent-fg: #ffffff;
-  --app-danger: #dc2626;
-  --app-success: #16a34a;
+  --app-accent: #64d2ff;
+  --app-accent-fg: #06121c;
+  --app-danger: #f87171;
+  --app-success: #34d399;
   --app-glass-blur: 16px;
 }
 
@@ -376,6 +381,67 @@ h1, h2 { letter-spacing: -0.028em; }
 [data-theme$="-glass"] .app-surface {
   backdrop-filter: blur(var(--app-glass-blur));
   -webkit-backdrop-filter: blur(var(--app-glass-blur));
+}
+
+/* ── Liquid mesh (Pro / glass tiers only) ──────────────────────────────────
+   The signature drifting glow of the hotel-pms liquid themes. Rendered by the
+   AppShell as a fixed layer behind everything; hidden on the flat free themes
+   so the cheaper tiers stay clean + cheap. */
+.app-mesh { display: none; }
+[data-theme$="-glass"] .app-mesh {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  filter: blur(60px) saturate(1.3);
+}
+.app-mesh i {
+  position: absolute;
+  width: 46vw;
+  height: 46vw;
+  border-radius: 50%;
+  opacity: 0.55;
+  animation: appMeshDrift 26s ease-in-out infinite;
+}
+.app-mesh i:nth-child(1) { top: -12%; left: -8%; background: #0a84ff; animation-delay: 0s; }
+.app-mesh i:nth-child(2) { top: -6%; right: -10%; background: #64d2ff; animation-delay: -7s; }
+.app-mesh i:nth-child(3) { bottom: -14%; left: 18%; background: #bf5af2; animation-delay: -13s; }
+.app-mesh i:nth-child(4) { bottom: -10%; right: 6%; background: #5e9dff; animation-delay: -19s; }
+[data-theme="dark-glass"] .app-mesh i:nth-child(1) { background: #64d2ff; }
+[data-theme="dark-glass"] .app-mesh i:nth-child(2) { background: #0a84ff; }
+@keyframes appMeshDrift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(8vw, 6vh) scale(1.12); }
+  66% { transform: translate(-6vw, -4vh) scale(0.94); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-mesh i { animation: none !important; }
+}
+
+/* ── Calendar booking bars ─────────────────────────────────────────────────
+   Pill-shaped on every theme; on the Pro glass tiers they become frosted
+   tinted pills with a floating coloured shadow — the exact look of the real
+   hotel-pms liquid calendar. --bc carries the booking's status colour. */
+.app-cal-bar {
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+}
+[data-theme="light-glass"] .app-cal-bar {
+  background: color-mix(in srgb, var(--bc) 26%, rgba(255, 255, 255, 0.66)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  color: var(--app-fg) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    -1px 2px 4px color-mix(in srgb, var(--bc) 45%, transparent) !important;
+}
+[data-theme="dark-glass"] .app-cal-bar {
+  background: color-mix(in srgb, var(--bc) 50%, rgba(20, 26, 40, 0.55)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #f2f6fc !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 2px 8px color-mix(in srgb, var(--bc) 40%, transparent) !important;
 }
 
 /* Toast slide-in (used by components/app/ui/Toast.tsx) */
