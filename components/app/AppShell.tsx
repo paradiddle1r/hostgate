@@ -8,7 +8,7 @@
 import { ReactNode, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { CalendarDays, Users, BedDouble, Settings, LayoutDashboard, Menu, X } from "lucide-react";
+import { CalendarDays, Users, BedDouble, Settings, LayoutDashboard, Menu, X, Building2 } from "lucide-react";
 import type { Property } from "@/lib/db/properties";
 import { useAppT } from "@/lib/app-i18n";
 import { ToastProvider } from "@/components/app/ui/Toast";
@@ -92,10 +92,14 @@ export default function AppShell({
             <button className="lg:hidden" onClick={() => setDrawer(true)} aria-label="Open menu">
               <Menu size={22} />
             </button>
-            <Link href="/app" className="flex flex-none items-center gap-1 pr-1 text-[17px] font-semibold tracking-tight">
-              <span>Stay</span>
-              <span className="text-[var(--app-accent)]">MAYB</span>
-            </Link>
+            {/* Brand slot = the customer's property name (doubles as the
+                property switcher on Pro multi-property accounts). */}
+            <div className="flex min-w-0 flex-none items-center gap-2 pr-1">
+              <div className="grid h-7 w-7 flex-none place-items-center rounded-lg bg-[var(--app-accent)] text-[var(--app-accent-fg)]">
+                <Building2 size={16} />
+              </div>
+              <PropertySwitcher />
+            </div>
             <nav className="hidden min-w-0 items-center gap-0.5 lg:flex">
               {NAV.map(({ href, icon: Icon, key, exact }) => {
                 const on = isActive(href, exact);
@@ -115,7 +119,6 @@ export default function AppShell({
               })}
             </nav>
             <div className="ml-auto flex flex-none items-center gap-2">
-              <PropertySwitcher />
               <LocaleToggle />
               <ThemeToggle theme={theme} plan={plan} onChange={setTheme} />
               <SignOutButton />
@@ -127,9 +130,9 @@ export default function AppShell({
             <div className="fixed inset-0 z-40 lg:hidden">
               <div className="absolute inset-0 bg-black/40" onClick={() => setDrawer(false)} aria-hidden />
               <aside className="app-surface absolute left-0 top-0 h-full w-64 border-r border-[var(--app-border)]">
-                <div className="flex h-14 items-center justify-between px-5">
-                  <span className="text-base font-semibold">Stay <span className="text-[var(--app-accent)]">MAYB</span></span>
-                  <button onClick={() => setDrawer(false)} aria-label="Close menu">
+                <div className="flex h-14 items-center justify-between gap-2 px-5">
+                  <span className="truncate text-base font-semibold">{property.name}</span>
+                  <button onClick={() => setDrawer(false)} aria-label="Close menu" className="flex-none">
                     <X size={20} />
                   </button>
                 </div>
