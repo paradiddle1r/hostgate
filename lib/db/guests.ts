@@ -16,6 +16,8 @@ export interface Guest {
   id_number: string | null;
   nationality: string | null;
   notes: string | null;
+  is_vip: boolean;
+  is_blacklisted: boolean;
   created_at: string;
 }
 
@@ -26,6 +28,15 @@ export interface GuestInput {
   id_number?: string;
   nationality?: string;
   notes?: string;
+  is_vip?: boolean;
+  is_blacklisted?: boolean;
+}
+
+export interface GuestStays {
+  visits: number;
+  nights: number;
+  spend: number;
+  lastStay: string | null;
 }
 
 /**
@@ -92,6 +103,8 @@ export async function createGuest(
         id_number: input.id_number ?? null,
         nationality: input.nationality ?? null,
         notes: input.notes ?? null,
+        is_vip: input.is_vip ?? false,
+        is_blacklisted: input.is_blacklisted ?? false,
       })
       .select()
       .single();
@@ -117,6 +130,68 @@ export async function updateGuest(
       .single();
     if (error) throw error;
     return ok(data as Guest);
+  } catch (e) {
+    return mapPgError(e);
+  }
+}
+
+/** Flip the VIP / blacklist flags on a guest. Thin wrapper over updateGuest. */
+export async function setGuestFlag(
+  id: string,
+  patch: { is_vip?: boolean; is_blacklisted?: boolean }
+): Promise<ActionResult<Guest>> {
+  return updateGuest(id, patch);
+}
+
+/**
+ * Aggregate stay history for one guest within a property. Counts non-cancelled
+ * bookings: visits, total nights, total spend, and the latest check-in date.
+ * Nights/spend are computed in JS from the selected rows.
+ */
+export async function guestStays(
+  propertyId: string,
+  guestId: string
+): Promise<ActionResult<GuestStays>> {
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("bookings")
+      .select("check_in, check_out, total_amount, status")
+      .eq("property_id", propertyId)
+      .eq("guest_id", guestId)
+      .neq("status", "cancelled");
+    if (error) throw error;
+
+    const rows = (data ?? []) as Array<{
+      check_in: string | null;
+      check_out: string | null;
+      total_amount: number | string | null;
+      status: string | null;
+    }>;
+
+    let nights = 0;
+    let spend = 0;
+    let lastStay: string | null = null;
+
+    for (const r of rows) {
+      // Nights: only when both endpoints exist. Date-only strings parse as
+      // UTC midnight, so the day delta is exact.
+      if (r.check_in && r.check_out) {
+        const ms = new Date(r.check_out).getTime() - new Date(r.check_in).getTime();
+        if (Number.isFinite(ms) && ms > 0) {
+          nights += Math.round(ms / 86_400_000);
+        }
+      }
+
+      const amt = Number(r.total_amount);
+      if (Number.isFinite(amt)) spend += amt;
+
+      if (r.check_in && (lastStay === null || r.check_in > lastStay)) {
+        lastStay = r.check_in;
+      }
+    }
+
+    return ok({ visits: rows.length, nights, spend, lastStay });
   } catch (e) {
     return mapPgError(e);
   }

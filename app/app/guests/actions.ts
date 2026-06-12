@@ -6,8 +6,10 @@ import {
   searchGuests,
   createGuest,
   updateGuest,
+  guestStays,
   Guest,
   GuestInput,
+  GuestStays,
 } from "@/lib/db/guests";
 import { getActiveProperty } from "@/lib/active-property-server";
 
@@ -46,4 +48,26 @@ export async function searchGuestsAction(
   const res = await searchGuests(active.data.property.id, q);
   if (res.ok) revalidatePath("/app/guests");
   return res;
+}
+
+/**
+ * Flip the VIP / blacklist flags on a guest by id. updateGuest is RLS-scoped,
+ * so the active property isn't needed here.
+ */
+export async function toggleGuestFlag(
+  id: string,
+  patch: { is_vip?: boolean; is_blacklisted?: boolean }
+): Promise<ActionResult<Guest>> {
+  const res = await updateGuest(id, patch);
+  if (res.ok) revalidatePath("/app/guests");
+  return res;
+}
+
+/** Stay-history summary for one guest within the active property. */
+export async function guestStaysAction(
+  guestId: string
+): Promise<ActionResult<GuestStays>> {
+  const active = await getActiveProperty();
+  if (!active.ok) return active;
+  return guestStays(active.data.property.id, guestId);
 }

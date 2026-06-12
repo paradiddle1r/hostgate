@@ -80,6 +80,42 @@ export async function listBookings(
   }
 }
 
+/**
+ * Flat list of every booking for a property — the Bookings list page.
+ * Optional status filter + a fuzzy `q` (ilike on guest_name / code / phone).
+ * Newest stays first (check_in desc), capped at 500.
+ */
+export async function listAllBookings(
+  propertyId: string,
+  opts?: { status?: BookingStatus; q?: string }
+): Promise<ActionResult<Booking[]>> {
+  try {
+    const supabase = createClient();
+    let query = supabase
+      .from("bookings")
+      .select("*")
+      .eq("property_id", propertyId);
+
+    if (opts?.status) query = query.eq("status", opts.status);
+
+    const q = opts?.q?.trim();
+    if (q) {
+      const like = `%${q}%`;
+      query = query.or(
+        `guest_name.ilike.${like},code.ilike.${like},phone.ilike.${like}`
+      );
+    }
+
+    const { data, error } = await query
+      .order("check_in", { ascending: false })
+      .limit(500);
+    if (error) throw error;
+    return ok((data ?? []) as Booking[]);
+  } catch (e) {
+    return mapPgError(e);
+  }
+}
+
 /** Create a booking. Surfaces HG-BOOK-409 from the conflict trigger. */
 export async function createBooking(
   propertyId: string,

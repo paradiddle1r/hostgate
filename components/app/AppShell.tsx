@@ -8,7 +8,7 @@
 import { ReactNode, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { CalendarDays, Users, BedDouble, Settings, LayoutDashboard, Menu, X, Building2 } from "lucide-react";
+import { CalendarDays, Users, BedDouble, Settings, LayoutDashboard, Menu, X, Building2, BookOpen, Tag } from "lucide-react";
 import type { Property } from "@/lib/db/properties";
 import { useAppT } from "@/lib/app-i18n";
 import { ToastProvider } from "@/components/app/ui/Toast";
@@ -21,8 +21,10 @@ import SignOutButton from "@/app/app/SignOutButton";
 const NAV = [
   { href: "/app", icon: LayoutDashboard, key: "nav.home", exact: true },
   { href: "/app/calendar", icon: CalendarDays, key: "nav.calendar" },
+  { href: "/app/bookings", icon: BookOpen, key: "nav.bookings" },
   { href: "/app/guests", icon: Users, key: "nav.guests" },
   { href: "/app/rooms", icon: BedDouble, key: "nav.rooms" },
+  { href: "/app/rate-plans", icon: Tag, key: "nav.ratePlans" },
   { href: "/app/settings", icon: Settings, key: "nav.settings" },
 ];
 

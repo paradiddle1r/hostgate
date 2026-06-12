@@ -10,8 +10,10 @@ import { useI18n } from "./i18n";
 const STR: Record<"th" | "en", Record<string, string>> = {
   th: {
     "nav.calendar": "ปฏิทิน",
+    "nav.bookings": "การจอง",
     "nav.guests": "แขก",
     "nav.rooms": "ห้องพัก",
+    "nav.ratePlans": "แผนราคา",
     "nav.settings": "ตั้งค่า",
     "nav.home": "ภาพรวม",
     "shell.signOut": "ออกจากระบบ",
@@ -120,8 +122,10 @@ const STR: Record<"th" | "en", Record<string, string>> = {
   },
   en: {
     "nav.calendar": "Calendar",
+    "nav.bookings": "Bookings",
     "nav.guests": "Guests",
     "nav.rooms": "Rooms",
+    "nav.ratePlans": "Rate plans",
     "nav.settings": "Settings",
     "nav.home": "Overview",
     "shell.signOut": "Sign out",

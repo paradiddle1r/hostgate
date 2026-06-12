@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Users, Search, Plus, Phone, Mail, Globe } from "lucide-react";
-import type { Guest, GuestInput } from "@/lib/db/guests";
+import { Users, Search, Plus, Phone, Mail, Globe, Star, Ban } from "lucide-react";
+import type { Guest, GuestInput, GuestStays } from "@/lib/db/guests";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/components/app/ui/Toast";
 import Button from "@/components/app/ui/Button";
 import Modal from "@/components/app/ui/Modal";
 import EmptyState from "@/components/app/ui/EmptyState";
-import { saveGuest, searchGuestsAction } from "@/app/app/guests/actions";
+import { saveGuest, searchGuestsAction, guestStaysAction } from "@/app/app/guests/actions";
 
 // Local bilingual strings, keyed off useI18n().locale — same shape lib/app-i18n.ts uses.
 const STR: Record<"th" | "en", Record<string, string>> = {
@@ -30,6 +30,13 @@ const STR: Record<"th" | "en", Record<string, string>> = {
     emptyHint: "เพิ่มแขกคนแรกเพื่อเริ่มเก็บข้อมูลลูกค้า",
     noMatchTitle: "ไม่พบแขก",
     noMatchHint: "ลองค้นหาด้วยชื่อหรือเบอร์โทรอื่น",
+    vip: "VIP",
+    blacklist: "บัญชีดำ",
+    visits: "เข้าพัก",
+    nights: "คืน",
+    spend: "ยอดใช้จ่าย",
+    lastStay: "เข้าพักล่าสุด",
+    never: "ยังไม่เคยเข้าพัก",
   },
   en: {
     title: "Guests",
@@ -49,6 +56,13 @@ const STR: Record<"th" | "en", Record<string, string>> = {
     emptyHint: "Add your first guest to start building your CRM.",
     noMatchTitle: "No guests found",
     noMatchHint: "Try a different name or phone number.",
+    vip: "VIP",
+    blacklist: "Blacklisted",
+    visits: "Visits",
+    nights: "Nights",
+    spend: "Spend",
+    lastStay: "Last stay",
+    never: "No stays yet",
   },
 };
 
@@ -63,6 +77,8 @@ type FormState = {
   id_number: string;
   nationality: string;
   notes: string;
+  is_vip: boolean;
+  is_blacklisted: boolean;
 };
 
 const EMPTY_FORM: FormState = {
@@ -72,6 +88,8 @@ const EMPTY_FORM: FormState = {
   id_number: "",
   nationality: "",
   notes: "",
+  is_vip: false,
+  is_blacklisted: false,
 };
 
 function toForm(g: Guest): FormState {
@@ -83,7 +101,55 @@ function toForm(g: Guest): FormState {
     id_number: g.id_number ?? "",
     nationality: g.nationality ?? "",
     notes: g.notes ?? "",
+    is_vip: g.is_vip,
+    is_blacklisted: g.is_blacklisted,
   };
+}
+
+// Money: property currency isn't threaded here, so use ฿ + locale grouping.
+function fmtSpend(n: number): string {
+  return `฿${Math.round(n).toLocaleString()}`;
+}
+
+// Lazy stay-history summary for a guest, shown inside the edit modal.
+function GuestStaysSummary({ guestId, s }: { guestId: string; s: (k: string) => string }) {
+  const [stays, setStays] = useState<GuestStays | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    guestStaysAction(guestId).then((res) => {
+      if (!alive) return;
+      if (res.ok) setStays(res.data);
+      setLoading(false);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [guestId]);
+
+  const cell = (label: string, value: string) => (
+    <div>
+      <div className="text-xs text-[var(--app-fg-muted)]">{label}</div>
+      <div className="text-sm font-semibold">{value}</div>
+    </div>
+  );
+
+  return (
+    <div className="rounded-lg border border-[var(--app-border)] bg-[var(--app-surface-2)] px-3 py-2.5">
+      {loading || !stays ? (
+        <div className="text-xs text-[var(--app-fg-muted)]">…</div>
+      ) : (
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
+          {cell(s("visits"), String(stays.visits))}
+          {cell(s("nights"), String(stays.nights))}
+          {cell(s("spend"), fmtSpend(stays.spend))}
+          {cell(s("lastStay"), stays.lastStay ?? s("never"))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function GuestsClient({ initialGuests }: { initialGuests: Guest[] }) {
@@ -151,6 +217,8 @@ export default function GuestsClient({ initialGuests }: { initialGuests: Guest[]
       id_number: editing.id_number.trim() || undefined,
       nationality: editing.nationality.trim() || undefined,
       notes: editing.notes.trim() || undefined,
+      is_vip: editing.is_vip,
+      is_blacklisted: editing.is_blacklisted,
     };
 
     setSaving(true);
@@ -216,7 +284,19 @@ export default function GuestsClient({ initialGuests }: { initialGuests: Guest[]
                 onClick={() => openEdit(g)}
                 className="cursor-pointer border-t border-[var(--app-border)] px-4 py-3 transition-colors first:border-t-0 hover:bg-[var(--app-surface-2)]"
               >
-                <div className="font-semibold">{g.full_name}</div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-semibold">{g.full_name}</span>
+                  {g.is_vip && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[#f59e0b]/15 px-2.5 py-0.5 text-xs font-medium text-[#b45309]">
+                      <Star size={11} /> {s("vip")}
+                    </span>
+                  )}
+                  {g.is_blacklisted && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--app-danger)]/15 px-2.5 py-0.5 text-xs font-medium text-[var(--app-danger)]">
+                      <Ban size={11} /> {s("blacklist")}
+                    </span>
+                  )}
+                </div>
                 <div className="mt-0.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--app-fg-muted)]">
                   {g.phone && (
                     <span className="inline-flex items-center gap-1">
@@ -258,6 +338,9 @@ export default function GuestsClient({ initialGuests }: { initialGuests: Guest[]
       >
         {editing && (
           <div className="space-y-3">
+            {/* Stay history — only existing guests have any. */}
+            {editing.id && <GuestStaysSummary guestId={editing.id} s={s} />}
+
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-[var(--app-fg-muted)]">{s("name")}</span>
               <input
@@ -313,6 +396,29 @@ export default function GuestsClient({ initialGuests }: { initialGuests: Guest[]
                 className={`${field} w-full resize-none`}
               />
             </label>
+
+            <div className="flex flex-wrap gap-2">
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] px-3 py-1.5 text-sm">
+                <input
+                  type="checkbox"
+                  checked={editing.is_vip}
+                  onChange={(e) => patchForm({ is_vip: e.target.checked })}
+                  className="accent-[#f59e0b]"
+                />
+                <Star size={14} className="text-[#b45309]" />
+                <span className="font-medium">{s("vip")}</span>
+              </label>
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] px-3 py-1.5 text-sm">
+                <input
+                  type="checkbox"
+                  checked={editing.is_blacklisted}
+                  onChange={(e) => patchForm({ is_blacklisted: e.target.checked })}
+                  className="accent-[var(--app-danger)]"
+                />
+                <Ban size={14} className="text-[var(--app-danger)]" />
+                <span className="font-medium">{s("blacklist")}</span>
+              </label>
+            </div>
           </div>
         )}
       </Modal>
