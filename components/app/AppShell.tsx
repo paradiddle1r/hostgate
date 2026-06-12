@@ -8,7 +8,7 @@
 import { ReactNode, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { CalendarDays, Users, BedDouble, Settings, LayoutDashboard, Menu, X, Building2, BookOpen, Tag, Receipt, BarChart3 } from "lucide-react";
+import { CalendarDays, Users, BedDouble, Settings, LayoutDashboard, Menu, X, Building2, BookOpen, Tag, Receipt, BarChart3, SprayCan, CalendarClock, Wrench } from "lucide-react";
 import type { Property } from "@/lib/db/properties";
 import { useAppT } from "@/lib/app-i18n";
 import { ToastProvider } from "@/components/app/ui/Toast";
@@ -24,6 +24,9 @@ const NAV = [
   { href: "/app/bookings", icon: BookOpen, key: "nav.bookings" },
   { href: "/app/guests", icon: Users, key: "nav.guests" },
   { href: "/app/rooms", icon: BedDouble, key: "nav.rooms" },
+  { href: "/app/housekeeping", icon: SprayCan, key: "nav.housekeeping" },
+  { href: "/app/shifts", icon: CalendarClock, key: "nav.shifts" },
+  { href: "/app/maintenance", icon: Wrench, key: "nav.maintenance" },
   { href: "/app/rate-plans", icon: Tag, key: "nav.ratePlans" },
   { href: "/app/invoices", icon: Receipt, key: "nav.invoices" },
   { href: "/app/reports", icon: BarChart3, key: "nav.reports" },
