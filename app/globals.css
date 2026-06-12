@@ -409,3 +409,55 @@ h1, h2 { letter-spacing: -0.028em; }
     animation: none !important;
   }
 }
+
+/* ===========================================================================
+   Liquid-light PMS mock theme — the marketing device mockups (AnimatedDashboard,
+   AnimatedMobile, scenes/*) render the product UI in the REAL hotel-pms
+   "liquid light" theme so previews match what customers actually run.
+   Tokens mirror hotel-pms globals.css [data-theme="liquid-light"] +
+   calendar.css .theme-liquid-light. Wrap a mock in `.pms-ll`.
+   =========================================================================== */
+.pms-ll {
+  --ll-bg: #eaf1fb;
+  --ll-surface: rgba(255, 255, 255, 0.62);
+  --ll-surface-2: rgba(247, 250, 255, 0.5);
+  --ll-fg: #0b1220;
+  --ll-muted: #5a6678;
+  --ll-faint: #8c98ab;
+  --ll-border: rgba(71, 85, 105, 0.2);
+  --ll-accent: #0a84ff;
+  --ll-accent-soft: rgba(10, 132, 255, 0.14);
+  --ll-wknd: rgba(221, 231, 243, 0.55);
+  --ll-shadow: 0 10px 40px rgba(15, 23, 42, 0.14);
+  background: var(--ll-bg);
+  color: var(--ll-fg);
+  font-family: "Inter", "Noto Sans Thai", system-ui, sans-serif;
+}
+/* Liquid mesh behind the mock — soft blue/cyan/violet glow, the signature of
+   the liquid theme. Pure CSS, no motion (these previews can be many-per-page). */
+.pms-ll-mesh {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(40% 50% at 12% 8%, rgba(10, 132, 255, 0.18), transparent 70%),
+    radial-gradient(36% 44% at 92% 4%, rgba(191, 90, 242, 0.14), transparent 70%),
+    radial-gradient(46% 56% at 78% 98%, rgba(100, 210, 255, 0.18), transparent 72%);
+}
+/* Frosted surface — translucent white over the mesh. */
+.pms-ll-surface {
+  background: var(--ll-surface);
+  border: 1px solid var(--ll-border);
+  -webkit-backdrop-filter: blur(14px) saturate(1.3);
+  backdrop-filter: blur(14px) saturate(1.3);
+}
+/* Frosted booking pill — fill is the booking colour (--bc) tinted into white,
+   white rim, and a thin coloured drop-shadow so it floats. Exactly the
+   .theme-liquid-light .bbar recipe from the real calendar. */
+.pms-ll-bar {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bc) 26%, rgba(255, 255, 255, 0.66));
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    -1px 2px 4px color-mix(in srgb, var(--bc) 45%, transparent);
+}

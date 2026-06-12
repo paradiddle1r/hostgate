@@ -14,84 +14,88 @@ export default function PaymentScene() {
   }, []);
 
   return (
-    <div className="h-full w-full bg-white p-4 text-zinc-900">
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-[13px] font-semibold tracking-tight">รับชำระเงิน</h3>
-        <span className="text-[9px] text-zinc-500">วันนี้</span>
-      </div>
-
-      <div className="grid grid-cols-[140px_1fr] gap-3">
-        {/* QR code area */}
-        <div className="rounded-lg border border-zinc-200 bg-white p-2.5">
-          <div className="mb-1.5 text-center text-[9px] font-semibold uppercase tracking-wide text-zinc-500">
-            PromptPay
-          </div>
-          <div className="relative aspect-square rounded-md bg-white p-1.5">
-            <FakeQR />
-            {/* Pulsing scan ring */}
-            <div
-              key={pulse}
-              className="pointer-events-none absolute inset-0 rounded-md ring-2 ring-emerald-400"
-              style={{ animation: "scanPulse 2.4s ease-out forwards" }}
-            />
-          </div>
-          <div className="mt-2 text-center">
-            <div className="text-[9px] text-zinc-500">จำนวน</div>
-            <div className="text-[13px] font-bold tabular-nums">฿4,500.00</div>
-          </div>
+    <div className="pms-ll relative h-full w-full overflow-hidden p-4">
+      <div className="pms-ll-mesh" aria-hidden />
+      <div className="relative z-10">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-[13px] font-semibold tracking-tight">รับชำระเงิน</h3>
+          <span className="text-[9px]" style={{ color: "var(--ll-muted)" }}>วันนี้</span>
         </div>
 
-        {/* Recent transactions */}
-        <div className="rounded-lg border border-zinc-200 bg-white p-2.5">
-          <div className="mb-1.5 flex items-center justify-between">
-            <span className="text-[10px] font-semibold">รายการล่าสุด</span>
-            <span className="flex items-center gap-1 text-[8px] text-emerald-600">
-              <span className="h-1 w-1 animate-pulse rounded-full bg-emerald-500" />
-              live
-            </span>
-          </div>
-          <div className="space-y-1">
-            {[
-              { n: "คุณนภา", amt: "+฿4,500", t: "เมื่อสักครู่", new: true },
-              { n: "Mr. James", amt: "+฿4,800", t: "5 นาที", new: false },
-              { n: "คุณสมชาย", amt: "+฿4,500", t: "12 นาที", new: false },
-              { n: "Pim L.", amt: "+฿8,970", t: "1 ชม.", new: false },
-            ].map((tx, i) => (
+        <div className="grid grid-cols-[140px_1fr] gap-3">
+          {/* QR code area */}
+          <div className="pms-ll-surface rounded-lg p-2.5">
+            <div className="mb-1.5 text-center text-[9px] font-semibold uppercase tracking-wide" style={{ color: "var(--ll-faint)" }}>
+              PromptPay
+            </div>
+            <div className="relative aspect-square rounded-md p-1.5" style={{ background: "rgba(255,255,255,0.7)" }}>
+              <FakeQR />
+              {/* Pulsing scan ring */}
               <div
-                key={tx.n}
-                className={`flex items-center justify-between rounded-md px-1.5 py-1 text-[9px] ${
-                  tx.new ? "bg-emerald-50" : "bg-zinc-50"
-                }`}
-                style={tx.new ? { animation: "slideRight 0.6s ease-out both" } : undefined}
-              >
-                <div className="flex items-center gap-1.5">
-                  {tx.new && (
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  )}
-                  <span className="font-medium">{tx.n}</span>
+                key={pulse}
+                className="pointer-events-none absolute inset-0 rounded-md"
+                style={{ boxShadow: "0 0 0 2px #16a34a", animation: "scanPulse 2.4s ease-out forwards" }}
+              />
+            </div>
+            <div className="mt-2 text-center">
+              <div className="text-[9px]" style={{ color: "var(--ll-muted)" }}>จำนวน</div>
+              <div className="text-[13px] font-bold tabular-nums">฿4,500.00</div>
+            </div>
+          </div>
+
+          {/* Recent transactions */}
+          <div className="pms-ll-surface rounded-lg p-2.5">
+            <div className="mb-1.5 flex items-center justify-between">
+              <span className="text-[10px] font-semibold">รายการล่าสุด</span>
+              <span className="flex items-center gap-1 text-[8px]" style={{ color: "#16a34a" }}>
+                <span className="h-1 w-1 animate-pulse rounded-full" style={{ background: "#16a34a" }} />
+                live
+              </span>
+            </div>
+            <div className="space-y-1">
+              {[
+                { n: "คุณนภา", amt: "+฿4,500", t: "เมื่อสักครู่", new: true },
+                { n: "Mr. James", amt: "+฿4,800", t: "5 นาที", new: false },
+                { n: "คุณสมชาย", amt: "+฿4,500", t: "12 นาที", new: false },
+                { n: "Pim L.", amt: "+฿8,970", t: "1 ชม.", new: false },
+              ].map((tx) => (
+                <div
+                  key={tx.n}
+                  className="flex items-center justify-between rounded-md px-1.5 py-1 text-[9px]"
+                  style={{
+                    background: tx.new ? "rgba(22,163,74,0.1)" : "var(--ll-surface-2)",
+                    ...(tx.new ? { animation: "slideRight 0.6s ease-out both" } : {}),
+                  }}
+                >
+                  <div className="flex items-center gap-1.5">
+                    {tx.new && (
+                      <span className="h-1.5 w-1.5 rounded-full" style={{ background: "#16a34a" }} />
+                    )}
+                    <span className="font-medium">{tx.n}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold tabular-nums" style={{ color: "#16a34a" }}>{tx.amt}</span>
+                    <span style={{ color: "var(--ll-muted)" }}>{tx.t}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-emerald-700 tabular-nums">{tx.amt}</span>
-                  <span className="text-zinc-500">{tx.t}</span>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Payment methods */}
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {[
-          { l: "PromptPay", c: "bg-violet-100 text-violet-700" },
-          { l: "บัตรเครดิต", c: "bg-blue-100 text-blue-700" },
-          { l: "โอนผ่านธนาคาร", c: "bg-emerald-100 text-emerald-700" },
-          { l: "เงินสด", c: "bg-amber-100 text-amber-700" },
-        ].map((m) => (
-          <span key={m.l} className={`rounded-full px-2 py-0.5 text-[9px] font-medium ${m.c}`}>
-            {m.l}
-          </span>
-        ))}
+        {/* Payment methods */}
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {[
+            { l: "PromptPay", bg: "var(--ll-accent-soft)", fg: "var(--ll-accent)" },
+            { l: "บัตรเครดิต", bg: "rgba(48,200,192,0.16)", fg: "#0f766e" },
+            { l: "โอนผ่านธนาคาร", bg: "rgba(139,92,246,0.16)", fg: "#6d28d9" },
+            { l: "เงินสด", bg: "rgba(245,158,11,0.16)", fg: "#b45309" },
+          ].map((m) => (
+            <span key={m.l} className="rounded-full px-2 py-0.5 text-[9px] font-medium" style={{ background: m.bg, color: m.fg }}>
+              {m.l}
+            </span>
+          ))}
+        </div>
       </div>
 
       <style jsx>{`
@@ -134,7 +138,7 @@ function FakeQR() {
   return (
     <div className="grid h-full w-full grid-cols-9 grid-rows-9 gap-[1px]">
       {cells.map((c, i) => (
-        <div key={i} className={c ? "bg-zinc-900" : "bg-transparent"} />
+        <div key={i} style={{ background: c ? "var(--ll-fg)" : "transparent" }} />
       ))}
     </div>
   );

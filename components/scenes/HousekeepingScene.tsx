@@ -38,61 +38,58 @@ export default function HousekeepingScene() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Liquid-light status palette: clean = teal-green (success), dirty = amber, occupied = neutral.
+  const cellStyle = (s: string) => {
+    if (s === "clean") return { background: "rgba(48,200,192,0.14)", borderColor: "rgba(48,200,192,0.4)" };
+    if (s === "dirty") return { background: "rgba(245,158,11,0.14)", borderColor: "rgba(245,158,11,0.4)" };
+    return { background: "var(--ll-surface-2)", borderColor: "var(--ll-border)" };
+  };
+  const dotColor = (s: string) => (s === "clean" ? "#16a34a" : s === "dirty" ? "#f59e0b" : "var(--ll-faint)");
+  const labelColor = (s: string) => (s === "clean" ? "#0f766e" : s === "dirty" ? "#b45309" : "var(--ll-muted)");
+
   return (
-    <div className="h-full w-full bg-white p-4 text-zinc-900">
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-[13px] font-semibold tracking-tight">แม่บ้าน</h3>
-        <span className="text-[9px] text-zinc-500">
-          {rooms.filter((r) => r.s === "dirty").length} ห้องค้าง
-        </span>
-      </div>
+    <div className="pms-ll relative h-full w-full overflow-hidden p-4">
+      <div className="pms-ll-mesh" aria-hidden />
+      <div className="relative z-10">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-[13px] font-semibold tracking-tight">แม่บ้าน</h3>
+          <span className="text-[9px]" style={{ color: "var(--ll-muted)" }}>
+            {rooms.filter((r) => r.s === "dirty").length} ห้องค้าง
+          </span>
+        </div>
 
-      {/* Legend */}
-      <div className="mb-3 flex gap-2 text-[9px]">
-        <Legend color="bg-emerald-400" label="สะอาด" />
-        <Legend color="bg-amber-400" label="ค้างทำ" />
-        <Legend color="bg-zinc-400" label="แขกอยู่" />
-      </div>
+        {/* Legend */}
+        <div className="mb-3 flex gap-2 text-[9px]">
+          <Legend color="#30c8c0" label="สะอาด" />
+          <Legend color="#f59e0b" label="ค้างทำ" />
+          <Legend color="var(--ll-faint)" label="แขกอยู่" />
+        </div>
 
-      {/* Room grid */}
-      <div className="grid grid-cols-4 gap-2">
-        {rooms.map((r) => (
-          <div
-            key={r.n}
-            className={`relative aspect-square rounded-lg border p-2 transition-all duration-500 ${
-              r.s === "clean"
-                ? "border-emerald-200 bg-emerald-50"
-                : r.s === "dirty"
-                ? "border-amber-200 bg-amber-50"
-                : "border-zinc-200 bg-zinc-100"
-            }`}
-          >
-            <div className="text-[10px] font-bold">{r.n}</div>
+        {/* Room grid */}
+        <div className="grid grid-cols-4 gap-2">
+          {rooms.map((r) => (
             <div
-              className={`absolute right-1.5 top-1.5 h-2 w-2 rounded-full transition-colors duration-500 ${
-                r.s === "clean"
-                  ? "bg-emerald-500"
-                  : r.s === "dirty"
-                  ? "bg-amber-500"
-                  : "bg-zinc-400"
-              }`}
-            />
-            <div
-              className={`absolute bottom-1.5 left-1.5 right-1.5 text-[8px] font-medium ${
-                r.s === "clean"
-                  ? "text-emerald-700"
-                  : r.s === "dirty"
-                  ? "text-amber-700"
-                  : "text-zinc-500"
-              }`}
+              key={r.n}
+              className="pms-ll-surface relative aspect-square rounded-lg p-2 transition-all duration-500"
+              style={cellStyle(r.s)}
             >
-              {r.s === "clean" ? "✓ done" : r.s === "dirty" ? "to do" : "in use"}
+              <div className="text-[10px] font-bold">{r.n}</div>
+              <div
+                className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full transition-colors duration-500"
+                style={{ background: dotColor(r.s) }}
+              />
+              <div
+                className="absolute bottom-1.5 left-1.5 right-1.5 text-[8px] font-medium"
+                style={{ color: labelColor(r.s) }}
+              >
+                {r.s === "clean" ? "✓ done" : r.s === "dirty" ? "to do" : "in use"}
+              </div>
+              {r.s === "clean" && (
+                <div className="pointer-events-none absolute inset-0 rounded-lg" style={{ boxShadow: "0 0 0 2px rgba(48,200,192,0.6)", animation: "flashRing 0.7s ease-out forwards" }} />
+              )}
             </div>
-            {r.s === "clean" && (
-              <div className="pointer-events-none absolute inset-0 rounded-lg ring-2 ring-emerald-400/60" style={{ animation: "flashRing 0.7s ease-out forwards" }} />
-            )}
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       <style jsx>{`
@@ -108,8 +105,8 @@ export default function HousekeepingScene() {
 function Legend({ color, label }: { color: string; label: string }) {
   return (
     <span className="flex items-center gap-1">
-      <span className={`h-2 w-2 rounded-full ${color}`} />
-      <span className="text-zinc-600">{label}</span>
+      <span className="h-2 w-2 rounded-full" style={{ background: color }} />
+      <span style={{ color: "var(--ll-muted)" }}>{label}</span>
     </span>
   );
 }
