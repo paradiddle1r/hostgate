@@ -20,6 +20,16 @@ export interface Property {
   country: string;
   currency: string;
   timezone: string;
+  // billing settings (migration 08) — used by the accounting module
+  legal_name: string | null;
+  tax_id: string | null;
+  billing_address: string | null;
+  vat_rate: number;
+  vat_inclusive: boolean;
+  bank_name: string | null;
+  bank_account: string | null;
+  invoice_prefix: string;
+  invoice_footer: string | null;
   created_at: string;
 }
 

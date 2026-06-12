@@ -11,7 +11,10 @@ import Footer from "@/components/Footer";
 
 export default function MarketingChrome({ children }: { children: ReactNode }) {
   const pathname = usePathname() || "/";
-  const isApp = pathname === "/app" || pathname.startsWith("/app/");
+  // The PMS app (/app/*) and the no-chrome print routes (/print/*) render
+  // their own shell — no marketing navbar/footer/mesh.
+  const isApp =
+    pathname === "/app" || pathname.startsWith("/app/") || pathname.startsWith("/print/");
 
   if (isApp) return <>{children}</>;
 

@@ -8,7 +8,7 @@
 import { ReactNode, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { CalendarDays, Users, BedDouble, Settings, LayoutDashboard, Menu, X, Building2, BookOpen, Tag } from "lucide-react";
+import { CalendarDays, Users, BedDouble, Settings, LayoutDashboard, Menu, X, Building2, BookOpen, Tag, Receipt, BarChart3 } from "lucide-react";
 import type { Property } from "@/lib/db/properties";
 import { useAppT } from "@/lib/app-i18n";
 import { ToastProvider } from "@/components/app/ui/Toast";
@@ -25,6 +25,8 @@ const NAV = [
   { href: "/app/guests", icon: Users, key: "nav.guests" },
   { href: "/app/rooms", icon: BedDouble, key: "nav.rooms" },
   { href: "/app/rate-plans", icon: Tag, key: "nav.ratePlans" },
+  { href: "/app/invoices", icon: Receipt, key: "nav.invoices" },
+  { href: "/app/reports", icon: BarChart3, key: "nav.reports" },
   { href: "/app/settings", icon: Settings, key: "nav.settings" },
 ];
 
@@ -102,7 +104,9 @@ export default function AppShell({
               </div>
               <PropertySwitcher />
             </div>
-            <nav className="hidden min-w-0 items-center gap-0.5 lg:flex">
+            <nav
+              className="hidden min-w-0 items-center gap-0.5 overflow-x-auto lg:flex [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
               {NAV.map(({ href, icon: Icon, key, exact }) => {
                 const on = isActive(href, exact);
                 return (

@@ -58,6 +58,33 @@ export async function savePropertyDetails(
 }
 
 /**
+ * Save the active property's billing / tax-invoice settings. Resolves the
+ * active property internally (mirrors addProperty) so the client only sends a
+ * patch. Revalidates /app and /app/invoices since the invoice module reads
+ * these defaults (vat rate, prefix, footer, bank block).
+ */
+export async function saveBilling(patch: {
+  legal_name?: string | null;
+  tax_id?: string | null;
+  billing_address?: string | null;
+  vat_rate?: number;
+  vat_inclusive?: boolean;
+  bank_name?: string | null;
+  bank_account?: string | null;
+  invoice_prefix?: string;
+  invoice_footer?: string | null;
+}): Promise<ActionResult<Property>> {
+  const active = await getActiveProperty();
+  if (!active.ok) return active;
+  const res = await updateProperty(active.data.property.id, patch);
+  if (res.ok) {
+    revalidatePath("/app");
+    revalidatePath("/app/invoices");
+  }
+  return res;
+}
+
+/**
  * Add a new property to the active tenant. The DB plan-limit trigger rejects
  * a 2nd property for non-pro tenants with HG-PROP-403.
  */
