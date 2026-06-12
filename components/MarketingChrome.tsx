@@ -11,10 +11,15 @@ import Footer from "@/components/Footer";
 
 export default function MarketingChrome({ children }: { children: ReactNode }) {
   const pathname = usePathname() || "/";
-  // The PMS app (/app/*) and the no-chrome print routes (/print/*) render
-  // their own shell — no marketing navbar/footer/mesh.
+  // The PMS app (/app/*), the no-chrome print routes (/print/*), and the
+  // guest-facing public booking engine (/book/*) render their own shell —
+  // no marketing navbar/footer/mesh.
   const isApp =
-    pathname === "/app" || pathname.startsWith("/app/") || pathname.startsWith("/print/");
+    pathname === "/app" ||
+    pathname.startsWith("/app/") ||
+    pathname.startsWith("/print/") ||
+    pathname === "/book" ||
+    pathname.startsWith("/book/");
 
   if (isApp) return <>{children}</>;
 
