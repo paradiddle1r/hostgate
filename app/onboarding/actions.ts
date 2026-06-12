@@ -8,18 +8,23 @@ export type StayKind = "daily" | "monthly";
 
 export interface RoomTypeInput {
   name: string;
-  quantity: number;
-  stay_kind: StayKind;
+  rate: number; // nightly (daily) or monthly rate, depending on property_type
+}
+
+export interface RoomRowInput {
+  number: string;
+  floor: number;
+  type_index: number | null; // index into room_types[], or null = unassigned
+  sort_order: number;
 }
 
 export interface ProvisionInput {
   property_name: string;
   property_type: PropertyType;
-  address?: string;
   city?: string;
-  country?: string;
   currency?: string;
   room_types: RoomTypeInput[];
+  rooms: RoomRowInput[];
 }
 
 export type ProvisionResult =
@@ -86,9 +91,9 @@ export async function provisionTenant(input: ProvisionInput): Promise<ProvisionR
       tenant_id: tenant.id,
       name: input.property_name,
       property_type: input.property_type,
-      address: input.address ?? null,
+      address: null,
       city: input.city ?? null,
-      country: input.country ?? "TH",
+      country: "TH",
       currency: input.currency ?? "THB",
     })
     .select("id")
@@ -99,25 +104,55 @@ export async function provisionTenant(input: ProvisionInput): Promise<ProvisionR
     return { ok: false, error: `property: ${propertyErr?.message ?? "insert_failed"}` };
   }
 
-  // ----- 5. Room types -----
-  const cleanedRooms = input.room_types
-    .filter((r) => r.name.trim().length > 0 && r.quantity > 0)
-    .map((r, i) => ({
+  // ----- 5. Room types — insert, then map each back to its id by sort_order
+  //         (= its original index) so step 6 can attach rooms to the right one.
+  const stayKind: StayKind = input.property_type === "monthly" ? "monthly" : "daily";
+  const typeCount = input.room_types.length;
+  const perType = new Array<number>(typeCount).fill(0);
+  for (const r of input.rooms) {
+    if (r.type_index != null && r.type_index >= 0 && r.type_index < typeCount) perType[r.type_index]++;
+  }
+  const typeRows = input.room_types.map((r, i) => ({
+    property_id: property.id,
+    name: r.name.trim() || `Type ${i + 1}`,
+    quantity: perType[i],
+    stay_kind: stayKind,
+    daily_rate: stayKind === "daily" ? r.rate || null : null,
+    monthly_rate: stayKind === "monthly" ? r.rate || null : null,
+    sort_order: i,
+  }));
+
+  const typeIdByIndex = new Array<string | null>(typeCount).fill(null);
+  if (typeRows.length > 0) {
+    const { data: insertedTypes, error: typesErr } = await supabase
+      .from("room_types")
+      .insert(typeRows)
+      .select("id, sort_order");
+    if (typesErr) {
+      console.error("[provisionTenant] room_types insert failed:", typesErr);
+      return { ok: false, error: `room_types: ${typesErr.message}` };
+    }
+    for (const row of insertedTypes ?? []) {
+      typeIdByIndex[row.sort_order as number] = row.id as string;
+    }
+  }
+
+  // ----- 6. Individual rooms — so the calendar is ready immediately -----
+  const roomRows = input.rooms
+    .filter((r) => r.number && r.number.trim().length > 0)
+    .map((r) => ({
+      tenant_id: tenant.id,
       property_id: property.id,
-      name: r.name.trim(),
-      quantity: r.quantity,
-      stay_kind: r.stay_kind,
-      sort_order: i,
+      room_type_id: r.type_index != null ? typeIdByIndex[r.type_index] ?? null : null,
+      number: r.number.trim(),
+      floor: r.floor,
+      sort_order: r.sort_order,
     }));
-  if (cleanedRooms.length > 0) {
-    const { error: roomsErr } = await supabase.from("room_types").insert(cleanedRooms);
+  if (roomRows.length > 0) {
+    const { error: roomsErr } = await supabase.from("rooms").insert(roomRows);
     if (roomsErr) {
-      console.error("[provisionTenant] room_types insert failed:", roomsErr);
-      // tenant/property remain — user can add rooms later. Don't roll back.
-      return {
-        ok: false,
-        error: `rooms: ${roomsErr.message}`,
-      };
+      console.error("[provisionTenant] rooms insert failed:", roomsErr);
+      return { ok: false, error: `rooms: ${roomsErr.message}` };
     }
   }
 
