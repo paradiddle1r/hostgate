@@ -3,6 +3,7 @@ import { getActiveProperty } from "@/lib/active-property-server";
 import { listRooms } from "@/lib/db/rooms";
 import { listBookings } from "@/lib/db/bookings";
 import { rateMap } from "@/lib/db/rates";
+import { listRatePlans } from "@/lib/db/rate-plans";
 import CalendarClient, { RoomTypeBrief } from "@/components/app/calendar/CalendarClient";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +31,7 @@ export default async function CalendarPage({
   const from = /^\d{4}-\d{2}-\d{2}$/.test(sp?.from ?? "") ? (sp!.from as string) : today;
   const to = addDays(from, WINDOW_DAYS);
 
-  const [roomsRes, typesRes, bookingsRes] = await Promise.all([
+  const [roomsRes, typesRes, bookingsRes, plansRes] = await Promise.all([
     listRooms(property.id),
     supabase
       .from("room_types")
@@ -38,11 +39,13 @@ export default async function CalendarPage({
       .eq("property_id", property.id)
       .order("sort_order", { ascending: true }),
     listBookings(property.id, from, to),
+    listRatePlans(property.id),
   ]);
 
   const rooms = (roomsRes.ok ? roomsRes.data : []).filter((r) => r.status === "active");
   const roomTypes = (typesRes.data ?? []) as RoomTypeBrief[];
   const bookings = bookingsRes.ok ? bookingsRes.data : [];
+  const plans = (plansRes.ok ? plansRes.data : []).filter((p) => p.active);
 
   const typeIds = roomTypes.map((t) => t.id);
   const ratesRes = typeIds.length ? await rateMap(property.id, typeIds, from, to) : null;
@@ -57,6 +60,7 @@ export default async function CalendarPage({
       roomTypes={roomTypes}
       bookings={bookings}
       rates={rates}
+      plans={plans}
       currency={property.currency}
     />
   );

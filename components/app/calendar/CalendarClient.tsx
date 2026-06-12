@@ -1,17 +1,21 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Plus, BedDouble, LogIn, LogOut } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, BedDouble, LogIn, LogOut, ClipboardPaste, Coins } from "lucide-react";
 import type { Room } from "@/lib/db/rooms";
 import type { Booking, BookingStatus } from "@/lib/db/bookings";
 import type { RateMap } from "@/lib/db/rates";
+import type { RatePlan } from "@/lib/db/rate-plans";
+import { stayTotal } from "@/lib/booking-calc";
 import { useAppT } from "@/lib/app-i18n";
 import { useToast } from "@/components/app/ui/Toast";
 import EmptyState from "@/components/app/ui/EmptyState";
 import Button from "@/components/app/ui/Button";
 import BookingModal, { ModalSeed } from "./BookingModal";
-import { setStatusAction } from "@/app/app/calendar/actions";
+import PasteImportModal from "./PasteImportModal";
+import BulkRateModal from "./BulkRateModal";
+import { setStatusAction, updateBookingAction } from "@/app/app/calendar/actions";
 
 export interface RoomTypeBrief {
   id: string;
@@ -49,6 +53,7 @@ export default function CalendarClient({
   roomTypes,
   bookings,
   rates,
+  plans,
   currency,
 }: {
   from: string;
@@ -58,18 +63,107 @@ export default function CalendarClient({
   roomTypes: RoomTypeBrief[];
   bookings: Booking[];
   rates: RateMap;
+  plans: RatePlan[];
   currency: string;
 }) {
   const t = useAppT();
   const toast = useToast();
   const router = useRouter();
   const [seed, setSeed] = useState<ModalSeed | null>(null);
+  const [pasteOpen, setPasteOpen] = useState(false);
+  const [rateOpen, setRateOpen] = useState(false);
 
   const dates = useMemo(
     () => Array.from({ length: windowDays }, (_, i) => addDays(from, i)),
     [from, windowDays]
   );
   const live = bookings.filter((b) => b.status !== "cancelled");
+
+  // ── drag-to-move ──────────────────────────────────────────────────────────
+  // Day shift = round(dx / COL); target room = elementFromPoint → data-room-id
+  // at drop. Commit-on-drop; the HG-BOOK-409 conflict trigger + refresh revert
+  // an illegal move. A movement threshold distinguishes drag from click.
+  const [dragB, setDragB] = useState<Booking | null>(null);
+  const [ghost, setGhost] = useState<{ x: number; y: number } | null>(null);
+  const [dragMoved, setDragMoved] = useState(false);
+  const startRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const movedRef = useRef(false);
+  const justDraggedRef = useRef(false);
+
+  function recomputeTotal(roomId: string | null, ci: string, co: string): number | null {
+    const rtId = rooms.find((r) => r.id === roomId)?.room_type_id ?? null;
+    const base = roomTypes.find((rt) => rt.id === rtId)?.daily_rate ?? 0;
+    const rm = rtId ? rates[rtId] ?? {} : {};
+    return stayTotal(rm, Number(base) || 0, ci, co).total || null;
+  }
+
+  function onBarPointerDown(e: React.PointerEvent, b: Booking) {
+    if (e.button !== 0) return;
+    startRef.current = { x: e.clientX, y: e.clientY };
+    movedRef.current = false;
+    setDragMoved(false);
+    setGhost({ x: e.clientX, y: e.clientY });
+    setDragB(b);
+  }
+
+  useEffect(() => {
+    if (!dragB) return;
+    document.body.style.userSelect = "none";
+
+    function move(e: PointerEvent) {
+      const dx = e.clientX - startRef.current.x;
+      const dy = e.clientY - startRef.current.y;
+      if (!movedRef.current && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) {
+        movedRef.current = true;
+        setDragMoved(true);
+      }
+      setGhost({ x: e.clientX, y: e.clientY });
+    }
+
+    async function up(e: PointerEvent) {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      document.body.style.userSelect = "";
+      const b = dragB!;
+      const moved = movedRef.current;
+      setDragB(null);
+      setGhost(null);
+      setDragMoved(false);
+      if (!moved) return;
+      justDraggedRef.current = true;
+      setTimeout(() => (justDraggedRef.current = false), 0);
+
+      const dx = e.clientX - startRef.current.x;
+      const deltaDays = Math.round(dx / COL);
+      const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
+      const rowEl = el?.closest("[data-room-id]") as HTMLElement | null;
+      const newRoomId = rowEl ? rowEl.getAttribute("data-room-id") || null : b.room_id;
+      const newCI = deltaDays ? addDays(b.check_in, deltaDays) : b.check_in;
+      const newCO = deltaDays ? addDays(b.check_out, deltaDays) : b.check_out;
+      if (newRoomId === b.room_id && deltaDays === 0) return;
+
+      const roomTypeId = rooms.find((r) => r.id === newRoomId)?.room_type_id ?? null;
+      const res = await updateBookingAction(b.id, {
+        room_id: newRoomId,
+        room_type_id: roomTypeId,
+        check_in: newCI,
+        check_out: newCO,
+        total_amount: recomputeTotal(newRoomId, newCI, newCO),
+      });
+      if (res.ok) toast.success(t("cal.saved"));
+      else toast.error(`${res.code} · ${res.message}`);
+      router.refresh();
+    }
+
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    return () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      document.body.style.userSelect = "";
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dragB]);
 
   function nav(deltaDays: number) {
     router.push(`/app/calendar?from=${addDays(from, deltaDays)}`);
@@ -144,9 +238,17 @@ export default function CalendarClient({
             <ChevronRight size={18} />
           </button>
         </div>
-        <Button className="ml-auto" onClick={() => setSeed({ checkIn: today, checkOut: addDays(today, 1) })}>
-          <Plus size={16} /> {t("cal.newBooking")}
-        </Button>
+        <div className="ml-auto flex items-center gap-2">
+          <Button variant="ghost" onClick={() => setRateOpen(true)}>
+            <Coins size={16} /> {t("cal.rates")}
+          </Button>
+          <Button variant="ghost" onClick={() => setPasteOpen(true)}>
+            <ClipboardPaste size={16} /> {t("cal.paste")}
+          </Button>
+          <Button onClick={() => setSeed({ checkIn: today, checkOut: addDays(today, 1) })}>
+            <Plus size={16} /> {t("cal.newBooking")}
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
@@ -175,13 +277,15 @@ export default function CalendarClient({
             {/* unassigned row */}
             {unassigned.length > 0 && (
               <Row
+                roomId=""
                 label={t("cal.unassigned")}
                 bars={unassigned}
                 dates={dates}
-                from={from}
-                windowDays={windowDays}
+                draggingId={dragMoved ? dragB?.id ?? null : null}
                 onCell={() => {}}
                 onBar={(b) => setSeed({ booking: b })}
+                onBarPointerDown={onBarPointerDown}
+                justDraggedRef={justDraggedRef}
               />
             )}
 
@@ -189,13 +293,15 @@ export default function CalendarClient({
             {rooms.map((r) => (
               <Row
                 key={r.id}
+                roomId={r.id}
                 label={r.number}
                 bars={barsFor(r.id)}
                 dates={dates}
-                from={from}
-                windowDays={windowDays}
+                draggingId={dragMoved ? dragB?.id ?? null : null}
                 onCell={(date) => setSeed({ roomId: r.id, checkIn: date, checkOut: addDays(date, 1) })}
                 onBar={(b) => setSeed({ booking: b })}
+                onBarPointerDown={onBarPointerDown}
+                justDraggedRef={justDraggedRef}
               />
             ))}
           </div>
@@ -242,6 +348,21 @@ export default function CalendarClient({
         </aside>
       </div>
 
+      {/* drag ghost — follows the pointer, must not catch elementFromPoint */}
+      {dragB && ghost && dragMoved && (
+        <div
+          className="pointer-events-none fixed z-[60] truncate rounded-md px-2.5 py-1 text-xs font-medium text-white shadow-lg"
+          style={{
+            left: ghost.x + 10,
+            top: ghost.y - 12,
+            maxWidth: 180,
+            background: STATUS_BG[dragB.status] === "transparent" ? "var(--app-accent)" : STATUS_BG[dragB.status],
+          }}
+        >
+          {dragB.guest_name}
+        </div>
+      )}
+
       {seed && (
         <BookingModal
           seed={seed}
@@ -252,28 +373,54 @@ export default function CalendarClient({
           onClose={() => setSeed(null)}
         />
       )}
+
+      {pasteOpen && (
+        <PasteImportModal
+          onClose={() => setPasteOpen(false)}
+          onSeed={(p) => {
+            setPasteOpen(false);
+            setSeed({ checkIn: p.checkIn, checkOut: p.checkOut, guestName: p.guestName, phone: p.phone });
+          }}
+        />
+      )}
+
+      {rateOpen && (
+        <BulkRateModal
+          roomTypes={roomTypes}
+          plans={plans}
+          defaultFrom={from}
+          defaultTo={addDays(from, windowDays - 1)}
+          currency={currency}
+          onClose={() => setRateOpen(false)}
+        />
+      )}
     </div>
   );
 }
 
 // ── Grid row: sticky label + day cells + absolute bars ──
 function Row({
+  roomId,
   label,
   bars,
   dates,
-  from,
-  windowDays,
+  draggingId,
   onCell,
   onBar,
+  onBarPointerDown,
+  justDraggedRef,
 }: {
+  roomId: string; // "" for the unassigned lane
   label: string;
   bars: { b: Booking; s: number; e: number }[];
   dates: string[];
-  from: string;
-  windowDays: number;
+  draggingId: string | null;
   onCell: (date: string) => void;
   onBar: (b: Booking) => void;
+  onBarPointerDown: (e: React.PointerEvent, b: Booking) => void;
+  justDraggedRef: React.MutableRefObject<boolean>;
 }) {
+  const windowDays = dates.length;
   return (
     <div className="flex border-b border-[var(--app-border)]">
       <div
@@ -282,7 +429,7 @@ function Row({
       >
         {label}
       </div>
-      <div className="relative" style={{ width: windowDays * COL, height: 38 }}>
+      <div className="relative" style={{ width: windowDays * COL, height: 38 }} data-room-id={roomId}>
         {/* empty-cell click targets + column separators */}
         <div className="absolute inset-0 flex">
           {dates.map((d) => (
@@ -299,16 +446,22 @@ function Row({
         {bars.map(({ b, s, e }) => (
           <button
             key={b.id}
-            onClick={() => onBar(b)}
+            onPointerDown={(ev) => onBarPointerDown(ev, b)}
+            onClick={() => {
+              if (justDraggedRef.current) return; // suppress the click that ends a drag
+              onBar(b);
+            }}
             title={b.guest_name}
             style={{
               left: s * COL + 2,
               width: (e - s) * COL - 4,
               background: STATUS_BG[b.status],
+              touchAction: "none",
+              opacity: draggingId === b.id ? 0.4 : 1,
               // @ts-expect-error CSS var consumed by .app-cal-bar's frosted recipe
               "--bc": STATUS_BG[b.status],
             }}
-            className="app-cal-bar absolute top-1 h-[30px] truncate px-2.5 text-left text-xs font-medium text-white shadow-sm"
+            className="app-cal-bar absolute top-1 h-[30px] cursor-grab truncate px-2.5 text-left text-xs font-medium text-white shadow-sm active:cursor-grabbing"
           >
             {b.guest_name}
           </button>

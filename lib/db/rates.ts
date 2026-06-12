@@ -78,6 +78,9 @@ export async function upsertRate(
           room_type_id: roomTypeId,
           date,
           price,
+          // A manual override detaches the date from any rate plan, so a later
+          // plan-rate edit won't clobber it via sync_daily_rates_from_plan.
+          plan_id: null,
         },
         { onConflict: "room_type_id,date" }
       )
@@ -85,6 +88,53 @@ export async function upsertRate(
       .single();
     if (error) throw error;
     return ok(data as DailyRate);
+  } catch (e) {
+    return mapPgError(e);
+  }
+}
+
+/** Inclusive list of YYYY-MM-DD between two dates. */
+function datesInclusive(fromISO: string, toISO: string): string[] {
+  const out: string[] = [];
+  const start = Date.parse(fromISO + "T00:00:00Z");
+  const end = Date.parse(toISO + "T00:00:00Z");
+  if (Number.isNaN(start) || Number.isNaN(end) || end < start) return out;
+  for (let t = start; t <= end; t += 86_400_000) out.push(new Date(t).toISOString().slice(0, 10));
+  return out;
+}
+
+/**
+ * Bulk manual price override for the given room types across [fromISO, toISO]
+ * (inclusive). Every written cell gets plan_id=null so it detaches from any
+ * rate plan (mirrors upsertRate). Returns how many cells were written.
+ */
+export async function applyManualRateToRange(
+  propertyId: string,
+  tenantId: string,
+  roomTypeIds: string[],
+  fromISO: string,
+  toISO: string,
+  price: number
+): Promise<ActionResult<{ count: number }>> {
+  try {
+    const dates = datesInclusive(fromISO, toISO);
+    if (roomTypeIds.length === 0 || dates.length === 0) return ok({ count: 0 });
+
+    const rows = roomTypeIds.flatMap((room_type_id) =>
+      dates.map((date) => ({
+        tenant_id: tenantId,
+        property_id: propertyId,
+        room_type_id,
+        date,
+        price,
+        plan_id: null,
+      }))
+    );
+
+    const supabase = createClient();
+    const { error } = await supabase.from("daily_rates").upsert(rows, { onConflict: "room_type_id,date" });
+    if (error) throw error;
+    return ok({ count: rows.length });
   } catch (e) {
     return mapPgError(e);
   }

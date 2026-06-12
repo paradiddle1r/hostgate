@@ -10,7 +10,29 @@ import {
   Booking,
   BookingStatus,
 } from "@/lib/db/bookings";
+import { applyManualRateToRange } from "@/lib/db/rates";
 import { getActiveProperty } from "@/lib/active-property-server";
+
+/** Apply a flat manual nightly price to room types across a date range. */
+export async function bulkManualRateAction(
+  roomTypeIds: string[],
+  fromISO: string,
+  toISO: string,
+  price: number
+): Promise<ActionResult<{ count: number }>> {
+  const active = await getActiveProperty();
+  if (!active.ok) return active;
+  const res = await applyManualRateToRange(
+    active.data.property.id,
+    active.data.property.tenant_id,
+    roomTypeIds,
+    fromISO,
+    toISO,
+    price
+  );
+  if (res.ok) revalidatePath("/app/calendar");
+  return res;
+}
 
 export async function createBookingAction(input: BookingInput): Promise<ActionResult<Booking>> {
   const active = await getActiveProperty();

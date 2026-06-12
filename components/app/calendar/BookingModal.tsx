@@ -24,6 +24,9 @@ export interface ModalSeed {
   roomId?: string | null;
   checkIn?: string;
   checkOut?: string;
+  // Prefills from paste-import (a new booking seeded from pasted OTA text).
+  guestName?: string;
+  phone?: string;
 }
 
 export default function BookingModal({
@@ -48,8 +51,8 @@ export default function BookingModal({
 
   const [form, setForm] = useState({
     room_id: seed.booking?.room_id ?? seed.roomId ?? "",
-    guest_name: seed.booking?.guest_name ?? "",
-    phone: seed.booking?.phone ?? "",
+    guest_name: seed.booking?.guest_name ?? seed.guestName ?? "",
+    phone: seed.booking?.phone ?? seed.phone ?? "",
     check_in: seed.booking?.check_in ?? seed.checkIn ?? "",
     check_out: seed.booking?.check_out ?? seed.checkOut ?? "",
     adults: seed.booking?.adults ?? 1,
