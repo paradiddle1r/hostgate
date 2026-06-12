@@ -40,52 +40,42 @@ export default function AnimatedDashboard({ phase }: { phase?: number }) {
     <div
       ref={ref}
       data-paused={active ? undefined : "true"}
-      className="pms-ll hg-anim-root relative flex h-full w-full overflow-hidden"
+      className="pms-ll hg-anim-root relative flex h-full w-full flex-col overflow-hidden"
     >
       <div className="pms-ll-mesh" aria-hidden />
 
-      {/* Sidebar */}
-      <aside className="pms-ll-surface relative z-10 hidden w-[150px] flex-none px-3 py-4 md:block">
-        <div className="mb-5 flex items-center gap-2 px-1">
-          <div className="grid h-6 w-6 place-items-center rounded-lg bg-[var(--ll-accent)] text-white">
+      {/* Top bar — horizontal nav, like the real hotel-pms desktop TopNav */}
+      <header className="pms-ll-surface relative z-10 flex h-8 flex-none items-center gap-1 px-2.5">
+        <div className="flex flex-none items-center gap-1.5 pr-1.5">
+          <div className="grid h-5 w-5 place-items-center rounded-md bg-[var(--ll-accent)] text-white">
             <HotelGlyph />
           </div>
-          <span className="text-[11px] font-bold tracking-tight">HostGate</span>
+          <span className="text-[10px] font-bold tracking-tight">HostGate</span>
         </div>
-        {NAV.map((item, i) => {
-          const on = navActive(i);
-          return (
-            <div
-              key={item}
-              className="mb-0.5 flex items-center gap-2 rounded-lg px-2 py-1.5 text-[10px] font-medium transition-colors duration-500"
-              style={
-                on
-                  ? { background: "var(--ll-accent-soft)", color: "var(--ll-accent)" }
-                  : { color: "var(--ll-muted)" }
-              }
-            >
+        <nav className="flex min-w-0 items-center gap-0.5 overflow-hidden">
+          {NAV.map((item, i) => {
+            const on = navActive(i);
+            return (
               <span
-                className="grid h-4 w-4 place-items-center rounded-[5px]"
-                style={{ background: on ? "var(--ll-accent)" : "rgba(71,85,105,0.12)" }}
+                key={item}
+                className="flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-1 text-[9px] font-medium transition-colors duration-500"
+                style={on ? { background: "var(--ll-accent-soft)", color: "var(--ll-accent)" } : { color: "var(--ll-muted)" }}
               >
-                <span className="h-1 w-1 rounded-full" style={{ background: on ? "#fff" : "var(--ll-faint)" }} />
+                {on && <span className="h-1 w-1 rounded-full" style={{ background: "var(--ll-accent)" }} />}
+                {item}
               </span>
-              {item}
-            </div>
-          );
-        })}
-        <div className="mt-4 border-t pt-3" style={{ borderColor: "var(--ll-border)" }}>
-          <div className="flex items-center gap-2 px-1">
-            <div className="grid h-6 w-6 place-items-center rounded-full bg-[var(--ll-accent)] text-[9px] font-bold text-white">
-              N
-            </div>
-            <div className="leading-tight">
-              <div className="text-[9px] font-semibold">Nida P.</div>
-              <div className="text-[8px]" style={{ color: "var(--ll-faint)" }}>admin</div>
-            </div>
-          </div>
+            );
+          })}
+        </nav>
+        <div className="ml-auto flex flex-none items-center gap-1.5 pl-1.5">
+          <span className="hidden items-center gap-1 sm:flex">
+            {["#0a84ff", "#0b1220", "#eaf1fb"].map((c) => (
+              <span key={c} className="h-2.5 w-2.5 rounded-full" style={{ background: c, border: "1px solid var(--ll-border)" }} />
+            ))}
+          </span>
+          <div className="grid h-5 w-5 place-items-center rounded-full bg-[var(--ll-accent)] text-[8px] font-bold text-white">N</div>
         </div>
-      </aside>
+      </header>
 
       {/* Main */}
       <div className="relative z-10 flex-1 overflow-hidden">
