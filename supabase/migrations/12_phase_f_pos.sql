@@ -107,13 +107,14 @@ declare
   v_item jsonb;
   v_pid uuid; v_qty numeric; v_name text; v_price numeric; v_line numeric;
 begin
-  -- caller must belong to the property's tenant
-  if p_property not in (select public.auth_tenant_ids()) then
-    raise exception 'HG-AUTH-403: not your property' using errcode = 'P0001';
-  end if;
+  -- resolve the property's tenant, then authorize the caller against it.
+  -- (auth_tenant_ids() returns TENANT ids — must compare v_tenant, not p_property.)
   select tenant_id into v_tenant from public.properties where id = p_property;
   if v_tenant is null then
     raise exception 'HG-PROP-404: property not found' using errcode = 'P0001';
+  end if;
+  if v_tenant not in (select public.auth_tenant_ids()) then
+    raise exception 'HG-AUTH-403: not your property' using errcode = 'P0001';
   end if;
   if p_payment not in ('cash','transfer','card','room') then p_payment := 'cash'; end if;
 

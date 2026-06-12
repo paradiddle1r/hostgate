@@ -124,6 +124,8 @@ begin
 end $$;
 create trigger trg_housekeeping_on_checkout after update on public.bookings
   for each row execute function public.housekeeping_on_checkout();
+-- Trigger function only — keep it out of the public RPC API (the trigger still fires).
+revoke all on function public.housekeeping_on_checkout() from public, anon, authenticated;
 
 -- ---------------------------------------------------------------------
 -- RLS — tenant-scoped read/write on all three.
