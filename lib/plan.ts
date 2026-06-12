@@ -11,8 +11,11 @@ export interface PlanLimits {
 }
 
 export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
-  trial: { maxProperties: 1, glassThemes: false, label: "Trial" },
-  standard: { maxProperties: 1, glassThemes: false, label: "Standard" },
+  // glassThemes temporarily unlocked for everyone (promo). To re-gate as a Pro
+  // perk later, set trial/standard back to `glassThemes: false`. Multi-property
+  // stays Pro-only (maxProperties is unchanged).
+  trial: { maxProperties: 1, glassThemes: true, label: "Trial" },
+  standard: { maxProperties: 1, glassThemes: true, label: "Standard" },
   pro: { maxProperties: 25, glassThemes: true, label: "Pro" },
 };
 
