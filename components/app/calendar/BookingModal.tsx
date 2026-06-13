@@ -15,6 +15,7 @@ import {
   updateBookingAction,
   setStatusAction,
   bookingsInRangeAction,
+  createMultiRoomBooking,
 } from "@/app/app/calendar/actions";
 import type { RoomTypeBrief } from "./CalendarClient";
 
@@ -84,6 +85,13 @@ const STR: Record<"th" | "en", Record<string, string>> = {
     needFirstName: "กรุณาใส่ชื่อผู้เข้าพัก",
     nights: "คืน",
     total: "ยอดรวม",
+    addRooms: "เพิ่มห้อง",
+    noExtraRooms: "ไม่มีห้องเพิ่ม",
+    selectExtraRoom: "เลือกห้องเพิ่ม…",
+    extraRoomsHelp: "ห้องเพิ่มจะใช้ข้อมูลผู้เข้าพักและวันที่เดียวกัน (เช่าร่วมกัน)",
+    numRooms: "จำนวนห้อง",
+    rooms_: "ห้อง",
+    booking_: "กำลังจอง",
     markCheckedIn: "เช็คอิน",
     markCheckedOut: "เช็คเอาต์",
     cancelBooking: "ยกเลิกการจอง",
@@ -144,6 +152,13 @@ const STR: Record<"th" | "en", Record<string, string>> = {
     needFirstName: "Enter the guest's first name",
     nights: "nights",
     total: "Total",
+    addRooms: "Add rooms",
+    noExtraRooms: "No extra rooms",
+    selectExtraRoom: "Add a room…",
+    extraRoomsHelp: "Extra rooms share the same guest and dates (one lease).",
+    numRooms: "Rooms",
+    rooms_: "rooms",
+    booking_: "Booking",
     markCheckedIn: "Check in",
     markCheckedOut: "Check out",
     cancelBooking: "Cancel booking",
@@ -233,6 +248,9 @@ export default function BookingModal({
   });
   const [saving, setSaving] = useState(false);
   const [userTouchedTotal, setUserTouchedTotal] = useState(editing);
+  // Extra rooms for a multi-room booking (new standard bookings only). Each
+  // entry is a room_id; all share one booking_group_id on save.
+  const [extraRoomIds, setExtraRoomIds] = useState<string[]>([]);
 
   const type = form.booking_type;
   const isBlocked = type === "blocked" || type === "oos";
@@ -300,6 +318,35 @@ export default function BookingModal({
   const visibleRooms = rooms.filter(
     (r) => r.id === form.room_id || !occupiedRoomIds.has(r.id)
   );
+
+  // ── Multi-room (extra rooms) ────────────────────────────────────────────
+  // Only offered when creating a fresh standard booking. The picker excludes
+  // the primary room, occupied rooms, and rooms already picked.
+  const multiRoomEnabled = !editing && type === "standard";
+
+  const extraRoomCandidates = useMemo(
+    () =>
+      rooms.filter(
+        (r) =>
+          r.id !== form.room_id &&
+          !occupiedRoomIds.has(r.id) &&
+          !extraRoomIds.includes(r.id)
+      ),
+    [rooms, form.room_id, occupiedRoomIds, extraRoomIds]
+  );
+
+  // Prune any extra room that became the primary or now conflicts/disappears.
+  useEffect(() => {
+    if (!multiRoomEnabled) return;
+    setExtraRoomIds((prev) => {
+      const next = prev.filter(
+        (id) => id !== form.room_id && !occupiedRoomIds.has(id) && rooms.some((r) => r.id === id)
+      );
+      return next.length === prev.length ? prev : next;
+    });
+  }, [multiRoomEnabled, form.room_id, occupiedRoomIds, rooms]);
+
+  const roomCount = multiRoomEnabled ? 1 + extraRoomIds.length : 1;
 
   const fmtMoney = (n: number) => `${currency} ${n.toLocaleString()}`;
 
@@ -375,7 +422,14 @@ export default function BookingModal({
     }
     setSaving(true);
     const input = buildInput();
-    const res = editing ? await updateBookingAction(b!.id, input) : await createBookingAction(input);
+    // New standard booking with ≥1 extra room → one row per room, shared lease.
+    // Every other path (editing, blocked/oos, single room) is unchanged.
+    const res =
+      !editing && multiRoomEnabled && extraRoomIds.length > 0
+        ? await createMultiRoomBooking(input, extraRoomIds)
+        : editing
+        ? await updateBookingAction(b!.id, input)
+        : await createBookingAction(input);
     setSaving(false);
     if (res.ok) {
       toast.success(s.saved);
@@ -478,6 +532,58 @@ export default function BookingModal({
               <input type="date" className={field} value={form.check_out} onChange={(e) => set("check_out", e.target.value)} />
             </div>
           </div>
+
+          {/* ── Extra rooms (multi-room booking) — new standard bookings only ── */}
+          {multiRoomEnabled && (
+            <div className="mt-3">
+              <div className="mb-1 flex items-center justify-between">
+                <label className={label + " mb-0"}>{s.addRooms}</label>
+                <span className="text-xs text-[var(--app-fg-muted)]">
+                  {s.numRooms}: <b className="text-[var(--app-fg)]">{roomCount}</b>
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] p-2">
+                {extraRoomIds.length === 0 && (
+                  <span className="px-1 text-xs text-[var(--app-fg-muted)]">{s.noExtraRooms}</span>
+                )}
+                {extraRoomIds.map((id) => {
+                  const rm = rooms.find((r) => r.id === id);
+                  return (
+                    <span
+                      key={id}
+                      className="inline-flex items-center gap-1 rounded-md bg-[var(--app-surface-2)] px-2 py-1 text-xs font-medium"
+                    >
+                      {rm?.number ?? id}
+                      <button
+                        type="button"
+                        className="text-[var(--app-fg-muted)] hover:text-[var(--app-fg)]"
+                        onClick={() => setExtraRoomIds((prev) => prev.filter((x) => x !== id))}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  );
+                })}
+                <select
+                  className={field + " ml-auto w-auto min-w-[8rem] flex-none"}
+                  value=""
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (!v) return;
+                    setExtraRoomIds((prev) => (prev.includes(v) ? prev : [...prev, v]));
+                  }}
+                >
+                  <option value="">{s.selectExtraRoom}</option>
+                  {extraRoomCandidates.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.number}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="mt-1 text-[11px] text-[var(--app-fg-muted)]">{s.extraRoomsHelp}</div>
+            </div>
+          )}
 
           {/* OOS / block specifics */}
           {isBlocked && (
@@ -679,10 +785,12 @@ export default function BookingModal({
         {calc.nights > 0 && !isBlocked && (
           <div className="flex items-center justify-between rounded-lg bg-[var(--app-surface-2)] px-3 py-2 text-sm">
             <span className="text-[var(--app-fg-muted)]">
-              {calc.nights} {s.nights}
+              {roomCount > 1
+                ? `${s.booking_} ${roomCount} ${s.rooms_} · ${calc.nights} ${s.nights}`
+                : `${calc.nights} ${s.nights}`}
             </span>
             <span className="font-semibold">
-              {s.total}: {fmtMoney(calc.total)}
+              {s.total}: {fmtMoney(calc.total * roomCount)}
             </span>
           </div>
         )}
