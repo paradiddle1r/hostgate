@@ -33,12 +33,13 @@ export function hasGlassThemes(plan: string): boolean {
   return planLimits(plan).glassThemes;
 }
 
-export const ALL_THEMES = ["light", "dark", "light-glass", "dark-glass"] as const;
+export const ALL_THEMES = ["light", "dark", "sand", "ink", "forest", "rose", "light-glass", "dark-glass"] as const;
 export type ThemeName = (typeof ALL_THEMES)[number];
 
-/** Themes available to a plan (glass variants are pro-only). */
+/** Themes available to a plan (only the glass variants are pro-gated). */
 export function availableThemes(plan: string): ThemeName[] {
-  return hasGlassThemes(plan) ? [...ALL_THEMES] : ["light", "dark"];
+  const opaque = ALL_THEMES.filter((t) => !t.endsWith("-glass")) as ThemeName[];
+  return hasGlassThemes(plan) ? [...ALL_THEMES] : opaque;
 }
 
 export function isThemeAllowed(plan: string, theme: string): theme is ThemeName {
