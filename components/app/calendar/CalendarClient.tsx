@@ -927,7 +927,7 @@ export default function CalendarClient({
                     })}
                     {/* avail count — colour low (<=3) / mid (<=10) */}
                     <div className="mt-0.5 font-semibold" style={{ fontSize: 9, color: isToday ? "inherit" : availTone(avail) }}>
-                      {avail}/{TOTAL} {s.availLabel}
+                      {avail}/{TOTAL}
                     </div>
                   </div>
                 );
