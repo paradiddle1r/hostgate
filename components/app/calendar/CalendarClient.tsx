@@ -253,7 +253,14 @@ export default function CalendarClient({
     () => Array.from({ length: windowDays }, (_, i) => addDays(from, i)),
     [from, windowDays]
   );
-  const live = bookings.filter((b) => b.status !== "cancelled");
+  // Local mirror of the server bookings so a drag-move can patch the bar's
+  // position OPTIMISTICALLY — it lands instantly, without waiting on the server
+  // round-trip + a full page re-fetch. Re-syncs whenever fresh props arrive.
+  const [rows, setRows] = useState(bookings);
+  useEffect(() => {
+    setRows(bookings);
+  }, [bookings]);
+  const live = rows.filter((b) => b.status !== "cancelled");
 
   // Plan lookup by id for colour chip + tooltip name.
   const planById = useMemo(() => {
@@ -307,8 +314,8 @@ export default function CalendarClient({
   // re-subscribing its window listeners mid-drag.
   const colRef = useRef(COL);
   colRef.current = COL;
-  const bookingsRef = useRef(bookings);
-  bookingsRef.current = bookings;
+  const bookingsRef = useRef(rows);
+  bookingsRef.current = rows;
 
   // Rich hover tooltip: the booking + pointer coords.
   const [tip, setTip] = useState<{ b: Booking; x: number; y: number } | null>(null);
@@ -479,16 +486,31 @@ export default function CalendarClient({
     if (!mc) return;
     setMoveConfirm(null);
     const roomTypeId = rooms.find((r) => r.id === mc.newRoomId)?.room_type_id ?? null;
+    const total = recomputeTotal(mc.newRoomId, mc.newCI, mc.newCO);
+    // Optimistic: move the bar in local state NOW so it lands instantly. The
+    // server write + reconcile happen in the background.
+    setRows((prev) =>
+      prev.map((x) =>
+        x.id === mc.b.id
+          ? { ...x, room_id: mc.newRoomId, room_type_id: roomTypeId, check_in: mc.newCI, check_out: mc.newCO, total_amount: total }
+          : x,
+      ),
+    );
     const res = await updateBookingAction(mc.b.id, {
       room_id: mc.newRoomId,
       room_type_id: roomTypeId,
       check_in: mc.newCI,
       check_out: mc.newCO,
-      total_amount: recomputeTotal(mc.newRoomId, mc.newCI, mc.newCO),
+      total_amount: total,
     });
-    if (res.ok) toast.success(t("cal.saved"));
-    else toast.error(`${res.code} · ${res.message}`);
-    router.refresh();
+    if (res.ok) {
+      toast.success(t("cal.saved"));
+      // No router.refresh() — the optimistic state already matches the server,
+      // so re-fetching would only add a slow flash. Next navigation reconciles.
+    } else {
+      toast.error(`${res.code} · ${res.message}`);
+      router.refresh(); // failed — pull the truth back to revert the optimistic move
+    }
   }
 
   // Carry BOTH from + days through every navigation so changing one never
@@ -543,7 +565,7 @@ export default function CalendarClient({
     const q = search.trim().toLowerCase();
     if (!q) return null;
     const out = new Set<string>();
-    for (const b of bookings) {
+    for (const b of rows) {
       const hay = [
         b.guest_name,
         b.guest_first_name,
@@ -559,7 +581,7 @@ export default function CalendarClient({
       if (hay.includes(q)) out.add(b.id);
     }
     return out;
-  }, [bookings, search]);
+  }, [rows, search]);
 
   // ── Occupancy + KPI math (dedupe room/day) ───────────────────────────────
   const stats = useMemo(() => {
