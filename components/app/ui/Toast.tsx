@@ -82,8 +82,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastCtx.Provider value={api}>
       {children}
-      {/* Sits BELOW the app header (h-14) so it never overlaps the top toolbar. */}
-      <div className="pointer-events-none fixed right-4 top-[4.25rem] z-[70] flex w-[min(92vw,23rem)] flex-col gap-2.5">
+      {/* Bottom-right, stacked just above the Notes launcher (bottom-4) — clear
+          of the crowded header + calendar toolbar so it never overlaps them. */}
+      <div className="pointer-events-none fixed bottom-20 right-4 z-[70] flex w-[min(92vw,23rem)] flex-col gap-2.5">
         {toasts.map((t) => {
           const Icon = ICONS[t.kind];
           return (
