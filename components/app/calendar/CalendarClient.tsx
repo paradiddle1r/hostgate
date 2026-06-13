@@ -13,6 +13,7 @@ import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/components/app/ui/Toast";
 import EmptyState from "@/components/app/ui/EmptyState";
 import Button from "@/components/app/ui/Button";
+import Modal from "@/components/app/ui/Modal";
 import BookingModal, { ModalSeed } from "./BookingModal";
 import PasteImportModal from "./PasteImportModal";
 import BulkRateModal from "./BulkRateModal";
@@ -83,6 +84,14 @@ const STR: Record<"th" | "en", Record<string, string>> = {
     typeBlocked: "บล็อก",
     typeOOS: "ห้องเสีย",
     openEnded: "ไม่มีกำหนด",
+    guest: "ผู้เข้าพัก",
+    moveTitle: "ย้ายการจอง?",
+    moveFrom: "จาก",
+    moveTo: "ไป",
+    moveCancel: "ยกเลิก",
+    moveConfirmBtn: "ยืนยันการย้าย",
+    conflictTitle: "ย้ายไม่ได้ — ห้องไม่ว่าง",
+    conflictBody: "ห้องนี้มีการจองทับช่วงเวลาที่เลือกอยู่แล้ว",
   },
   en: {
     availLabel: "avail",
@@ -127,6 +136,14 @@ const STR: Record<"th" | "en", Record<string, string>> = {
     typeBlocked: "Blocked",
     typeOOS: "Out of service",
     openEnded: "Open-ended",
+    guest: "Guest",
+    moveTitle: "Move booking?",
+    moveFrom: "From",
+    moveTo: "To",
+    moveCancel: "Cancel",
+    moveConfirmBtn: "Confirm move",
+    conflictTitle: "Can't move — room busy",
+    conflictBody: "This room already has a booking overlapping the selected dates.",
   },
 };
 
@@ -264,14 +281,34 @@ export default function CalendarClient({
   // hotel-pms's `.bbar.dragging`. The drop-target row + day-cell highlight is
   // toggled via direct DOM class flips in the same rAF, never React state.
   const [dragB, setDragB] = useState<Booking | null>(null); // identity only — tooltip suppression + listener gate
+  const [dragMoved, setDragMoved] = useState(false); // true once past the move threshold (drives the lift class)
+  // Live drop target: which room row + day span the bar would land in. Updated
+  // only when the target actually changes (a few times per drag), so the React
+  // re-render that paints the highlight is cheap and never per-frame.
+  const [drop, setDrop] = useState<{ roomId: string | null; s: number; e: number } | null>(null);
+  const dropKeyRef = useRef("");
+  // Pending move awaiting confirmation in the dialog.
+  const [moveConfirm, setMoveConfirm] = useState<{
+    b: Booking;
+    newRoomId: string | null;
+    fromRoom: string;
+    toRoom: string;
+    newCI: string;
+    newCO: string;
+  } | null>(null);
   const startRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const movedRef = useRef(false);
   const justDraggedRef = useRef(false);
   const rafRef = useRef<number | null>(null);
   const lastPtRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-  const hiRowRef = useRef<HTMLElement | null>(null); // currently highlighted room row
-  const hiCellRef = useRef<HTMLElement | null>(null); // currently highlighted day cell
   const srcBarRef = useRef<HTMLElement | null>(null); // the bar being dragged (lifted in place)
+  // Refs so the [dragB]-scoped drag effect always reads the freshest COL +
+  // bookings (for the drop-span geometry + conflict pre-check) without
+  // re-subscribing its window listeners mid-drag.
+  const colRef = useRef(COL);
+  colRef.current = COL;
+  const bookingsRef = useRef(bookings);
+  bookingsRef.current = bookings;
 
   // Rich hover tooltip: the booking + pointer coords.
   const [tip, setTip] = useState<{ b: Booking; x: number; y: number } | null>(null);
@@ -283,12 +320,6 @@ export default function CalendarClient({
     return stayTotal(rm, Number(base) || 0, ci, co).total || null;
   }
 
-  function clearHighlights() {
-    hiRowRef.current?.classList.remove("app-cal-droprow");
-    hiCellRef.current?.classList.remove("app-cal-dropcell");
-    hiRowRef.current = null;
-    hiCellRef.current = null;
-  }
   function restoreSrcBar() {
     if (srcBarRef.current) {
       srcBarRef.current.style.transform = "";
@@ -301,6 +332,10 @@ export default function CalendarClient({
 
   function onBarPointerDown(e: React.PointerEvent, b: Booking) {
     if (e.button !== 0) return;
+    // Monthly leases + cancelled bars are drag-locked (parity with hotel-pms):
+    // moving them would silently invalidate linked tenant/contract/meter rows or
+    // re-activate a cancelled booking. A plain click still opens the modal.
+    if (b.booking_type === "monthly" || b.status === "cancelled") return;
     startRef.current = { x: e.clientX, y: e.clientY };
     lastPtRef.current = { x: e.clientX, y: e.clientY };
     // Grab the real bar node — it's the element we lift and translate. We don't
@@ -315,11 +350,14 @@ export default function CalendarClient({
   useEffect(() => {
     if (!dragB) return;
     document.body.style.userSelect = "";
+    // Fixed for the whole drag: the bar's start column + its length in nights.
+    const baseStart = dayIdx(from, dragB.check_in);
+    const nights = nightsBetween(dragB.check_in, dragB.check_out);
 
-    // One rAF does BOTH the bar's lift-transform AND the drop-target highlight.
-    // Crucially the highlight's elementFromPoint() — a synchronous layout
-    // hit-test — runs here (≤ once per frame), NOT on every raw pointermove
-    // (pointers fire 120–1000 Hz; calling it per event was the real jank).
+    // One rAF does BOTH the bar's lift-transform AND the drop-target compute.
+    // Crucially elementFromPoint() — a synchronous layout hit-test — runs here
+    // (≤ once per frame), NOT on every raw pointermove (pointers fire 120–1000
+    // Hz; calling it per event was the real jank).
     function applyFrame() {
       rafRef.current = null;
       const { x, y } = lastPtRef.current;
@@ -329,22 +367,21 @@ export default function CalendarClient({
         const dy = y - startRef.current.y;
         src.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
       }
-      updateHighlight(x, y);
+      updateDropTarget(x, y);
     }
 
-    function updateHighlight(x: number, y: number) {
+    // Resolve the room row + day span under the cursor and, only when it
+    // changes, push it to React state — that paints the drop highlight.
+    function updateDropTarget(x: number, y: number) {
       const el = document.elementFromPoint(x, y) as HTMLElement | null;
-      const rowEl = (el?.closest("[data-room-id]") as HTMLElement | null) ?? null;
-      if (rowEl !== hiRowRef.current) {
-        hiRowRef.current?.classList.remove("app-cal-droprow");
-        rowEl?.classList.add("app-cal-droprow");
-        hiRowRef.current = rowEl;
-      }
-      const cellEl = (el?.closest("[data-day-cell]") as HTMLElement | null) ?? null;
-      if (cellEl !== hiCellRef.current) {
-        hiCellRef.current?.classList.remove("app-cal-dropcell");
-        cellEl?.classList.add("app-cal-dropcell");
-        hiCellRef.current = cellEl;
+      const rowEl = el?.closest("[data-room-id]") as HTMLElement | null;
+      const roomId = rowEl ? rowEl.getAttribute("data-room-id") : dragB!.room_id;
+      const deltaDays = Math.round((x - startRef.current.x) / colRef.current);
+      const s = baseStart + deltaDays;
+      const key = `${roomId}:${s}`;
+      if (key !== dropKeyRef.current) {
+        dropKeyRef.current = key;
+        setDrop({ roomId, s, e: s + nights });
       }
     }
 
@@ -356,22 +393,22 @@ export default function CalendarClient({
         movedRef.current = true;
         document.body.style.userSelect = "none";
         // Lift the real bar only once a real drag begins (so a click stays a
-        // click). pointer-events:none lets the drop highlight + elementFromPoint
-        // lookup see the grid beneath, not this bar.
+        // click). pointer-events:none lets the drop hit-test see the grid
+        // beneath, not this bar. The lift CLASS is React-driven (dragMoved) so
+        // it survives the drop-highlight re-renders; transform/zIndex stay
+        // direct-DOM (React never touches props it doesn't own).
         if (srcBarRef.current) {
           srcBarRef.current.style.zIndex = "40";
           srcBarRef.current.style.pointerEvents = "none";
-          srcBarRef.current.classList.add("app-cal-bar-dragging");
-          applyFrame(); // position synchronously so it never flashes at origin
         }
+        setDragMoved(true);
+        applyFrame(); // position synchronously so it never flashes at origin
       }
       if (!movedRef.current) return;
-      // Coalesce ghost move + drop highlight into a single rAF — zero per-move
-      // setState and at most one elementFromPoint hit-test per frame.
       if (rafRef.current == null) rafRef.current = requestAnimationFrame(applyFrame);
     }
 
-    async function up(e: PointerEvent) {
+    function up(e: PointerEvent) {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       if (rafRef.current != null) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
@@ -381,32 +418,47 @@ export default function CalendarClient({
       // Read the drop target BEFORE restoring the source bar (it's pointer-events
       // none right now, so elementFromPoint correctly sees the grid beneath).
       const dropEl = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
-      clearHighlights();
       restoreSrcBar();
+      setDragMoved(false);
+      setDrop(null);
+      dropKeyRef.current = "";
       setDragB(null);
       if (!moved) return;
       justDraggedRef.current = true;
       setTimeout(() => (justDraggedRef.current = false), 0);
 
-      const dx = e.clientX - startRef.current.x;
-      const deltaDays = Math.round(dx / COL);
+      const deltaDays = Math.round((e.clientX - startRef.current.x) / colRef.current);
       const rowEl = dropEl?.closest("[data-room-id]") as HTMLElement | null;
       const newRoomId = rowEl ? rowEl.getAttribute("data-room-id") || null : b.room_id;
+      if (newRoomId === b.room_id && deltaDays === 0) return; // no-op drop
       const newCI = deltaDays ? addDays(b.check_in, deltaDays) : b.check_in;
       const newCO = deltaDays ? addDays(b.check_out, deltaDays) : b.check_out;
-      if (newRoomId === b.room_id && deltaDays === 0) return;
 
-      const roomTypeId = rooms.find((r) => r.id === newRoomId)?.room_type_id ?? null;
-      const res = await updateBookingAction(b.id, {
-        room_id: newRoomId,
-        room_type_id: roomTypeId,
-        check_in: newCI,
-        check_out: newCO,
-        total_amount: recomputeTotal(newRoomId, newCI, newCO),
+      // Conflict pre-check (parity with hotel-pms): block an overlap in the
+      // target room before even asking to confirm.
+      const conflict = bookingsRef.current.find(
+        (x) =>
+          x.id !== b.id &&
+          x.status !== "cancelled" &&
+          (b.booking_group_id == null || x.booking_group_id !== b.booking_group_id) &&
+          x.room_id === newRoomId &&
+          x.check_in < newCO &&
+          newCI < x.check_out,
+      );
+      if (conflict) {
+        toast.error(`${s.conflictTitle} · ${s.conflictBody}`);
+        return;
+      }
+
+      // Ask before applying — show the change details in a dialog.
+      setMoveConfirm({
+        b,
+        newRoomId,
+        fromRoom: roomLabel(b.room_id),
+        toRoom: roomLabel(newRoomId),
+        newCI,
+        newCO,
       });
-      if (res.ok) toast.success(t("cal.saved"));
-      else toast.error(`${res.code} · ${res.message}`);
-      router.refresh();
     }
 
     window.addEventListener("pointermove", move);
@@ -415,12 +467,29 @@ export default function CalendarClient({
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       if (rafRef.current != null) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
-      clearHighlights();
       restoreSrcBar();
       document.body.style.userSelect = "";
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dragB]);
+
+  // Apply the move the operator confirmed in the dialog.
+  async function confirmMove() {
+    const mc = moveConfirm;
+    if (!mc) return;
+    setMoveConfirm(null);
+    const roomTypeId = rooms.find((r) => r.id === mc.newRoomId)?.room_type_id ?? null;
+    const res = await updateBookingAction(mc.b.id, {
+      room_id: mc.newRoomId,
+      room_type_id: roomTypeId,
+      check_in: mc.newCI,
+      check_out: mc.newCO,
+      total_amount: recomputeTotal(mc.newRoomId, mc.newCI, mc.newCO),
+    });
+    if (res.ok) toast.success(t("cal.saved"));
+    else toast.error(`${res.code} · ${res.message}`);
+    router.refresh();
+  }
 
   // Carry BOTH from + days through every navigation so changing one never
   // silently resets the other.
@@ -859,6 +928,8 @@ export default function CalendarClient({
                 onBarHover={(b, x, y) => setTip({ b, x, y })}
                 onBarLeave={() => setTip(null)}
                 justDraggedRef={justDraggedRef}
+                draggingId={dragMoved && dragB ? dragB.id : null}
+                dropSpan={drop && drop.roomId === "" ? { s: drop.s, e: drop.e } : null}
               />
             )}
 
@@ -887,6 +958,8 @@ export default function CalendarClient({
                     onBarHover={(b, x, y) => setTip({ b, x, y })}
                     onBarLeave={() => setTip(null)}
                     justDraggedRef={justDraggedRef}
+                    draggingId={dragMoved && dragB ? dragB.id : null}
+                    dropSpan={drop && drop.roomId === r.id ? { s: drop.s, e: drop.e } : null}
                   />
                 ))}
               </div>
@@ -971,6 +1044,45 @@ export default function CalendarClient({
           onClose={() => setRateOpen(false)}
         />
       )}
+
+      {/* Drag-move confirmation — shows the change before it's applied. */}
+      {moveConfirm && (
+        <Modal
+          open
+          onClose={() => setMoveConfirm(null)}
+          title={s.moveTitle}
+          className="max-w-sm"
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setMoveConfirm(null)}>
+                {s.moveCancel}
+              </Button>
+              <Button variant="primary" onClick={confirmMove}>
+                {s.moveConfirmBtn}
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-2.5 text-sm">
+            <div className="flex justify-between gap-4">
+              <span className="text-[var(--app-fg-muted)]">{s.guest}</span>
+              <span className="font-medium">{moveConfirm.b.guest_name}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-[var(--app-fg-muted)]">{s.room}</span>
+              <span className="font-medium">
+                {moveConfirm.fromRoom} <span className="text-[var(--app-fg-muted)]">→</span> {moveConfirm.toRoom}
+              </span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-[var(--app-fg-muted)]">{s.dates}</span>
+              <span className="font-medium">
+                {moveConfirm.newCI} <span className="text-[var(--app-fg-muted)]">→</span> {moveConfirm.newCO}
+              </span>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
@@ -986,6 +1098,8 @@ function Row({
   matchedIds,
   onCell,
   onBar,
+  draggingId,
+  dropSpan,
   onBarPointerDown,
   onBarHover,
   onBarLeave,
@@ -1004,8 +1118,14 @@ function Row({
   onBarHover: (b: Booking, x: number, y: number) => void;
   onBarLeave: () => void;
   justDraggedRef: React.MutableRefObject<boolean>;
+  draggingId: string | null; // id of the bar currently being dragged (lift class)
+  dropSpan: { s: number; e: number } | null; // drop-target span when this is the target row
 }) {
   const windowDays = dates.length;
+  // Clamp the drop highlight to the visible window.
+  const dropS = dropSpan ? Math.max(0, dropSpan.s) : 0;
+  const dropE = dropSpan ? Math.min(windowDays, dropSpan.e) : 0;
+  const showDrop = dropSpan != null && dropE > dropS;
   return (
     <div className="flex border-b border-[var(--app-border)]">
       <div
@@ -1015,6 +1135,19 @@ function Row({
         {label}
       </div>
       <div className="relative" style={{ width: windowDays * col, height: 38 }} data-room-id={roomId}>
+        {/* drop-target highlight — the cell span where the dragged bar will land */}
+        {showDrop && (
+          <div
+            className="pointer-events-none absolute top-1 z-[1] h-[30px] rounded-md"
+            style={{
+              left: dropS * col + 2,
+              width: (dropE - dropS) * col - 4,
+              background: "color-mix(in srgb, var(--app-accent) 16%, transparent)",
+              border: "2px dashed var(--app-accent)",
+              boxShadow: "inset 0 0 14px color-mix(in srgb, var(--app-accent) 28%, transparent)",
+            }}
+          />
+        )}
         {/* empty-cell click targets + column separators */}
         <div className="absolute inset-0 flex">
           {dates.map((d) => {
@@ -1056,7 +1189,9 @@ function Row({
                 // @ts-expect-error CSS var consumed by .app-cal-bar's frosted recipe
                 "--bc": bg,
               }}
-              className="app-cal-bar absolute top-1 h-[30px] cursor-grab truncate px-2.5 text-left text-xs font-medium text-white shadow-sm active:cursor-grabbing"
+              className={`app-cal-bar absolute top-1 h-[30px] cursor-grab truncate px-2.5 text-left text-xs font-medium text-white shadow-sm active:cursor-grabbing${
+                b.id === draggingId ? " app-cal-bar-dragging" : ""
+              }`}
             >
               {b.guest_name}
             </button>
