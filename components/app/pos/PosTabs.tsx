@@ -2,18 +2,35 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ShoppingCart, Package, ShoppingBag } from "lucide-react";
+import { ShoppingCart, Package, ShoppingBag, LayoutDashboard, Boxes } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 
-const STR: Record<"th" | "en", { terminal: string; products: string; sales: string }> = {
-  th: { terminal: "ขายสินค้า", products: "สินค้า", sales: "ประวัติการขาย" },
-  en: { terminal: "Terminal", products: "Products", sales: "Sales" },
+const STR: Record<
+  "th" | "en",
+  { terminal: string; products: string; sales: string; dashboard: string; inventory: string }
+> = {
+  th: {
+    terminal: "ขายสินค้า",
+    products: "สินค้า",
+    sales: "ประวัติการขาย",
+    dashboard: "แดชบอร์ด",
+    inventory: "สต๊อก",
+  },
+  en: {
+    terminal: "Terminal",
+    products: "Products",
+    sales: "Sales",
+    dashboard: "Dashboard",
+    inventory: "Inventory",
+  },
 };
 
 const TABS = [
   { href: "/app/pos", icon: ShoppingCart, key: "terminal" as const, exact: true },
   { href: "/app/pos/products", icon: Package, key: "products" as const },
+  { href: "/app/pos/inventory", icon: Boxes, key: "inventory" as const },
   { href: "/app/pos/sales", icon: ShoppingBag, key: "sales" as const },
+  { href: "/app/pos/dashboard", icon: LayoutDashboard, key: "dashboard" as const },
 ];
 
 export default function PosTabs() {

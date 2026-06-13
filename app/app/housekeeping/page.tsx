@@ -25,6 +25,7 @@ export default async function HousekeepingPage() {
       rooms={(roomsRes.ok ? roomsRes.data : []).filter((r) => r.status === "active")}
       members={membersRes.ok ? membersRes.data : []}
       currentUserId={userData.user?.id ?? null}
+      propertyId={property.id}
     />
   );
 }

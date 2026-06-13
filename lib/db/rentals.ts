@@ -24,6 +24,14 @@ export interface RentalTenant {
   occupants: number;
   notes: string | null;
   created_at: string;
+  // ── parity (migration 15) — full fee model ──────────────────────────────────
+  water_minimum_charge: number; // NOT NULL default 0
+  internet_fee: number; // NOT NULL default 0
+  parking_fee: number; // NOT NULL default 0
+  billing_day: number; // NOT NULL default 1
+  start_meter_electric: number | null;
+  start_meter_water: number | null;
+  other_charges: Array<Record<string, unknown>>; // jsonb NOT NULL default '[]'
 }
 
 export interface MeterReading {
@@ -56,6 +64,19 @@ export interface RentalBill {
   invoice_id: string | null;
   notes: string | null;
   created_at: string;
+  // ── parity (migration 15) — period range + meter snapshots + structured ─────
+  period_start: string | null;
+  period_end: string | null;
+  electric_prev: number | null;
+  electric_curr: number | null;
+  electric_rate: number; // NOT NULL default 0
+  water_prev: number | null;
+  water_curr: number | null;
+  water_rate: number; // NOT NULL default 0
+  internet_amount: number; // NOT NULL default 0
+  parking_amount: number; // NOT NULL default 0
+  other_charges: Array<Record<string, unknown>>; // jsonb NOT NULL default '[]'
+  subtotal: number; // NOT NULL default 0
 }
 
 export interface RentalContract {
@@ -73,6 +94,45 @@ export interface RentalContract {
   tenant_name: string | null;
   body_th: string | null;
   body_en: string | null;
+  created_at: string;
+  // ── parity (migration 15) — structured legal fields ─────────────────────────
+  landlord_address: string | null;
+  landlord_tax_id: string | null;
+  tenant_address: string | null;
+  tenant_citizen_id: string | null;
+  furniture_rent: number; // NOT NULL default 0
+  common_area_fee: number; // NOT NULL default 0
+  internet_fee: number; // NOT NULL default 0
+  parking_fee: number; // NOT NULL default 0
+  payment_due_day: number; // NOT NULL default 1
+  notice_period_days: number; // NOT NULL default 30
+  language: string; // NOT NULL default 'th'
+  witnesses: Array<Record<string, unknown>>; // jsonb NOT NULL default '[]'
+  terminated_at: string | null;
+  terminated_reason: string | null;
+}
+
+/**
+ * Per-room-type monthly config + photos (migration 15 table
+ * `monthly_room_types`). One row per room type; drives the monthly-rentals
+ * setup page (which room types sell monthly, their default rates + photos).
+ */
+export interface MonthlyRoomType {
+  id: string;
+  tenant_id: string;
+  property_id: string;
+  room_type_id: string;
+  display_name_th: string | null;
+  display_name_en: string | null;
+  monthly_rent: number; // NOT NULL default 0
+  deposit: number; // NOT NULL default 0
+  advance_rent: number; // NOT NULL default 0
+  electric_rate: number; // NOT NULL default 0
+  water_rate: number; // NOT NULL default 0
+  internet_fee: number; // NOT NULL default 0
+  parking_fee: number; // NOT NULL default 0
+  photos: Array<Record<string, unknown>>; // jsonb NOT NULL default '[]'
+  amenities: string[]; // NOT NULL default '{}'
   created_at: string;
 }
 
@@ -146,6 +206,14 @@ export interface RentalTenantInput {
   other_fees?: number;
   occupants?: number;
   notes?: string | null;
+  // ── parity (migration 15) ──────────────────────────────────────────────────
+  water_minimum_charge?: number;
+  internet_fee?: number;
+  parking_fee?: number;
+  billing_day?: number;
+  start_meter_electric?: number | null;
+  start_meter_water?: number | null;
+  other_charges?: Array<Record<string, unknown>>;
 }
 
 /** Create or update the rate config for a booking (makes it a monthly tenant). */
@@ -223,6 +291,19 @@ export interface BillInput {
   other: number;
   total: number;
   notes?: string | null;
+  // ── parity (migration 15) — period range + meter snapshots + structured ─────
+  period_start?: string | null;
+  period_end?: string | null;
+  electric_prev?: number | null;
+  electric_curr?: number | null;
+  electric_rate?: number;
+  water_prev?: number | null;
+  water_curr?: number | null;
+  water_rate?: number;
+  internet_amount?: number;
+  parking_amount?: number;
+  other_charges?: Array<Record<string, unknown>>;
+  subtotal?: number;
 }
 
 export async function createBill(
@@ -299,6 +380,21 @@ export interface ContractInput {
   tenant_name?: string | null;
   body_th?: string | null;
   body_en?: string | null;
+  // ── parity (migration 15) — structured legal fields ─────────────────────────
+  landlord_address?: string | null;
+  landlord_tax_id?: string | null;
+  tenant_address?: string | null;
+  tenant_citizen_id?: string | null;
+  furniture_rent?: number;
+  common_area_fee?: number;
+  internet_fee?: number;
+  parking_fee?: number;
+  payment_due_day?: number;
+  notice_period_days?: number;
+  language?: string;
+  witnesses?: Array<Record<string, unknown>>;
+  terminated_at?: string | null;
+  terminated_reason?: string | null;
 }
 
 export async function createContract(
@@ -346,6 +442,66 @@ export async function deleteContract(id: string): Promise<ActionResult<{ id: str
     const { error } = await supabase.from("rental_contracts").delete().eq("id", id);
     if (error) throw error;
     return ok({ id });
+  } catch (e) {
+    return mapPgError(e);
+  }
+}
+
+// ── monthly room types (per-type config + photos) ─────────────────────────────
+export interface MonthlyRoomTypeInput {
+  display_name_th?: string | null;
+  display_name_en?: string | null;
+  monthly_rent?: number;
+  deposit?: number;
+  advance_rent?: number;
+  electric_rate?: number;
+  water_rate?: number;
+  internet_fee?: number;
+  parking_fee?: number;
+  photos?: Array<Record<string, unknown>>;
+  amenities?: string[];
+}
+
+/** Every monthly-room-type config row for a property. */
+export async function listMonthlyRoomTypes(
+  propertyId: string
+): Promise<ActionResult<MonthlyRoomType[]>> {
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("monthly_room_types")
+      .select("*")
+      .eq("property_id", propertyId)
+      .order("created_at", { ascending: true });
+    if (error) throw error;
+    return ok((data ?? []) as MonthlyRoomType[]);
+  } catch (e) {
+    return mapPgError(e);
+  }
+}
+
+/**
+ * Create or update the monthly config for a room type (one row per room type —
+ * the table is unique on room_type_id, so this upserts on conflict).
+ */
+export async function upsertMonthlyRoomType(
+  propertyId: string,
+  tenantId: string,
+  roomTypeId: string,
+  input: MonthlyRoomTypeInput
+): Promise<ActionResult<MonthlyRoomType>> {
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("monthly_room_types")
+      .upsert(
+        { tenant_id: tenantId, property_id: propertyId, room_type_id: roomTypeId, ...input },
+        { onConflict: "room_type_id" }
+      )
+      .select()
+      .single();
+    if (error) throw error;
+    return ok(data as MonthlyRoomType);
   } catch (e) {
     return mapPgError(e);
   }

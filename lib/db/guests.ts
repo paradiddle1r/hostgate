@@ -4,7 +4,8 @@ import "server-only";
 // the assert_property_in_tenant trigger (HG-PROP-404) guards mismatches.
 
 import { createClient } from "@/lib/supabase/server";
-import { ActionResult, ok, mapPgError } from "@/lib/errors";
+import { ActionResult, ok, fail, mapPgError } from "@/lib/errors";
+import type { Booking } from "@/lib/db/bookings";
 
 export interface Guest {
   id: string;
@@ -19,6 +20,20 @@ export interface Guest {
   is_vip: boolean;
   is_blacklisted: boolean;
   created_at: string;
+  // ── parity (migration 15) ──────────────────────────────────────────────────
+  thai_name: string | null;
+  car_plate: string | null;
+  preferences: string | null;
+  blacklist_reason: string | null;
+  tags: string[]; // NOT NULL default '{}'
+  citizen_id: string | null;
+  id_dob: string | null;
+  id_gender: string | null;
+  id_issued_date: string | null;
+  id_expires_date: string | null;
+  id_address: string | null;
+  id_photo_path: string | null;
+  updated_at: string; // NOT NULL default now()
 }
 
 export interface GuestInput {
@@ -30,6 +45,19 @@ export interface GuestInput {
   notes?: string;
   is_vip?: boolean;
   is_blacklisted?: boolean;
+  // ── parity (migration 15) ──────────────────────────────────────────────────
+  thai_name?: string | null;
+  car_plate?: string | null;
+  preferences?: string | null;
+  blacklist_reason?: string | null;
+  tags?: string[];
+  citizen_id?: string | null;
+  id_dob?: string | null;
+  id_gender?: string | null;
+  id_issued_date?: string | null;
+  id_expires_date?: string | null;
+  id_address?: string | null;
+  id_photo_path?: string | null;
 }
 
 export interface GuestStays {
@@ -84,6 +112,31 @@ export async function getGuest(id: string): Promise<ActionResult<Guest>> {
   }
 }
 
+/** Fetch one guest plus every booking linked to it (newest check-in first). */
+export async function getGuestWithBookings(
+  id: string
+): Promise<ActionResult<{ guest: Guest; bookings: Booking[] }>> {
+  try {
+    const supabase = createClient();
+    const { data: guest, error } = await supabase
+      .from("guests")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    if (error) throw error;
+    if (!guest) return fail("HG-BOOK-404", "Guest not found.");
+    const { data: bookings, error: bErr } = await supabase
+      .from("bookings")
+      .select("*")
+      .eq("guest_id", id)
+      .order("check_in", { ascending: false });
+    if (bErr) throw bErr;
+    return ok({ guest: guest as Guest, bookings: (bookings ?? []) as Booking[] });
+  } catch (e) {
+    return mapPgError(e);
+  }
+}
+
 /** Create a guest under a property. */
 export async function createGuest(
   propertyId: string,
@@ -105,6 +158,19 @@ export async function createGuest(
         notes: input.notes ?? null,
         is_vip: input.is_vip ?? false,
         is_blacklisted: input.is_blacklisted ?? false,
+        // ── parity (migration 15) ──────────────────────────────────────────
+        thai_name: input.thai_name ?? null,
+        car_plate: input.car_plate ?? null,
+        preferences: input.preferences ?? null,
+        blacklist_reason: input.blacklist_reason ?? null,
+        tags: input.tags ?? [],
+        citizen_id: input.citizen_id ?? null,
+        id_dob: input.id_dob ?? null,
+        id_gender: input.id_gender ?? null,
+        id_issued_date: input.id_issued_date ?? null,
+        id_expires_date: input.id_expires_date ?? null,
+        id_address: input.id_address ?? null,
+        id_photo_path: input.id_photo_path ?? null,
       })
       .select()
       .single();

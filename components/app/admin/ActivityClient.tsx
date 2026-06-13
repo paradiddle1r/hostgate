@@ -1,10 +1,14 @@
 "use client";
 
-// Read-only tenant audit trail. Data arrives once via server props (capped at
-// 200 rows server-side, newest-first). Search (action / entity / entity_id)
-// and action-prefix chips run in-memory — no server actions here.
+// Read-only tenant audit trail. Server-side paginated: the page loader applies
+// the prefix / actor / search filters and slices one PAGE_SIZE window (newest
+// first) with an exact count. This component drives all of that through the URL
+// (router.push) so the server re-runs the filtered query — search is debounced
+// so each keystroke isn't a navigation. The visible summary column prefers the
+// stored `summary`, falling back to a composed line from the detail payload.
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Search,
   Activity,
@@ -12,6 +16,8 @@ import {
   ShoppingCart,
   CalendarDays,
   Receipt,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import type { ActivityEntry } from "@/lib/db/admin";
@@ -54,76 +60,138 @@ const STR = {
   th: {
     title: "บันทึกกิจกรรม",
     count: "รายการ",
-    search: "ค้นหา การกระทำ / รายการ / รหัส",
+    search: "ค้นหา สรุป / การกระทำ / รายการ",
     all: "ทั้งหมด",
+    allActors: "ทุกผู้ใช้",
     system: "ระบบ",
     empty: "ยังไม่มีบันทึกกิจกรรม",
     emptyHint: "กิจกรรมจะปรากฏที่นี่เมื่อมีการเปลี่ยนแปลง",
     noMatch: "ไม่พบรายการที่ตรงกัน",
     noMatchHint: "ลองปรับคำค้นหรือตัวกรอง",
+    newer: "ใหม่กว่า",
+    older: "เก่ากว่า",
+    page: "หน้า",
   },
   en: {
     title: "Activity",
     count: "entries",
-    search: "Search action / entity / id",
+    search: "Search summary / action / entity",
     all: "All",
+    allActors: "All users",
     system: "System",
     empty: "No activity yet",
     emptyHint: "Activity will appear here as changes are made.",
     noMatch: "No matching entries",
     noMatchHint: "Try adjusting your search or filter.",
+    newer: "Newer",
+    older: "Older",
+    page: "Page",
   },
 } as const;
+
+// Pretty role label for the muted actor sub-line.
+const ROLE_STR: Record<string, { th: string; en: string }> = {
+  owner: { th: "เจ้าของ", en: "Owner" },
+  admin: { th: "ผู้ดูแล", en: "Admin" },
+  staff: { th: "พนักงาน", en: "Staff" },
+};
 
 export default function ActivityClient({
   entries,
   members,
+  total,
+  page,
+  pageSize,
+  prefix,
+  actor,
+  q: qInitial,
+  prefixes,
 }: {
   entries: ActivityEntry[];
   members: TenantMember[];
+  total: number;
+  page: number;
+  pageSize: number;
+  prefix: string;
+  actor: string;
+  q: string;
+  prefixes: string[];
 }) {
   const { locale } = useI18n();
-  const tr = STR[locale === "en" ? "en" : "th"];
+  const lang = locale === "en" ? "en" : "th";
+  const tr = STR[lang];
+  const router = useRouter();
 
-  const [q, setQ] = useState("");
-  const [prefix, setPrefix] = useState<string>("all");
+  // Local search box state, debounced into the URL so each keystroke isn't a
+  // navigation. Seeded from the server-resolved value.
+  const [q, setQ] = useState(qInitial);
+  useEffect(() => {
+    setQ(qInitial);
+  }, [qInitial]);
 
-  // actor_id → display name. Falls back to the email local-part, then "System".
-  const actorName = useMemo(() => {
-    const byId = new Map<string, TenantMember>();
-    for (const m of members) byId.set(m.user_id, m);
-    return (actorId: string | null): string => {
-      if (!actorId) return tr.system;
-      const m = byId.get(actorId);
-      if (!m) return tr.system;
-      if (m.display_name && m.display_name.trim()) return m.display_name;
-      if (m.email && m.email.includes("@")) return m.email.split("@")[0];
-      if (m.email) return m.email;
-      return tr.system;
+  const firstRender = useRef(true);
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    if (q === qInitial) return;
+    const id = setTimeout(() => {
+      navigate({ q, page: 0 });
+    }, 350);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q]);
+
+  // Build a fresh query string from the current server state + overrides, then
+  // push it. Any filter change resets to page 0 (callers pass page:0).
+  function navigate(next: Partial<{ prefix: string; actor: string; q: string; page: number }>) {
+    const merged = {
+      prefix: next.prefix ?? prefix,
+      actor: next.actor ?? actor,
+      q: next.q ?? q,
+      page: next.page ?? page,
     };
-  }, [members, tr.system]);
+    const params = new URLSearchParams();
+    if (merged.prefix) params.set("prefix", merged.prefix);
+    if (merged.actor) params.set("actor", merged.actor);
+    if (merged.q) params.set("q", merged.q);
+    if (merged.page > 0) params.set("page", String(merged.page));
+    const qs = params.toString();
+    router.push(qs ? `/app/activity?${qs}` : "/app/activity");
+  }
 
-  // Distinct action prefixes present, for the filter chips.
-  const prefixes = useMemo(() => {
-    const set = new Set<string>();
-    for (const e of entries) set.add(prefixOf(e.action));
-    return Array.from(set).sort();
-  }, [entries]);
+  // actor_id → display name (falls back to email local-part, then "System").
+  const memberById = useMemo(() => {
+    const m = new Map<string, TenantMember>();
+    for (const x of members) m.set(x.user_id, x);
+    return m;
+  }, [members]);
 
-  const rows = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    return entries.filter((e) => {
-      if (prefix !== "all" && prefixOf(e.action) !== prefix) return false;
-      if (!needle) return true;
-      return (
-        e.action.toLowerCase().includes(needle) ||
-        (e.entity ?? "").toLowerCase().includes(needle) ||
-        (e.entity_id ?? "").toLowerCase().includes(needle)
-      );
-    });
-  }, [entries, q, prefix]);
+  function actorName(actorId: string | null): string {
+    if (!actorId) return tr.system;
+    const m = memberById.get(actorId);
+    if (!m) return tr.system;
+    if (m.display_name && m.display_name.trim()) return m.display_name;
+    if (m.email && m.email.includes("@")) return m.email.split("@")[0];
+    if (m.email) return m.email;
+    return tr.system;
+  }
 
-  // One-line render of the detail object (skips null / non-object payloads).
+  // Role label for a row: prefer the stored actor_role (snapshot at write
+  // time), else the member's current role.
+  function actorRoleLabel(e: ActivityEntry): string | null {
+    const raw = (e.actor_role || memberById.get(e.actor_id ?? "")?.role || "").toLowerCase();
+    if (!raw) return null;
+    return ROLE_STR[raw]?.[lang] ?? raw;
+  }
+
+  // Human-readable summary: stored `summary` wins; else compose from detail.
+  function summaryLine(e: ActivityEntry): string {
+    if (e.summary && e.summary.trim()) return e.summary.trim();
+    return detailLine(e.detail);
+  }
+
   const detailLine = (detail: Record<string, unknown> | null): string => {
     if (!detail || typeof detail !== "object") return "";
     return Object.entries(detail)
@@ -131,13 +199,15 @@ export default function ActivityClient({
       .join(" · ");
   };
 
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
   return (
     <div className="mx-auto max-w-5xl">
       {/* Header */}
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">{tr.title}</h1>
         <span className="text-sm text-[var(--app-fg-muted)]">
-          {rows.length} {tr.count}
+          {total.toLocaleString()} {tr.count}
         </span>
       </div>
 
@@ -155,43 +225,60 @@ export default function ActivityClient({
             className={`${field} w-full pl-8`}
           />
         </div>
-        {prefixes.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5">
+
+        {/* Actor dropdown — filters by actor_id (the log has no actor_email). */}
+        <select
+          value={actor}
+          onChange={(e) => navigate({ actor: e.target.value, page: 0 })}
+          className={field}
+        >
+          <option value="">{tr.allActors}</option>
+          {members.map((m) => (
+            <option key={m.user_id} value={m.user_id}>
+              {actorName(m.user_id)}
+            </option>
+          ))}
+        </select>
+
+        {/* Action-prefix chips. */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Chip
+            label={tr.all}
+            active={prefix === ""}
+            color="var(--app-fg-muted)"
+            onClick={() => navigate({ prefix: "", page: 0 })}
+          />
+          {prefixes.map((p) => (
             <Chip
-              label={tr.all}
-              active={prefix === "all"}
-              color="var(--app-fg-muted)"
-              onClick={() => setPrefix("all")}
+              key={p}
+              label={p}
+              active={prefix === p}
+              color={colorFor(p)}
+              onClick={() => navigate({ prefix: p, page: 0 })}
             />
-            {prefixes.map((p) => (
-              <Chip
-                key={p}
-                label={p}
-                active={prefix === p}
-                color={colorFor(p)}
-                onClick={() => setPrefix(p)}
-              />
-            ))}
-          </div>
-        )}
+          ))}
+        </div>
       </div>
 
       {/* List */}
-      {rows.length === 0 ? (
+      {entries.length === 0 ? (
         <div className="app-surface rounded-2xl border border-[var(--app-border)]">
           <EmptyState
             icon={<Activity size={22} />}
-            title={entries.length === 0 ? tr.empty : tr.noMatch}
-            hint={entries.length === 0 ? tr.emptyHint : tr.noMatchHint}
+            title={total === 0 && !q && !prefix && !actor ? tr.empty : tr.noMatch}
+            hint={
+              total === 0 && !q && !prefix && !actor ? tr.emptyHint : tr.noMatchHint
+            }
           />
         </div>
       ) : (
         <div className="app-surface overflow-hidden rounded-2xl border border-[var(--app-border)]">
           <ul className="divide-y divide-[var(--app-border)]">
-            {rows.map((e) => {
+            {entries.map((e) => {
               const p = prefixOf(e.action);
               const color = colorFor(p);
-              const detail = detailLine(e.detail);
+              const summary = summaryLine(e);
+              const role = actorRoleLabel(e);
               return (
                 <li
                   key={e.id}
@@ -212,6 +299,11 @@ export default function ActivityClient({
                         {e.action}
                       </span>
                       <span className="font-medium">{actorName(e.actor_id)}</span>
+                      {role && (
+                        <span className="text-xs text-[var(--app-fg-muted)]">
+                          · {role}
+                        </span>
+                      )}
                       {e.entity != null && (
                         <span className="min-w-0 truncate text-xs text-[var(--app-fg-muted)]">
                           {e.entity}
@@ -221,9 +313,9 @@ export default function ActivityClient({
                         </span>
                       )}
                     </div>
-                    {detail && (
+                    {summary && (
                       <p className="mt-1 truncate text-xs text-[var(--app-fg-muted)]">
-                        {detail}
+                        {summary}
                       </p>
                     )}
                   </div>
@@ -236,6 +328,31 @@ export default function ActivityClient({
               );
             })}
           </ul>
+        </div>
+      )}
+
+      {/* Pagination footer */}
+      {total > pageSize && (
+        <div className="mt-4 flex items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => navigate({ page: Math.max(0, page - 1) })}
+            disabled={page === 0}
+            className="inline-flex items-center gap-1 rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] px-2.5 py-1.5 text-xs font-medium text-[var(--app-fg)] transition-colors hover:bg-[var(--app-surface-2)] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <ChevronLeft size={14} /> {tr.newer}
+          </button>
+          <span className="text-xs text-[var(--app-fg-muted)]">
+            {tr.page} {page + 1} / {totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() => navigate({ page: page + 1 < totalPages ? page + 1 : page })}
+            disabled={page + 1 >= totalPages}
+            className="inline-flex items-center gap-1 rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] px-2.5 py-1.5 text-xs font-medium text-[var(--app-fg)] transition-colors hover:bg-[var(--app-surface-2)] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {tr.older} <ChevronRight size={14} />
+          </button>
         </div>
       )}
     </div>

@@ -31,6 +31,39 @@ export interface Property {
   invoice_prefix: string;
   invoice_footer: string | null;
   created_at: string;
+  // ── parity (migration 15) — company identity, Thai mirror, structured ───────
+  // address, landlord block, print defaults. Patchable via updateProperty
+  // (Partial<Omit<…>>). NOT NULL+default columns are always present.
+  logo_url: string | null;
+  legal_name_th: string | null;
+  trading_name: string | null;
+  trading_name_th: string | null;
+  branch: string | null;
+  branch_th: string | null;
+  registration_no: string | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  subdistrict: string | null;
+  district: string | null;
+  province: string | null;
+  postal_code: string | null;
+  address_line1_th: string | null;
+  address_line2_th: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  bank_branch: string | null;
+  bank_account_name: string | null;
+  default_paper_size: string; // NOT NULL default 'A4'
+  default_print_mode: string; // NOT NULL default 'invoice'
+  landlord_name: string | null;
+  landlord_name_th: string | null;
+  landlord_company: string | null;
+  landlord_company_th: string | null;
+  landlord_tax_id: string | null;
+  landlord_address: string | null;
+  landlord_address_th: string | null;
+  landlord_phone: string | null;
 }
 
 export interface CreatePropertyInput {

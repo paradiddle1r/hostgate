@@ -32,6 +32,19 @@ export interface Invoice {
   status: InvoiceStatus;
   notes: string | null;
   created_at: string;
+  // ── parity (migration 15) — Thai B2B bill-to + void/discount ────────────────
+  guest_company_name: string | null;
+  guest_company_name_th: string | null;
+  guest_branch: string | null;
+  guest_address_th: string | null;
+  guest_phone: string | null;
+  guest_email: string | null;
+  due_date: string | null;
+  footer: string | null;
+  discount: number; // NOT NULL default 0
+  vat_inclusive: boolean | null;
+  void_reason: string | null;
+  voided_at: string | null;
 }
 
 export interface InvoiceItem {
@@ -52,6 +65,8 @@ export interface Payment {
   method: string;
   paid_at: string;
   note: string | null;
+  // ── parity (migration 15) ──────────────────────────────────────────────────
+  reference: string | null;
 }
 
 export interface Receipt {
@@ -191,7 +206,28 @@ export async function createInvoiceFromBooking(
 // ── edit ───────────────────────────────────────────────────────────────────
 export async function updateInvoiceMeta(
   id: string,
-  patch: Partial<Pick<Invoice, "guest_name" | "guest_tax_id" | "guest_address" | "notes" | "service_period_start" | "service_period_end">>
+  patch: Partial<
+    Pick<
+      Invoice,
+      | "guest_name"
+      | "guest_tax_id"
+      | "guest_address"
+      | "notes"
+      | "service_period_start"
+      | "service_period_end"
+      // ── parity (migration 15) — Thai B2B bill-to + presentation ────────────
+      | "guest_company_name"
+      | "guest_company_name_th"
+      | "guest_branch"
+      | "guest_address_th"
+      | "guest_phone"
+      | "guest_email"
+      | "due_date"
+      | "footer"
+      | "discount"
+      | "vat_inclusive"
+    >
+  >
 ): Promise<ActionResult<Invoice>> {
   try {
     const supabase = createClient();
@@ -338,10 +374,19 @@ export async function recordPayment(
   }
 }
 
-export async function voidInvoice(id: string): Promise<ActionResult<Invoice>> {
+/**
+ * Void an invoice, optionally stamping a reason + timestamp. `reason` is
+ * optional so existing callers (`voidInvoice(id)`) keep working unchanged.
+ */
+export async function voidInvoice(id: string, reason?: string): Promise<ActionResult<Invoice>> {
   try {
     const supabase = createClient();
-    const { data, error } = await supabase.from("invoices").update({ status: "void" }).eq("id", id).select().single();
+    const { data, error } = await supabase
+      .from("invoices")
+      .update({ status: "void", void_reason: reason ?? null, voided_at: new Date().toISOString() })
+      .eq("id", id)
+      .select()
+      .single();
     if (error) throw error;
     return ok(data as Invoice);
   } catch (e) {

@@ -6,20 +6,23 @@
 // summarises today's sales (count + revenue) using the browser's local date.
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Receipt,
-  ShoppingBag,
   ChevronDown,
   Banknote,
   ArrowLeftRight,
   CreditCard,
   BedDouble,
+  Ban,
 } from "lucide-react";
 import type { PosSale, PosSaleItem } from "@/lib/db/pos";
 import { useI18n } from "@/lib/i18n";
 import EmptyState from "@/components/app/ui/EmptyState";
+import Modal from "@/components/app/ui/Modal";
+import Button from "@/components/app/ui/Button";
 import { useToast } from "@/components/app/ui/Toast";
-import { fetchSaleItems } from "@/app/app/pos/actions";
+import { fetchSaleItems, voidSale } from "@/app/app/pos/actions";
 
 type PayMethod = PosSale["payment_method"];
 
@@ -55,6 +58,16 @@ const STR = {
     noItems: "ไม่มีรายการสินค้า",
     empty: "ยังไม่มีการขาย",
     emptyHint: "การขายจาก POS จะแสดงที่นี่",
+    void: "ยกเลิกบิล",
+    voided: "ยกเลิกแล้ว",
+    voidTitle: "ยกเลิกการขาย",
+    voidReason: "เหตุผลในการยกเลิก",
+    voidReasonPh: "เช่น คิดเงินผิด, ลูกค้าคืนสินค้า…",
+    voidConfirm: "ยืนยันยกเลิก",
+    voidNeedReason: "กรุณาระบุเหตุผล",
+    voidDone: "ยกเลิกบิลแล้ว",
+    voidHint: "การยกเลิกจะคืนสต๊อกสินค้าทุกชิ้นในบิลนี้",
+    cancel: "ปิด",
   },
   en: {
     title: "Sales history",
@@ -77,6 +90,16 @@ const STR = {
     noItems: "No items",
     empty: "No sales yet",
     emptyHint: "Sales rung up in the POS will show here.",
+    void: "Void",
+    voided: "Voided",
+    voidTitle: "Void sale",
+    voidReason: "Void reason",
+    voidReasonPh: "e.g. wrong amount, customer returned items…",
+    voidConfirm: "Confirm void",
+    voidNeedReason: "A reason is required",
+    voidDone: "Sale voided",
+    voidHint: "Voiding restores stock for every item on this sale.",
+    cancel: "Cancel",
   },
 } as const;
 
@@ -90,11 +113,15 @@ const METHOD_ICON: Record<PayMethod, typeof Banknote> = {
 export default function SalesClient({
   sales,
   currency,
+  isAdmin = false,
 }: {
   sales: PosSale[];
   currency: string;
+  /** Owner/admin can void sales (with a reason). Defaults to false. */
+  isAdmin?: boolean;
 }) {
   const toast = useToast();
+  const router = useRouter();
   const { locale } = useI18n();
   const tr = STR[locale === "en" ? "en" : "th"];
 
@@ -102,6 +129,31 @@ export default function SalesClient({
   const [expanded, setExpanded] = useState<string | null>(null);
   const [itemsBySale, setItemsBySale] = useState<Record<string, PosSaleItem[]>>({});
   const [loadingId, setLoadingId] = useState<string | null>(null);
+
+  // Void-with-reason (admin only). Holds the sale being voided + the typed reason.
+  const [voiding, setVoiding] = useState<PosSale | null>(null);
+  const [voidReason, setVoidReason] = useState("");
+  const [voidBusy, setVoidBusy] = useState(false);
+
+  async function submitVoid() {
+    if (!voiding) return;
+    const reason = voidReason.trim();
+    if (!reason) {
+      toast.error(tr.voidNeedReason);
+      return;
+    }
+    setVoidBusy(true);
+    const res = await voidSale(voiding.id, reason);
+    setVoidBusy(false);
+    if (res.ok) {
+      toast.success(tr.voidDone);
+      setVoiding(null);
+      setVoidReason("");
+      router.refresh();
+    } else {
+      toast.error(`${res.code} · ${res.message}`);
+    }
+  }
 
   const money = (n: number) => `${currency} ${(Number(n) || 0).toLocaleString()}`;
   const methodLabel = (m: PayMethod) => tr[m] as string;
@@ -112,6 +164,7 @@ export default function SalesClient({
     let count = 0;
     let revenue = 0;
     for (const s of sales) {
+      if (s.voided) continue;
       if (new Date(s.created_at).toLocaleDateString() === todayStr) {
         count += 1;
         revenue += Number(s.total) || 0;
@@ -228,6 +281,7 @@ export default function SalesClient({
               const open = expanded === s.id;
               const items = itemsBySale[s.id];
               const Icon = METHOD_ICON[s.payment_method];
+              const isVoid = s.voided;
               return (
                 <li
                   key={s.id}
@@ -237,12 +291,32 @@ export default function SalesClient({
                     type="button"
                     onClick={() => toggle(s)}
                     aria-expanded={open}
-                    className="grid w-full grid-cols-[1fr_auto_2rem] items-center gap-3 px-4 py-3 text-left text-sm transition-colors hover:bg-[var(--app-surface-2)] sm:grid-cols-[1fr_1.4fr_auto_auto_2rem]"
+                    className={`grid w-full grid-cols-[1fr_auto_2rem] items-center gap-3 px-4 py-3 text-left text-sm transition-colors hover:bg-[var(--app-surface-2)] sm:grid-cols-[1fr_1.4fr_auto_auto_2rem] ${
+                      isVoid ? "opacity-70" : ""
+                    }`}
                   >
-                    <span className="min-w-0 truncate font-medium">
+                    <span
+                      className={`min-w-0 truncate font-medium ${isVoid ? "line-through" : ""}`}
+                    >
                       {s.code ?? <span className="text-[var(--app-fg-muted)]">—</span>}
+                      {isVoid && (
+                        <span
+                          className="ml-2 inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 align-middle text-[10px] font-semibold no-underline"
+                          style={{
+                            background:
+                              "color-mix(in srgb, var(--app-danger) 16%, transparent)",
+                            color: "var(--app-danger)",
+                          }}
+                        >
+                          <Ban size={9} /> {tr.voided}
+                        </span>
+                      )}
                     </span>
-                    <span className="hidden whitespace-nowrap text-[var(--app-fg-muted)] sm:block">
+                    <span
+                      className={`hidden whitespace-nowrap text-[var(--app-fg-muted)] sm:block ${
+                        isVoid ? "line-through" : ""
+                      }`}
+                    >
                       {new Date(s.created_at).toLocaleString()}
                     </span>
                     <span>
@@ -254,7 +328,11 @@ export default function SalesClient({
                         {methodLabel(s.payment_method)}
                       </span>
                     </span>
-                    <span className="text-right font-medium tabular-nums whitespace-nowrap">
+                    <span
+                      className={`text-right font-medium tabular-nums whitespace-nowrap ${
+                        isVoid ? "line-through" : ""
+                      }`}
+                    >
                       {money(s.total)}
                     </span>
                     <ChevronDown
@@ -268,6 +346,20 @@ export default function SalesClient({
                   {/* Expanded panel */}
                   {open && (
                     <div className="border-t border-[var(--app-border)] bg-[var(--app-surface-2)] px-4 py-3">
+                      {isVoid && s.void_reason && (
+                        <p
+                          className="mb-3 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm"
+                          style={{
+                            background:
+                              "color-mix(in srgb, var(--app-danger) 12%, transparent)",
+                            color: "var(--app-danger)",
+                          }}
+                        >
+                          <Ban size={13} />
+                          <span className="font-medium">{tr.voided}:</span>{" "}
+                          {s.void_reason}
+                        </p>
+                      )}
                       <p className="mb-2 text-xs uppercase tracking-wide text-[var(--app-fg-muted)]">
                         {tr.items}
                       </p>
@@ -307,6 +399,21 @@ export default function SalesClient({
                           {s.note}
                         </p>
                       )}
+
+                      {isAdmin && !isVoid && (
+                        <div className="mt-3 flex justify-end border-t border-[var(--app-border)] pt-3">
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            onClick={() => {
+                              setVoiding(s);
+                              setVoidReason("");
+                            }}
+                          >
+                            <Ban size={14} /> {tr.void}
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </li>
@@ -314,6 +421,55 @@ export default function SalesClient({
             })}
           </ul>
         </div>
+      )}
+
+      {/* ── Void-with-reason modal (admin) ───────────────────────────────── */}
+      {voiding && (
+        <Modal
+          open
+          onClose={() => {
+            if (!voidBusy) setVoiding(null);
+          }}
+          title={
+            <span className="inline-flex items-center gap-2">
+              <Ban size={16} style={{ color: "var(--app-danger)" }} />
+              {tr.voidTitle}
+            </span>
+          }
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setVoiding(null)} disabled={voidBusy}>
+                {tr.cancel}
+              </Button>
+              <Button variant="danger" onClick={submitVoid} loading={voidBusy}>
+                {tr.voidConfirm}
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-[var(--app-fg-muted)]">{tr.code}</span>
+              <span className="font-mono font-medium">
+                {voiding.code ?? "—"} · {money(voiding.total)}
+              </span>
+            </div>
+            <p className="text-xs text-[var(--app-fg-muted)]">{tr.voidHint}</p>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-[var(--app-fg-muted)]">
+                {tr.voidReason}
+              </label>
+              <textarea
+                rows={3}
+                className="w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] px-2.5 py-2 text-sm outline-none focus:border-[var(--app-accent)]"
+                value={voidReason}
+                onChange={(e) => setVoidReason(e.target.value)}
+                placeholder={tr.voidReasonPh}
+                autoFocus
+              />
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

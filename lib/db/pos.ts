@@ -29,6 +29,9 @@ export interface PosProduct {
   active: boolean;
   sort_order: number;
   created_at: string;
+  // ── parity (migration 15) ──────────────────────────────────────────────────
+  low_stock_threshold: number; // NOT NULL default 0
+  image_url: string | null;
 }
 
 export interface PosSale {
@@ -41,6 +44,30 @@ export interface PosSale {
   booking_id: string | null;
   sold_by: string | null;
   note: string | null;
+  created_at: string;
+  // ── parity (migration 15) — void + cash drawer + discount ───────────────────
+  voided: boolean; // NOT NULL default false
+  void_reason: string | null;
+  subtotal: number | null;
+  discount: number; // NOT NULL default 0
+  cash_received: number | null;
+  change_given: number | null;
+}
+
+/**
+ * A stock movement (migration 15 table `pos_stock_movements`). Audit trail of
+ * inventory changes — restocks ('in'), sale decrements ('sale'), manual
+ * adjustments ('adjustment'), and void restores ('void').
+ */
+export interface StockMovement {
+  id: string;
+  tenant_id: string;
+  property_id: string;
+  product_id: string | null;
+  type: "in" | "sale" | "adjustment" | "void";
+  qty: number; // NOT NULL default 0
+  reason: string | null;
+  created_by: string | null;
   created_at: string;
 }
 
@@ -114,6 +141,9 @@ export interface ProductInput {
   sku?: string | null;
   stock?: number;
   active?: boolean;
+  // ── parity (migration 15) ──────────────────────────────────────────────────
+  low_stock_threshold?: number;
+  image_url?: string | null;
 }
 
 export async function listProducts(
@@ -144,6 +174,8 @@ export async function createProduct(
         category_id: input.category_id ?? null, name: input.name,
         price: input.price ?? 0, cost: input.cost ?? 0,
         sku: input.sku ?? null, stock: input.stock ?? 0, active: input.active ?? true,
+        low_stock_threshold: input.low_stock_threshold ?? 0,
+        image_url: input.image_url ?? null,
       })
       .select().single();
     if (error) throw error;
@@ -223,6 +255,77 @@ export async function getSaleItems(saleId: string): Promise<ActionResult<PosSale
     const { data, error } = await supabase.from("pos_sale_items").select("*").eq("sale_id", saleId);
     if (error) throw error;
     return ok((data ?? []) as PosSaleItem[]);
+  } catch (e) {
+    return mapPgError(e);
+  }
+}
+
+// ── stock movements (pos_stock_movements) ─────────────────────────────────────
+/**
+ * Recent stock movements for a property, newest first. Optionally scoped to a
+ * single product. Capped at `limit` (default 200).
+ */
+export async function listStockMovements(
+  propertyId: string,
+  opts?: { productId?: string; limit?: number }
+): Promise<ActionResult<StockMovement[]>> {
+  try {
+    const supabase = createClient();
+    let q = supabase.from("pos_stock_movements").select("*").eq("property_id", propertyId);
+    if (opts?.productId) q = q.eq("product_id", opts.productId);
+    const { data, error } = await q
+      .order("created_at", { ascending: false })
+      .limit(opts?.limit ?? 200);
+    if (error) throw error;
+    return ok((data ?? []) as StockMovement[]);
+  } catch (e) {
+    return mapPgError(e);
+  }
+}
+
+/**
+ * Record a manual stock adjustment: writes a `pos_stock_movements` audit row
+ * and bumps the product's `stock` by `qty` (positive = restock, negative =
+ * shrink). Reads the current stock first, then writes the new absolute value.
+ */
+export async function adjustStock(
+  propertyId: string,
+  tenantId: string,
+  productId: string,
+  qty: number,
+  opts?: { type?: StockMovement["type"]; reason?: string | null }
+): Promise<ActionResult<{ movement: StockMovement; stock: number }>> {
+  try {
+    const supabase = createClient();
+    const { data: prod, error: pErr } = await supabase
+      .from("pos_products")
+      .select("stock")
+      .eq("id", productId)
+      .single();
+    if (pErr) throw pErr;
+
+    const { data: mv, error: mErr } = await supabase
+      .from("pos_stock_movements")
+      .insert({
+        tenant_id: tenantId,
+        property_id: propertyId,
+        product_id: productId,
+        type: opts?.type ?? "adjustment",
+        qty,
+        reason: opts?.reason ?? null,
+      })
+      .select()
+      .single();
+    if (mErr) throw mErr;
+
+    const nextStock = (Number(prod?.stock) || 0) + qty;
+    const { error: uErr } = await supabase
+      .from("pos_products")
+      .update({ stock: nextStock })
+      .eq("id", productId);
+    if (uErr) throw uErr;
+
+    return ok({ movement: mv as StockMovement, stock: nextStock });
   } catch (e) {
     return mapPgError(e);
   }

@@ -17,6 +17,8 @@ export interface Room {
   status: "active" | "inactive";
   sort_order: number;
   created_at: string;
+  // ── parity (migration 15) — sell this room as a monthly rental ──────────────
+  monthly_available: boolean; // NOT NULL default false
 }
 
 export interface NewRoomRow {

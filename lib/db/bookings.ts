@@ -17,6 +17,8 @@ export type BookingStatus =
 
 export type BookingSource = "direct" | "walk_in" | "ota" | "web";
 
+export type BookingType = "standard" | "monthly" | "blocked" | "oos";
+
 export interface Booking {
   id: string;
   tenant_id: string;
@@ -36,6 +38,35 @@ export interface Booking {
   total_amount: number | null;
   notes: string | null;
   created_at: string;
+  // ── parity (migration 15) ──────────────────────────────────────────────────
+  booking_type: BookingType; // NOT NULL default 'standard'
+  issue_type: string | null;
+  issue_detail: string | null;
+  reservation_no: string | null;
+  ota: string | null;
+  booked_date: string | null;
+  payment_method: string | null;
+  amount_paid: number; // NOT NULL default 0
+  deposit_date: string | null;
+  deposit_method: string | null;
+  reservation_deposit: number | null;
+  extra_bed: boolean; // NOT NULL default false
+  extra_bed_charge: number | null;
+  booking_group_id: string | null;
+  guest_first_name: string | null;
+  guest_last_name: string | null;
+  thai_name: string | null;
+  car_plate: string | null;
+  is_open_ended: boolean; // NOT NULL default false
+  checkin_time: string | null;
+  checkout_time: string | null;
+  citizen_id: string | null;
+  id_dob: string | null;
+  id_gender: string | null;
+  id_issued_date: string | null;
+  id_expires_date: string | null;
+  id_address: string | null;
+  id_photo_path: string | null;
 }
 
 export interface BookingInput {
@@ -52,6 +83,35 @@ export interface BookingInput {
   children?: number;
   total_amount?: number | null;
   notes?: string | null;
+  // ── parity (migration 15) ──────────────────────────────────────────────────
+  booking_type?: BookingType;
+  issue_type?: string | null;
+  issue_detail?: string | null;
+  reservation_no?: string | null;
+  ota?: string | null;
+  booked_date?: string | null;
+  payment_method?: string | null;
+  amount_paid?: number;
+  deposit_date?: string | null;
+  deposit_method?: string | null;
+  reservation_deposit?: number | null;
+  extra_bed?: boolean;
+  extra_bed_charge?: number | null;
+  booking_group_id?: string | null;
+  guest_first_name?: string | null;
+  guest_last_name?: string | null;
+  thai_name?: string | null;
+  car_plate?: string | null;
+  is_open_ended?: boolean;
+  checkin_time?: string | null;
+  checkout_time?: string | null;
+  citizen_id?: string | null;
+  id_dob?: string | null;
+  id_gender?: string | null;
+  id_issued_date?: string | null;
+  id_expires_date?: string | null;
+  id_address?: string | null;
+  id_photo_path?: string | null;
 }
 
 /**
@@ -142,6 +202,36 @@ export async function createBooking(
         children: input.children ?? 0,
         total_amount: input.total_amount ?? null,
         notes: input.notes ?? null,
+        // ── parity (migration 15) ──────────────────────────────────────────
+        // NOT NULL + default columns coalesce to their default; nullable → null.
+        booking_type: input.booking_type ?? "standard",
+        issue_type: input.issue_type ?? null,
+        issue_detail: input.issue_detail ?? null,
+        reservation_no: input.reservation_no ?? null,
+        ota: input.ota ?? null,
+        booked_date: input.booked_date ?? null,
+        payment_method: input.payment_method ?? null,
+        amount_paid: input.amount_paid ?? 0,
+        deposit_date: input.deposit_date ?? null,
+        deposit_method: input.deposit_method ?? null,
+        reservation_deposit: input.reservation_deposit ?? null,
+        extra_bed: input.extra_bed ?? false,
+        extra_bed_charge: input.extra_bed_charge ?? null,
+        booking_group_id: input.booking_group_id ?? null,
+        guest_first_name: input.guest_first_name ?? null,
+        guest_last_name: input.guest_last_name ?? null,
+        thai_name: input.thai_name ?? null,
+        car_plate: input.car_plate ?? null,
+        is_open_ended: input.is_open_ended ?? false,
+        checkin_time: input.checkin_time ?? null,
+        checkout_time: input.checkout_time ?? null,
+        citizen_id: input.citizen_id ?? null,
+        id_dob: input.id_dob ?? null,
+        id_gender: input.id_gender ?? null,
+        id_issued_date: input.id_issued_date ?? null,
+        id_expires_date: input.id_expires_date ?? null,
+        id_address: input.id_address ?? null,
+        id_photo_path: input.id_photo_path ?? null,
       })
       .select()
       .single();

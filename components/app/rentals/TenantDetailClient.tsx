@@ -18,6 +18,8 @@ import {
   Printer,
   LogOut,
   CalendarClock,
+  Users,
+  ClipboardList,
 } from "lucide-react";
 import type {
   RentalTenant,
@@ -27,7 +29,6 @@ import type {
 } from "@/lib/db/rentals";
 import type { Booking } from "@/lib/db/bookings";
 import {
-  calculateBill,
   moveOutSettlement,
   meterUsage,
   isOpenEnded,
@@ -49,7 +50,71 @@ import {
   makeContract,
   issueContractAction,
   removeContract,
+  addCoTenant,
+  removeCoTenant,
 } from "@/app/app/rentals/actions";
+
+// ── Structured monthly-bill calc (parity with hotel-pms lib/rentals.js) ──────
+// Blank/null prev readings stay null (NOT 0) so a missing previous reading
+// doesn't bill the whole current meter as consumption. Water has a minimum
+// charge floor. Internet + parking are fixed monthly add-ons.
+type NumLike = number | string | null | undefined;
+const numOrNull = (v: NumLike): number | null =>
+  v === "" || v == null || Number.isNaN(Number(v)) ? null : Number(v);
+
+export function calcStructuredBill(p: {
+  rent: number;
+  electricPrev: NumLike;
+  electricCurr: NumLike;
+  electricRate: number;
+  waterPrev: NumLike;
+  waterCurr: NumLike;
+  waterRate: number;
+  waterMinimumCharge: number;
+  internet: number;
+  parking: number;
+  other: number;
+}) {
+  const ePrev = numOrNull(p.electricPrev);
+  const eCurr = numOrNull(p.electricCurr);
+  const wPrev = numOrNull(p.waterPrev);
+  const wCurr = numOrNull(p.waterCurr);
+  const eUnits = eCurr !== null && ePrev !== null ? Math.max(0, eCurr - ePrev) : 0;
+  const wUnits = wCurr !== null && wPrev !== null ? Math.max(0, wCurr - wPrev) : 0;
+  const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
+  const electric_amount = r2(eUnits * (Number(p.electricRate) || 0));
+  const waterRaw = r2(wUnits * (Number(p.waterRate) || 0));
+  const water_amount = Math.max(waterRaw, Number(p.waterMinimumCharge) || 0);
+  const rent = r2(p.rent);
+  const internet = r2(p.internet);
+  const parking = r2(p.parking);
+  const other = r2(p.other);
+  const total = r2(rent + internet + parking + electric_amount + water_amount + other);
+  return {
+    electric_units: r2(eUnits),
+    electric_amount,
+    water_units: r2(wUnits),
+    water_amount,
+    internet_amount: internet,
+    parking_amount: parking,
+    total,
+  };
+}
+
+export interface CoTenant {
+  bookingId: string;
+  guestName: string;
+  phone: string | null;
+  monthlyRent: number;
+}
+
+export interface BulkTenant {
+  bookingId: string;
+  roomNumber: string;
+  guestName: string;
+  prevElectric: number | null;
+  prevWater: number | null;
+}
 
 const field =
   "w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] px-2.5 py-2 text-sm outline-none focus:border-[var(--app-accent)]";
@@ -77,11 +142,44 @@ const STR: Record<"th" | "en", Record<string, string>> = {
     advanceRent: "ค่าเช่าล่วงหน้า",
     electricRate: "ค่าไฟ/หน่วย",
     waterRate: "ค่าน้ำ/หน่วย",
+    waterMin: "ค่าน้ำขั้นต่ำ/เดือน",
+    internetFee: "ค่าเน็ต/เดือน",
+    parkingFee: "ค่าที่จอดรถ/เดือน",
+    billingDay: "วันออกบิล",
+    startMeterE: "เลขมิเตอร์ไฟเริ่มต้น",
+    startMeterW: "เลขมิเตอร์น้ำเริ่มต้น",
     otherFees: "ค่าใช้จ่ายอื่น",
     occupants: "จำนวนผู้พัก",
     notes: "หมายเหตุ",
     save: "บันทึก",
     saved: "บันทึกแล้ว",
+    // co-tenants
+    coTenants: "ผู้เช่าร่วม",
+    coTenantsHint: "บุคคลอื่นในสัญญาเดียวกัน (มิเตอร์/บิลอยู่ที่ผู้เช่าหลัก)",
+    addCoTenant: "เพิ่มผู้เช่าร่วม",
+    coName: "ชื่อผู้เช่าร่วม",
+    coPhone: "เบอร์โทร",
+    coRent: "ค่าเช่าส่วนแบ่ง",
+    noCoTenants: "ยังไม่มีผู้เช่าร่วม",
+    coAdded: "เพิ่มผู้เช่าร่วมแล้ว",
+    open: "เปิด",
+    needName: "ใส่ชื่อก่อน",
+    // bulk meter
+    bulkMeter: "บันทึกมิเตอร์หลายห้อง",
+    bulkMeterTitle: "บันทึกมิเตอร์รวม",
+    bulkDate: "วันที่อ่าน",
+    prevE: "ไฟ (ก่อน)",
+    newE: "ไฟ (ใหม่)",
+    prevW: "น้ำ (ก่อน)",
+    newW: "น้ำ (ใหม่)",
+    bulkSave: "บันทึกที่กรอก",
+    bulkSaved: "บันทึกมิเตอร์แล้ว",
+    bulkNone: "ไม่มีค่าที่จะบันทึก",
+    // bill structured
+    periodStart: "ตั้งแต่",
+    periodEnd: "ถึง",
+    internet: "เน็ต",
+    parking: "ที่จอดรถ",
     // section 3
     meters: "ค่ามิเตอร์",
     date: "วันที่",
@@ -161,11 +259,44 @@ const STR: Record<"th" | "en", Record<string, string>> = {
     advanceRent: "Advance rent",
     electricRate: "Electric rate / unit",
     waterRate: "Water rate / unit",
+    waterMin: "Water min charge / mo",
+    internetFee: "Internet / mo",
+    parkingFee: "Parking / mo",
+    billingDay: "Billing day",
+    startMeterE: "Start electric meter",
+    startMeterW: "Start water meter",
     otherFees: "Other fees",
     occupants: "Occupants",
     notes: "Notes",
     save: "Save",
     saved: "Saved",
+    // co-tenants
+    coTenants: "Co-tenants",
+    coTenantsHint: "Others on the same lease (meters/bills stay on the primary).",
+    addCoTenant: "Add co-tenant",
+    coName: "Co-tenant name",
+    coPhone: "Phone",
+    coRent: "Rent share",
+    noCoTenants: "No co-tenants yet",
+    coAdded: "Co-tenant added",
+    open: "Open",
+    needName: "Enter a name first",
+    // bulk meter
+    bulkMeter: "Bulk meter entry",
+    bulkMeterTitle: "Bulk meter readings",
+    bulkDate: "Reading date",
+    prevE: "Electric (prev)",
+    newE: "Electric (new)",
+    prevW: "Water (prev)",
+    newW: "Water (new)",
+    bulkSave: "Save entered",
+    bulkSaved: "Meter readings saved",
+    bulkNone: "Nothing to save",
+    // bill structured
+    periodStart: "Period start",
+    periodEnd: "Period end",
+    internet: "Internet",
+    parking: "Parking",
     meters: "Meter readings",
     date: "Date",
     electric: "Electric",
@@ -237,6 +368,8 @@ export default function TenantDetailClient({
   propertyName,
   currency,
   landlordName,
+  coTenants = [],
+  bulkTenants = [],
 }: {
   detail: {
     booking: Booking;
@@ -249,6 +382,8 @@ export default function TenantDetailClient({
   propertyName: string;
   currency: string;
   landlordName: string;
+  coTenants?: CoTenant[];
+  bulkTenants?: BulkTenant[];
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -268,6 +403,12 @@ export default function TenantDetailClient({
     advance_rent: (rentalTenant?.advance_rent ?? 0) as Num,
     electric_rate: (rentalTenant?.electric_rate ?? 0) as Num,
     water_rate: (rentalTenant?.water_rate ?? 0) as Num,
+    water_minimum_charge: (rentalTenant?.water_minimum_charge ?? 0) as Num,
+    internet_fee: (rentalTenant?.internet_fee ?? 0) as Num,
+    parking_fee: (rentalTenant?.parking_fee ?? 0) as Num,
+    billing_day: (rentalTenant?.billing_day ?? 1) as Num,
+    start_meter_electric: (rentalTenant?.start_meter_electric ?? "") as Num,
+    start_meter_water: (rentalTenant?.start_meter_water ?? "") as Num,
     other_fees: (rentalTenant?.other_fees ?? 0) as Num,
     occupants: (rentalTenant?.occupants ?? 1) as Num,
     notes: rentalTenant?.notes ?? "",
@@ -282,6 +423,12 @@ export default function TenantDetailClient({
       advance_rent: n(cfg.advance_rent),
       electric_rate: n(cfg.electric_rate),
       water_rate: n(cfg.water_rate),
+      water_minimum_charge: n(cfg.water_minimum_charge),
+      internet_fee: n(cfg.internet_fee),
+      parking_fee: n(cfg.parking_fee),
+      billing_day: n(cfg.billing_day) || 1,
+      start_meter_electric: cfg.start_meter_electric === "" ? null : n(cfg.start_meter_electric),
+      start_meter_water: cfg.start_meter_water === "" ? null : n(cfg.start_meter_water),
       other_fees: n(cfg.other_fees),
       occupants: n(cfg.occupants),
       notes: cfg.notes.trim() || null,
@@ -296,12 +443,9 @@ export default function TenantDetailClient({
   // Effective rates used by usage/bill maths (fall back to current cfg).
   const electricRate = rentalTenant?.electric_rate ?? n(cfg.electric_rate);
   const waterRate = rentalTenant?.water_rate ?? n(cfg.water_rate);
-
-  // Usage between the two most-recent readings (readings are newest-first).
-  const latestElectricUsage =
-    readings.length >= 2 ? meterUsage(readings[1].electric, readings[0].electric) : 0;
-  const latestWaterUsage =
-    readings.length >= 2 ? meterUsage(readings[1].water, readings[0].water) : 0;
+  const waterMin = rentalTenant?.water_minimum_charge ?? n(cfg.water_minimum_charge);
+  const internetFee = rentalTenant?.internet_fee ?? n(cfg.internet_fee);
+  const parkingFee = rentalTenant?.parking_fee ?? n(cfg.parking_fee);
 
   // ── section 3: add reading ──────────────────────────────────────────────────
   const today = new Date().toISOString().slice(0, 10);
@@ -338,37 +482,82 @@ export default function TenantDetailClient({
     } else toast.error(`${res.code} · ${res.message}`);
   }
 
-  // ── section 4: generate bill ────────────────────────────────────────────────
+  // ── section 4: generate bill (structured) ───────────────────────────────────
+  // Default a one-month period ending today, and seed prev/curr meter snapshots
+  // from the two most-recent readings (or the tenant's start meter as prev).
+  const monthAgo = (() => {
+    const d = new Date(today + "T00:00:00");
+    d.setMonth(d.getMonth() - 1);
+    return d.toISOString().slice(0, 10);
+  })();
+  const seedElecCurr = readings[0]?.electric ?? null;
+  const seedElecPrev = readings[1]?.electric ?? rentalTenant?.start_meter_electric ?? null;
+  const seedWaterCurr = readings[0]?.water ?? null;
+  const seedWaterPrev = readings[1]?.water ?? rentalTenant?.start_meter_water ?? null;
+
   const [bill, setBill] = useState<{
-    period: string; // YYYY-MM
+    periodStart: string;
+    periodEnd: string;
     rent: Num;
-    electricUnits: Num;
-    waterUnits: Num;
+    electricPrev: Num;
+    electricCurr: Num;
+    waterPrev: Num;
+    waterCurr: Num;
+    internet: Num;
+    parking: Num;
     other: Num;
   }>({
-    period: today.slice(0, 7),
+    periodStart: monthAgo,
+    periodEnd: today,
     rent: (rentalTenant?.monthly_rent ?? 0) as Num,
-    electricUnits: latestElectricUsage as Num,
-    waterUnits: latestWaterUsage as Num,
+    electricPrev: (seedElecPrev ?? "") as Num,
+    electricCurr: (seedElecCurr ?? "") as Num,
+    waterPrev: (seedWaterPrev ?? "") as Num,
+    waterCurr: (seedWaterCurr ?? "") as Num,
+    internet: internetFee as Num,
+    parking: parkingFee as Num,
     other: (rentalTenant?.other_fees ?? 0) as Num,
   });
   const [generating, setGenerating] = useState(false);
 
-  const billCalc = calculateBill({
+  const billCalc = calcStructuredBill({
     rent: n(bill.rent),
-    electricUnits: n(bill.electricUnits),
+    electricPrev: bill.electricPrev === "" ? null : n(bill.electricPrev),
+    electricCurr: bill.electricCurr === "" ? null : n(bill.electricCurr),
     electricRate,
-    waterUnits: n(bill.waterUnits),
+    waterPrev: bill.waterPrev === "" ? null : n(bill.waterPrev),
+    waterCurr: bill.waterCurr === "" ? null : n(bill.waterCurr),
     waterRate,
+    waterMinimumCharge: waterMin,
+    internet: n(bill.internet),
+    parking: n(bill.parking),
     other: n(bill.other),
   });
 
   async function onGenerateBill() {
-    if (!bill.period) return toast.error(tr.needPeriod);
+    if (!bill.periodStart || !bill.periodEnd) return toast.error(tr.needPeriod);
     setGenerating(true);
     const res = await generateBill(bookingId, {
-      period_month: `${bill.period}-01`,
-      ...billCalc,
+      // period_month anchors the upsert dedup (booking_id,period_month).
+      period_month: `${bill.periodEnd.slice(0, 7)}-01`,
+      period_start: bill.periodStart,
+      period_end: bill.periodEnd,
+      rent: n(bill.rent),
+      electric_prev: bill.electricPrev === "" ? null : n(bill.electricPrev),
+      electric_curr: bill.electricCurr === "" ? null : n(bill.electricCurr),
+      electric_rate: electricRate,
+      electric_units: billCalc.electric_units,
+      electric_amount: billCalc.electric_amount,
+      water_prev: bill.waterPrev === "" ? null : n(bill.waterPrev),
+      water_curr: bill.waterCurr === "" ? null : n(bill.waterCurr),
+      water_rate: waterRate,
+      water_units: billCalc.water_units,
+      water_amount: billCalc.water_amount,
+      internet_amount: billCalc.internet_amount,
+      parking_amount: billCalc.parking_amount,
+      other: n(bill.other),
+      subtotal: billCalc.total,
+      total: billCalc.total,
     });
     setGenerating(false);
     if (res.ok) {
@@ -484,6 +673,87 @@ export default function TenantDetailClient({
     } else toast.error(`${res.code} · ${res.message}`);
   }
 
+  // ── co-tenants ──────────────────────────────────────────────────────────────
+  const [coOpen, setCoOpen] = useState(false);
+  const [coBusy, setCoBusy] = useState(false);
+  const [coRemoving, setCoRemoving] = useState<string | null>(null);
+  const [coForm, setCoForm] = useState<{ name: string; phone: string; rent: Num }>({
+    name: "",
+    phone: "",
+    rent: "",
+  });
+
+  function openCo() {
+    setCoForm({ name: "", phone: "", rent: "" });
+    setCoOpen(true);
+  }
+
+  async function onAddCoTenant() {
+    if (!coForm.name.trim()) return toast.error(tr.needName);
+    setCoBusy(true);
+    const res = await addCoTenant(bookingId, {
+      guest_name: coForm.name.trim(),
+      phone: coForm.phone.trim() || null,
+      monthly_rent: n(coForm.rent),
+    });
+    setCoBusy(false);
+    if (res.ok) {
+      toast.success(tr.coAdded);
+      setCoOpen(false);
+      router.refresh();
+    } else toast.error(`${res.code} · ${res.message}`);
+  }
+
+  async function onRemoveCoTenant(id: string) {
+    if (!window.confirm(tr.deleteConfirm)) return;
+    setCoRemoving(id);
+    const res = await removeCoTenant(id, bookingId);
+    setCoRemoving(null);
+    if (res.ok) {
+      toast.success(tr.deleted);
+      router.refresh();
+    } else toast.error(`${res.code} · ${res.message}`);
+  }
+
+  // ── bulk meter entry ────────────────────────────────────────────────────────
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkDate, setBulkDate] = useState(today);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  // bookingId → { electric, water } new readings the operator types in.
+  const [bulkRows, setBulkRows] = useState<Record<string, { electric: Num; water: Num }>>({});
+
+  function openBulk() {
+    setBulkDate(today);
+    setBulkRows(Object.fromEntries(bulkTenants.map((t) => [t.bookingId, { electric: "", water: "" }])));
+    setBulkOpen(true);
+  }
+
+  async function onSaveBulk() {
+    const entries = bulkTenants
+      .map((t) => ({ t, v: bulkRows[t.bookingId] ?? { electric: "", water: "" } }))
+      .filter((x) => x.v.electric !== "" || x.v.water !== "");
+    if (entries.length === 0) return toast.error(tr.bulkNone);
+    setBulkBusy(true);
+    let okCount = 0;
+    for (const { t, v } of entries) {
+      const res = await addReading(t.bookingId, {
+        reading_date: bulkDate,
+        electric: v.electric === "" ? null : n(v.electric),
+        water: v.water === "" ? null : n(v.water),
+        note: null,
+      });
+      if (res.ok) okCount++;
+    }
+    setBulkBusy(false);
+    if (okCount > 0) {
+      toast.success(`${tr.bulkSaved} (${okCount})`);
+      setBulkOpen(false);
+      router.refresh();
+    } else {
+      toast.error(tr.bulkNone);
+    }
+  }
+
   // ── section 7: move-out ─────────────────────────────────────────────────────
   const [mo, setMo] = useState<{ electric: Num; water: Num; other: Num }>({
     electric: "",
@@ -541,6 +811,13 @@ export default function TenantDetailClient({
             {isOpenEnded(booking.check_out) ? tr.openEnded : `${tr.until} ${booking.check_out}`}
           </span>
         </div>
+        {bulkTenants.length > 0 && (
+          <div className="mt-3">
+            <Button variant="ghost" size="sm" onClick={openBulk}>
+              <ClipboardList size={14} /> {tr.bulkMeter}
+            </Button>
+          </div>
+        )}
       </div>
 
       {noConfig && (
@@ -586,6 +863,42 @@ export default function TenantDetailClient({
               {tr.waterRate} ({currency})
             </label>
             {numInput(cfg.water_rate, (x) => setCfg({ ...cfg, water_rate: x }))}
+          </div>
+          <div>
+            <label className={label}>
+              {tr.waterMin} ({currency})
+            </label>
+            {numInput(cfg.water_minimum_charge, (x) =>
+              setCfg({ ...cfg, water_minimum_charge: x })
+            )}
+          </div>
+          <div>
+            <label className={label}>
+              {tr.internetFee} ({currency})
+            </label>
+            {numInput(cfg.internet_fee, (x) => setCfg({ ...cfg, internet_fee: x }))}
+          </div>
+          <div>
+            <label className={label}>
+              {tr.parkingFee} ({currency})
+            </label>
+            {numInput(cfg.parking_fee, (x) => setCfg({ ...cfg, parking_fee: x }))}
+          </div>
+          <div>
+            <label className={label}>{tr.billingDay}</label>
+            {numInput(cfg.billing_day, (x) => setCfg({ ...cfg, billing_day: x }))}
+          </div>
+          <div>
+            <label className={label}>{tr.startMeterE}</label>
+            {numInput(cfg.start_meter_electric, (x) =>
+              setCfg({ ...cfg, start_meter_electric: x })
+            )}
+          </div>
+          <div>
+            <label className={label}>{tr.startMeterW}</label>
+            {numInput(cfg.start_meter_water, (x) =>
+              setCfg({ ...cfg, start_meter_water: x })
+            )}
           </div>
           <div>
             <label className={label}>
@@ -706,19 +1019,28 @@ export default function TenantDetailClient({
           </div>
         </div>
 
-        {/* 4. Generate bill */}
+        {/* 4. Generate bill (structured) */}
         <div className={card}>
           <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold">
             <Receipt size={15} /> {tr.genBill}
           </h2>
           <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2">
-              <label className={label}>{tr.period}</label>
+            <div>
+              <label className={label}>{tr.periodStart}</label>
               <input
-                type="month"
+                type="date"
                 className={field}
-                value={bill.period}
-                onChange={(e) => setBill({ ...bill, period: e.target.value })}
+                value={bill.periodStart}
+                onChange={(e) => setBill({ ...bill, periodStart: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className={label}>{tr.periodEnd}</label>
+              <input
+                type="date"
+                className={field}
+                value={bill.periodEnd}
+                onChange={(e) => setBill({ ...bill, periodEnd: e.target.value })}
               />
             </div>
             <div>
@@ -734,20 +1056,32 @@ export default function TenantDetailClient({
               {numInput(bill.other, (x) => setBill({ ...bill, other: x }), "text-right")}
             </div>
             <div>
-              <label className={label}>{tr.electricUnits}</label>
-              {numInput(
-                bill.electricUnits,
-                (x) => setBill({ ...bill, electricUnits: x }),
-                "text-right"
-              )}
+              <label className={label}>{tr.prevE}</label>
+              {numInput(bill.electricPrev, (x) => setBill({ ...bill, electricPrev: x }), "text-right")}
             </div>
             <div>
-              <label className={label}>{tr.waterUnits}</label>
-              {numInput(
-                bill.waterUnits,
-                (x) => setBill({ ...bill, waterUnits: x }),
-                "text-right"
-              )}
+              <label className={label}>{tr.newE}</label>
+              {numInput(bill.electricCurr, (x) => setBill({ ...bill, electricCurr: x }), "text-right")}
+            </div>
+            <div>
+              <label className={label}>{tr.prevW}</label>
+              {numInput(bill.waterPrev, (x) => setBill({ ...bill, waterPrev: x }), "text-right")}
+            </div>
+            <div>
+              <label className={label}>{tr.newW}</label>
+              {numInput(bill.waterCurr, (x) => setBill({ ...bill, waterCurr: x }), "text-right")}
+            </div>
+            <div>
+              <label className={label}>
+                {tr.internet} ({currency})
+              </label>
+              {numInput(bill.internet, (x) => setBill({ ...bill, internet: x }), "text-right")}
+            </div>
+            <div>
+              <label className={label}>
+                {tr.parking} ({currency})
+              </label>
+              {numInput(bill.parking, (x) => setBill({ ...bill, parking: x }), "text-right")}
             </div>
           </div>
 
@@ -755,7 +1089,7 @@ export default function TenantDetailClient({
           <dl className="mt-4 space-y-1.5 border-t border-[var(--app-border)] pt-4 text-sm">
             <div className="flex justify-between">
               <dt className="text-[var(--app-fg-muted)]">{tr.rent}</dt>
-              <dd>{money(billCalc.rent)}</dd>
+              <dd>{money(n(bill.rent))}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-[var(--app-fg-muted)]">
@@ -769,9 +1103,21 @@ export default function TenantDetailClient({
               </dt>
               <dd>{money(billCalc.water_amount)}</dd>
             </div>
+            {billCalc.internet_amount > 0 && (
+              <div className="flex justify-between">
+                <dt className="text-[var(--app-fg-muted)]">{tr.internet}</dt>
+                <dd>{money(billCalc.internet_amount)}</dd>
+              </div>
+            )}
+            {billCalc.parking_amount > 0 && (
+              <div className="flex justify-between">
+                <dt className="text-[var(--app-fg-muted)]">{tr.parking}</dt>
+                <dd>{money(billCalc.parking_amount)}</dd>
+              </div>
+            )}
             <div className="flex justify-between">
               <dt className="text-[var(--app-fg-muted)]">{tr.other}</dt>
-              <dd>{money(billCalc.other)}</dd>
+              <dd>{money(n(bill.other))}</dd>
             </div>
             <div className="flex justify-between border-t border-[var(--app-border)] pt-1.5 font-semibold">
               <dt>{tr.total}</dt>
@@ -920,6 +1266,53 @@ export default function TenantDetailClient({
         )}
       </div>
 
+      {/* ── 6b. Co-tenants ─────────────────────────────────────────────────── */}
+      <div className={`${card} mb-5`}>
+        <div className="mb-1 flex items-center justify-between gap-3">
+          <h2 className="flex items-center gap-2 text-sm font-semibold">
+            <Users size={15} /> {tr.coTenants}
+          </h2>
+          <Button size="sm" onClick={openCo}>
+            <Plus size={14} /> {tr.addCoTenant}
+          </Button>
+        </div>
+        <p className="mb-4 text-xs text-[var(--app-fg-muted)]">{tr.coTenantsHint}</p>
+
+        {coTenants.length === 0 ? (
+          <EmptyState icon={<Users size={20} />} title={tr.noCoTenants} />
+        ) : (
+          <ul className="divide-y divide-[var(--app-border)]">
+            {coTenants.map((c) => (
+              <li key={c.bookingId} className="flex flex-wrap items-center gap-3 py-3">
+                <span className="font-medium">{c.guestName}</span>
+                {c.phone && (
+                  <span className="text-sm text-[var(--app-fg-muted)]">{c.phone}</span>
+                )}
+                <span className="text-sm text-[var(--app-fg-muted)]">{money(c.monthlyRent)}</span>
+                <div className="ml-auto flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => router.push("/app/rentals/" + c.bookingId)}
+                    className="inline-flex h-8 items-center rounded-xl border border-[var(--app-border)] px-3 text-xs font-medium transition-colors hover:bg-[var(--app-surface-2)]"
+                  >
+                    {tr.open}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onRemoveCoTenant(c.bookingId)}
+                    aria-label={tr.delete}
+                    disabled={coRemoving === c.bookingId}
+                    className="px-1 text-[var(--app-fg-muted)] hover:text-[var(--app-danger)]"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
       {/* ── 7. Move-out settlement ─────────────────────────────────────────── */}
       <div className={card}>
         <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold">
@@ -1048,6 +1441,147 @@ export default function TenantDetailClient({
                 setContractForm({ ...contractForm, body_en: e.target.value })
               }
             />
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── Add co-tenant modal ────────────────────────────────────────────── */}
+      <Modal
+        open={coOpen}
+        onClose={() => setCoOpen(false)}
+        title={tr.addCoTenant}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setCoOpen(false)}>
+              {tr.cancel}
+            </Button>
+            <Button onClick={onAddCoTenant} loading={coBusy}>
+              {tr.addCoTenant}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-[var(--app-fg-muted)]">{tr.coTenantsHint}</p>
+          <div>
+            <label className={label}>{tr.coName}</label>
+            <input
+              className={field}
+              value={coForm.name}
+              onChange={(e) => setCoForm({ ...coForm, name: e.target.value })}
+              autoFocus
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={label}>{tr.coPhone}</label>
+              <input
+                className={field}
+                value={coForm.phone}
+                onChange={(e) => setCoForm({ ...coForm, phone: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className={label}>
+                {tr.coRent} ({currency})
+              </label>
+              {numInput(coForm.rent, (x) => setCoForm({ ...coForm, rent: x }))}
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── Bulk meter modal ───────────────────────────────────────────────── */}
+      <Modal
+        open={bulkOpen}
+        onClose={() => setBulkOpen(false)}
+        title={tr.bulkMeterTitle}
+        className="max-w-3xl"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setBulkOpen(false)}>
+              {tr.cancel}
+            </Button>
+            <Button onClick={onSaveBulk} loading={bulkBusy}>
+              {tr.bulkSave}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="max-w-[220px]">
+            <label className={label}>{tr.bulkDate}</label>
+            <input
+              type="date"
+              className={field}
+              value={bulkDate}
+              onChange={(e) => setBulkDate(e.target.value)}
+            />
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs uppercase text-[var(--app-fg-muted)]">
+                  <th className="py-2 pr-2 font-medium">{tr.room}</th>
+                  <th className="py-2 px-2 font-medium">{tr.tenant}</th>
+                  <th className="py-2 px-2 text-right font-medium">{tr.prevE}</th>
+                  <th className="py-2 px-2 text-right font-medium">{tr.newE}</th>
+                  <th className="py-2 px-2 text-right font-medium">{tr.prevW}</th>
+                  <th className="py-2 px-2 text-right font-medium">{tr.newW}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bulkTenants.map((t) => {
+                  const row = bulkRows[t.bookingId] ?? { electric: "" as Num, water: "" as Num };
+                  return (
+                    <tr key={t.bookingId} className="border-t border-[var(--app-border)]">
+                      <td className="py-2 pr-2 font-medium whitespace-nowrap">{t.roomNumber}</td>
+                      <td className="py-2 px-2 max-w-[140px] truncate">{t.guestName}</td>
+                      <td className="py-2 px-2 text-right text-[var(--app-fg-muted)] whitespace-nowrap">
+                        {t.prevElectric ?? "—"}
+                      </td>
+                      <td className="py-2 px-2">
+                        <input
+                          type="number"
+                          min={0}
+                          className={`${field} text-right`}
+                          value={row.electric}
+                          onChange={(e) =>
+                            setBulkRows((s) => ({
+                              ...s,
+                              [t.bookingId]: {
+                                ...row,
+                                electric: e.target.value === "" ? "" : Number(e.target.value),
+                              },
+                            }))
+                          }
+                        />
+                      </td>
+                      <td className="py-2 px-2 text-right text-[var(--app-fg-muted)] whitespace-nowrap">
+                        {t.prevWater ?? "—"}
+                      </td>
+                      <td className="py-2 px-2">
+                        <input
+                          type="number"
+                          min={0}
+                          className={`${field} text-right`}
+                          value={row.water}
+                          onChange={(e) =>
+                            setBulkRows((s) => ({
+                              ...s,
+                              [t.bookingId]: {
+                                ...row,
+                                water: e.target.value === "" ? "" : Number(e.target.value),
+                              },
+                            }))
+                          }
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       </Modal>

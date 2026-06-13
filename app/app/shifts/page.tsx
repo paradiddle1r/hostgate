@@ -1,3 +1,4 @@
+import { createClient } from "@/lib/supabase/server";
 import { getActiveProperty } from "@/lib/active-property-server";
 import { listShifts, listTenantMembers } from "@/lib/db/operations";
 import ShiftsClient from "@/components/app/operations/ShiftsClient";
@@ -25,16 +26,26 @@ export default async function ShiftsPage({
   const { property, tenant } = active.data;
   const { from, to, month } = monthBounds(sp?.month ?? "");
 
-  const [shiftsRes, membersRes] = await Promise.all([
+  const supabase = createClient();
+  const [{ data: userData }, shiftsRes, membersRes] = await Promise.all([
+    supabase.auth.getUser(),
     listShifts(property.id, from, to),
     listTenantMembers(tenant.id),
   ]);
+
+  const members = membersRes.ok ? membersRes.data : [];
+  // Edits (assign shifts, bulk-assign, manage staff) are owner/admin only; staff
+  // see a read-only schedule. Mirrors the team page's role resolution.
+  const myRole =
+    members.find((m) => m.user_id === userData.user?.id)?.role ?? "staff";
+  const canEdit = myRole === "owner" || myRole === "admin";
 
   return (
     <ShiftsClient
       month={month}
       shifts={shiftsRes.ok ? shiftsRes.data : []}
-      members={membersRes.ok ? membersRes.data : []}
+      members={members}
+      canEdit={canEdit}
     />
   );
 }

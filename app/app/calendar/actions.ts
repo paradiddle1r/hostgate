@@ -6,12 +6,28 @@ import {
   createBooking,
   updateBooking,
   setBookingStatus,
+  listBookings,
   BookingInput,
   Booking,
   BookingStatus,
 } from "@/lib/db/bookings";
 import { applyManualRateToRange } from "@/lib/db/rates";
 import { getActiveProperty } from "@/lib/active-property-server";
+
+/**
+ * Bookings overlapping a [from, to) window for the active property. Used by the
+ * BookingModal room picker to hide rooms already occupied during the chosen
+ * stay. Tenant-scoped via getActiveProperty(); reuses the existing
+ * listBookings() reader (window-overlap + tenant RLS handled there).
+ */
+export async function bookingsInRangeAction(
+  fromISO: string,
+  toISO: string
+): Promise<ActionResult<Booking[]>> {
+  const active = await getActiveProperty();
+  if (!active.ok) return active;
+  return listBookings(active.data.property.id, fromISO, toISO);
+}
 
 /** Apply a flat manual nightly price to room types across a date range. */
 export async function bulkManualRateAction(

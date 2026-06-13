@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { ActionResult } from "@/lib/errors";
+import { createClient } from "@/lib/supabase/server";
+import { ActionResult, ok, mapPgError } from "@/lib/errors";
 import {
   searchGuests,
   createGuest,
@@ -24,7 +25,10 @@ export async function saveGuest(
 
   if (id) {
     const res = await updateGuest(id, fields);
-    if (res.ok) revalidatePath("/app/guests");
+    if (res.ok) {
+      revalidatePath("/app/guests");
+      revalidatePath(`/app/guests/${id}`);
+    }
     return res;
   }
 
@@ -36,6 +40,22 @@ export async function saveGuest(
     fields
   );
   if (res.ok) revalidatePath("/app/guests");
+  return res;
+}
+
+/**
+ * Patch an existing guest by id (used by the inline-editable detail page).
+ * updateGuest is RLS-scoped, so the active property isn't needed here.
+ */
+export async function updateGuestFields(
+  id: string,
+  patch: Partial<GuestInput>
+): Promise<ActionResult<Guest>> {
+  const res = await updateGuest(id, patch);
+  if (res.ok) {
+    revalidatePath("/app/guests");
+    revalidatePath(`/app/guests/${id}`);
+  }
   return res;
 }
 
@@ -59,8 +79,31 @@ export async function toggleGuestFlag(
   patch: { is_vip?: boolean; is_blacklisted?: boolean }
 ): Promise<ActionResult<Guest>> {
   const res = await updateGuest(id, patch);
-  if (res.ok) revalidatePath("/app/guests");
+  if (res.ok) {
+    revalidatePath("/app/guests");
+    revalidatePath(`/app/guests/${id}`);
+  }
   return res;
+}
+
+/**
+ * Hard-delete a guest. No lib/db helper exists for deletes, so this is an
+ * inline RLS-scoped query (the guest's RLS policy already restricts it to the
+ * caller's tenant/property). Linked bookings keep their snapshot fields; only
+ * the guest_id FK is cleared by the DB.
+ */
+export async function deleteGuestAction(
+  id: string
+): Promise<ActionResult<{ id: string }>> {
+  try {
+    const supabase = createClient();
+    const { error } = await supabase.from("guests").delete().eq("id", id);
+    if (error) throw error;
+    revalidatePath("/app/guests");
+    return ok({ id });
+  } catch (e) {
+    return mapPgError(e);
+  }
 }
 
 /** Stay-history summary for one guest within the active property. */

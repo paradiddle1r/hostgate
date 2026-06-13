@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Sparkles,
@@ -10,10 +10,17 @@ import {
   Check,
   CheckCheck,
   SkipForward,
+  RotateCcw,
   Search,
   UserPlus,
+  Pencil,
+  X,
+  AlertTriangle,
+  Clock,
+  CalendarDays,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { createClient } from "@/lib/supabase/client";
 import type {
   HousekeepingTask,
   HousekeepingStatus,
@@ -30,17 +37,20 @@ import {
   newHousekeepingTask,
   setTaskStatus,
   assignTaskToMe,
+  patchTask,
   removeTask,
 } from "@/app/app/housekeeping/actions";
 
 const STR: Record<"th" | "en", Record<string, string>> = {
   th: {
     title: "งานแม่บ้าน",
-    sub: "คิวงานทำความสะอาดแยกตามห้อง",
+    sub: "คิวงานทำความสะอาดแยกตามห้อง เช็คเอาท์จะสร้างงานอัตโนมัติ",
     newTask: "เพิ่มงาน",
     room: "ห้อง",
     taskType: "ประเภทงาน",
     priority: "ความสำคัญ",
+    assignedTo: "ผู้รับผิดชอบ",
+    due: "กำหนดเสร็จ",
     notes: "หมายเหตุ",
     notesPh: "รายละเอียดเพิ่มเติม (ถ้ามี)",
     cancel: "ยกเลิก",
@@ -48,6 +58,11 @@ const STR: Record<"th" | "en", Record<string, string>> = {
     saved: "เพิ่มงานแล้ว",
     needRoom: "เลือกห้องก่อน",
     searchPh: "ค้นหาเลขห้อง",
+    // KPIs
+    kAwaitingClean: "รอทำความสะอาด",
+    kInProgress: "กำลังทำ",
+    kCleanedToday: "ทำเสร็จวันนี้",
+    kOverdue: "เกินกำหนด",
     // filter tabs
     fOpen: "เปิดอยู่",
     fDirty: "รอทำความสะอาด",
@@ -56,6 +71,18 @@ const STR: Record<"th" | "en", Record<string, string>> = {
     fInspected: "ตรวจแล้ว",
     fSkipped: "ข้าม",
     fAll: "ทั้งหมด",
+    // filter dropdowns
+    allTypes: "ทุกประเภท",
+    allPriorities: "ทุกความสำคัญ",
+    allAssignees: "ทุกคน",
+    mine: "ของฉัน",
+    fUnassigned: "ยังไม่มอบหมาย",
+    // due buckets
+    bOverdue: "เกินกำหนด",
+    bToday: "วันนี้",
+    bTomorrow: "พรุ่งนี้",
+    bLater: "ภายหลัง",
+    overdue: "เกินกำหนด",
     // statuses
     sDirty: "รอทำความสะอาด",
     "sIn-progress": "กำลังทำ",
@@ -82,9 +109,12 @@ const STR: Record<"th" | "en", Record<string, string>> = {
     markInspected: "ผ่านการตรวจ",
     done: "เสร็จสมบูรณ์",
     skip: "ข้าม",
+    reopen: "เปิดใหม่",
+    edit: "แก้ไข",
     assignMe: "รับงานนี้",
     statusChanged: "อัปเดตสถานะแล้ว",
     assigned: "รับงานแล้ว",
+    updated: "บันทึกแล้ว",
     deleted: "ลบงานแล้ว",
     delConfirm: "ลบงานนี้?",
     unassigned: "ยังไม่มอบหมาย",
@@ -94,11 +124,13 @@ const STR: Record<"th" | "en", Record<string, string>> = {
   },
   en: {
     title: "Housekeeping",
-    sub: "Per-room cleaning task queue.",
+    sub: "Per-room cleaning queue. Check-outs auto-create tasks.",
     newTask: "New task",
     room: "Room",
     taskType: "Task type",
     priority: "Priority",
+    assignedTo: "Assigned to",
+    due: "Due",
     notes: "Notes",
     notesPh: "Optional details",
     cancel: "Cancel",
@@ -106,6 +138,10 @@ const STR: Record<"th" | "en", Record<string, string>> = {
     saved: "Task added",
     needRoom: "Pick a room first",
     searchPh: "Search room number",
+    kAwaitingClean: "Awaiting clean",
+    kInProgress: "In progress",
+    kCleanedToday: "Cleaned today",
+    kOverdue: "Overdue",
     fOpen: "Open",
     fDirty: "Dirty",
     fInProgress: "In progress",
@@ -113,6 +149,16 @@ const STR: Record<"th" | "en", Record<string, string>> = {
     fInspected: "Inspected",
     fSkipped: "Skipped",
     fAll: "All",
+    allTypes: "All types",
+    allPriorities: "All priorities",
+    allAssignees: "All assignees",
+    mine: "Mine",
+    fUnassigned: "Unassigned",
+    bOverdue: "Overdue",
+    bToday: "Today",
+    bTomorrow: "Tomorrow",
+    bLater: "Later",
+    overdue: "Overdue",
     sDirty: "Dirty",
     "sIn-progress": "In progress",
     sClean: "Clean",
@@ -135,9 +181,12 @@ const STR: Record<"th" | "en", Record<string, string>> = {
     markInspected: "Mark inspected",
     done: "Done",
     skip: "Skip",
+    reopen: "Re-open",
+    edit: "Edit",
     assignMe: "Assign to me",
     statusChanged: "Status updated",
     assigned: "Assigned to you",
+    updated: "Saved",
     deleted: "Task deleted",
     delConfirm: "Delete this task?",
     unassigned: "Unassigned",
@@ -181,15 +230,6 @@ const FILTERS: { key: FilterKey; strKey: string }[] = [
   { key: "all", strKey: "fAll" },
 ];
 
-// bucket order for grouped views (Open / All)
-const BUCKET_ORDER: HousekeepingStatus[] = [
-  "dirty",
-  "in-progress",
-  "clean",
-  "inspected",
-  "skipped",
-];
-
 // next status in the dirty → in-progress → clean → inspected chain
 const NEXT_STATUS: Partial<Record<HousekeepingStatus, HousekeepingStatus>> = {
   dirty: "in-progress",
@@ -202,10 +242,52 @@ const NEXT_LABEL: Partial<Record<HousekeepingStatus, string>> = {
   clean: "markInspected",
 };
 
+// ── Date helpers ────────────────────────────────────────────────────────────
+// Date-only string comparison keeps things honest across the +07/UTC seam —
+// building the ISO key from local Y/M/D, never from Date math.
+function todayIso(): string {
+  const d = new Date();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+function isoPlus(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
+type DueBucket = "overdue" | "today" | "tomorrow" | "later";
+const BUCKET_ORDER: DueBucket[] = ["overdue", "today", "tomorrow", "later"];
+const BUCKET_STR: Record<DueBucket, string> = {
+  overdue: "bOverdue",
+  today: "bToday",
+  tomorrow: "bTomorrow",
+  later: "bLater",
+};
+
+// due_date is NOT NULL (default current_date) so no null fallback needed.
+function dueBucket(due: string): DueBucket {
+  const today = todayIso();
+  if (due < today) return "overdue";
+  if (due === today) return "today";
+  if (due === isoPlus(1)) return "tomorrow";
+  return "later";
+}
+function isOverdue(t: HousekeepingTask): boolean {
+  return (
+    t.due_date < todayIso() &&
+    (t.status === "dirty" || t.status === "in-progress")
+  );
+}
+
 interface NewDraft {
   room_id: string;
   task_type: HousekeepingType;
   priority: Priority;
+  due_date: string;
   notes: string;
 }
 
@@ -214,11 +296,13 @@ export default function HousekeepingClient({
   rooms,
   members,
   currentUserId,
+  propertyId,
 }: {
   tasks: HousekeepingTask[];
   rooms: Room[];
   members: TenantMember[];
   currentUserId: string | null;
+  propertyId?: string;
 }) {
   const { locale: raw } = useI18n();
   const locale = raw === "en" ? "en" : "th";
@@ -228,15 +312,43 @@ export default function HousekeepingClient({
 
   const [filter, setFilter] = useState<FilterKey>("open");
   const [query, setQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState<"all" | HousekeepingType>("all");
+  const [prioFilter, setPrioFilter] = useState<"all" | Priority>("all");
+  const [assignee, setAssignee] = useState<string>("all"); // "all" | "me" | "unassigned" | userId
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
   const [draft, setDraft] = useState<NewDraft>({
     room_id: "",
     task_type: "daily-clean",
     priority: "normal",
+    due_date: todayIso(),
     notes: "",
   });
+
+  // ── Realtime: a freshness trigger only. The subscription handler calls
+  // router.refresh() so the RLS+property-scoped loader re-runs; all mutations
+  // stay in server actions (no local task mirror, no dual source of truth).
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel("housekeeping_tasks_realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "housekeeping_tasks",
+          ...(propertyId ? { filter: `property_id=eq.${propertyId}` } : {}),
+        },
+        () => router.refresh()
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [router, propertyId]);
 
   const roomNumber = useMemo(() => {
     const m = new Map<string, string>();
@@ -250,6 +362,27 @@ export default function HousekeepingClient({
     return m;
   }, [members]);
 
+  // ── KPIs: Awaiting clean / In progress / Cleaned today / Overdue ──────────
+  const kpis = useMemo(() => {
+    const today = todayIso();
+    let awaiting = 0,
+      inProgress = 0,
+      cleanedToday = 0,
+      overdue = 0;
+    for (const t of tasks) {
+      if (t.status === "dirty") awaiting++;
+      else if (t.status === "in-progress") inProgress++;
+      if (
+        (t.status === "clean" || t.status === "inspected") &&
+        t.completed_at &&
+        t.completed_at.slice(0, 10) === today
+      )
+        cleanedToday++;
+      if (isOverdue(t)) overdue++;
+    }
+    return { awaiting, inProgress, cleanedToday, overdue };
+  }, [tasks]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return tasks.filter((t) => {
@@ -259,6 +392,17 @@ export default function HousekeepingClient({
       } else if (filter !== "all" && t.status !== filter) {
         return false;
       }
+      // type / priority dropdowns
+      if (typeFilter !== "all" && t.task_type !== typeFilter) return false;
+      if (prioFilter !== "all" && t.priority !== prioFilter) return false;
+      // assignee dropdown
+      if (assignee === "me") {
+        if (!currentUserId || t.assigned_to !== currentUserId) return false;
+      } else if (assignee === "unassigned") {
+        if (t.assigned_to) return false;
+      } else if (assignee !== "all") {
+        if (t.assigned_to !== assignee) return false;
+      }
       // room-number search
       if (q) {
         const num = (roomNumber.get(t.room_id) ?? "").toLowerCase();
@@ -266,17 +410,24 @@ export default function HousekeepingClient({
       }
       return true;
     });
-  }, [tasks, filter, query, roomNumber]);
+  }, [tasks, filter, typeFilter, prioFilter, assignee, query, roomNumber, currentUserId]);
 
-  // group into buckets for the Open / All views; otherwise a single bucket
+  // group by due-date bucket for Open / All views; otherwise a single flat list
   const grouped = useMemo(() => {
-    if (filter !== "open" && filter !== "all") {
-      return [{ status: filter as HousekeepingStatus, rows: filtered }];
+    const useBuckets = filter === "open" || filter === "all";
+    if (!useBuckets) {
+      return [{ bucket: null as DueBucket | null, rows: filtered }];
     }
-    return BUCKET_ORDER.map((status) => ({
-      status,
-      rows: filtered.filter((t) => t.status === status),
-    })).filter((g) => g.rows.length > 0);
+    const byBucket = new Map<DueBucket, HousekeepingTask[]>();
+    for (const t of filtered) {
+      const b = dueBucket(t.due_date);
+      if (!byBucket.has(b)) byBucket.set(b, []);
+      byBucket.get(b)!.push(t);
+    }
+    return BUCKET_ORDER.filter((b) => byBucket.has(b)).map((b) => ({
+      bucket: b,
+      rows: byBucket.get(b)!,
+    }));
   }, [filtered, filter]);
 
   async function create() {
@@ -289,13 +440,32 @@ export default function HousekeepingClient({
       room_id: draft.room_id,
       task_type: draft.task_type,
       priority: draft.priority,
+      due_date: draft.due_date || undefined,
       notes: draft.notes.trim() || null,
     });
     setSaving(false);
     if (res.ok) {
       toast.success(s("saved"));
       setCreating(false);
-      setDraft({ room_id: "", task_type: "daily-clean", priority: "normal", notes: "" });
+      setDraft({
+        room_id: "",
+        task_type: "daily-clean",
+        priority: "normal",
+        due_date: todayIso(),
+        notes: "",
+      });
+      router.refresh();
+    } else {
+      toast.error(`${res.code} · ${res.message}`);
+    }
+  }
+
+  async function changeStatus(t: HousekeepingTask, next: HousekeepingStatus, okMsg: string) {
+    setBusyId(t.id);
+    const res = await setTaskStatus(t.id, next);
+    setBusyId(null);
+    if (res.ok) {
+      toast.success(okMsg);
       router.refresh();
     } else {
       toast.error(`${res.code} · ${res.message}`);
@@ -305,28 +475,10 @@ export default function HousekeepingClient({
   async function advance(t: HousekeepingTask) {
     const next = NEXT_STATUS[t.status];
     if (!next) return;
-    setBusyId(t.id);
-    const res = await setTaskStatus(t.id, next);
-    setBusyId(null);
-    if (res.ok) {
-      toast.success(s("statusChanged"));
-      router.refresh();
-    } else {
-      toast.error(`${res.code} · ${res.message}`);
-    }
+    await changeStatus(t, next, s("statusChanged"));
   }
-
-  async function skip(t: HousekeepingTask) {
-    setBusyId(t.id);
-    const res = await setTaskStatus(t.id, "skipped");
-    setBusyId(null);
-    if (res.ok) {
-      toast.success(s("statusChanged"));
-      router.refresh();
-    } else {
-      toast.error(`${res.code} · ${res.message}`);
-    }
-  }
+  const skip = (t: HousekeepingTask) => changeStatus(t, "skipped", s("statusChanged"));
+  const reopen = (t: HousekeepingTask) => changeStatus(t, "dirty", s("statusChanged"));
 
   async function take(t: HousekeepingTask) {
     setBusyId(t.id);
@@ -334,6 +486,28 @@ export default function HousekeepingClient({
     setBusyId(null);
     if (res.ok) {
       toast.success(s("assigned"));
+      router.refresh();
+    } else {
+      toast.error(`${res.code} · ${res.message}`);
+    }
+  }
+
+  async function savePatch(
+    t: HousekeepingTask,
+    patch: {
+      priority?: Priority;
+      task_type?: HousekeepingType;
+      assigned_to?: string | null;
+      due_date?: string;
+      notes?: string | null;
+    }
+  ) {
+    setBusyId(t.id);
+    const res = await patchTask(t.id, patch);
+    setBusyId(null);
+    if (res.ok) {
+      toast.success(s("updated"));
+      setEditId(null);
       router.refresh();
     } else {
       toast.error(`${res.code} · ${res.message}`);
@@ -353,6 +527,9 @@ export default function HousekeepingClient({
     }
   }
 
+  const selectCls =
+    "rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--app-accent)]";
+
   return (
     <div className="mx-auto max-w-3xl">
       {/* header */}
@@ -366,8 +543,40 @@ export default function HousekeepingClient({
         </Button>
       </div>
 
-      {/* filter tabs + search */}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
+      {/* KPI tiles */}
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Kpi
+          icon={<AlertTriangle size={16} />}
+          label={s("kAwaitingClean")}
+          value={kpis.awaiting}
+          bg="rgba(220,38,38,0.12)"
+          fg="var(--app-danger)"
+        />
+        <Kpi
+          icon={<Clock size={16} />}
+          label={s("kInProgress")}
+          value={kpis.inProgress}
+          bg="rgba(217,119,6,0.14)"
+          fg="#d97706"
+        />
+        <Kpi
+          icon={<Check size={16} />}
+          label={s("kCleanedToday")}
+          value={kpis.cleanedToday}
+          bg="rgba(22,163,74,0.14)"
+          fg="var(--app-success)"
+        />
+        <Kpi
+          icon={<CalendarDays size={16} />}
+          label={s("kOverdue")}
+          value={kpis.overdue}
+          bg="rgba(220,38,38,0.12)"
+          fg="var(--app-danger)"
+        />
+      </div>
+
+      {/* filter tabs */}
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="flex flex-wrap gap-1.5">
           {FILTERS.map((f) => (
             <button
@@ -397,6 +606,48 @@ export default function HousekeepingClient({
         </div>
       </div>
 
+      {/* dropdown filters */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <select
+          className={selectCls}
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value as "all" | HousekeepingType)}
+        >
+          <option value="all">{s("allTypes")}</option>
+          {TASK_TYPES.map((tt) => (
+            <option key={tt} value={tt}>
+              {s(`t${tt}`)}
+            </option>
+          ))}
+        </select>
+        <select
+          className={selectCls}
+          value={prioFilter}
+          onChange={(e) => setPrioFilter(e.target.value as "all" | Priority)}
+        >
+          <option value="all">{s("allPriorities")}</option>
+          {PRIORITIES.map((p) => (
+            <option key={p} value={p}>
+              {s(`p${cap(p)}`)}
+            </option>
+          ))}
+        </select>
+        <select
+          className={selectCls}
+          value={assignee}
+          onChange={(e) => setAssignee(e.target.value)}
+        >
+          <option value="all">{s("allAssignees")}</option>
+          {currentUserId && <option value="me">{s("mine")}</option>}
+          <option value="unassigned">{s("fUnassigned")}</option>
+          {members.map((u) => (
+            <option key={u.user_id} value={u.user_id}>
+              {u.display_name || u.email || "—"}
+            </option>
+          ))}
+        </select>
+      </div>
+
       {/* list */}
       {filtered.length === 0 ? (
         <div className="app-surface rounded-2xl border border-[var(--app-border)]">
@@ -409,10 +660,26 @@ export default function HousekeepingClient({
       ) : (
         <div className="space-y-5">
           {grouped.map((group) => (
-            <div key={group.status} className="space-y-2">
-              {(filter === "open" || filter === "all") && (
-                <div className="px-1 text-xs font-semibold uppercase tracking-wide text-[var(--app-fg-muted)]">
-                  {s(statusStrKey(group.status))} · {group.rows.length}
+            <div key={group.bucket ?? "flat"} className="space-y-2">
+              {group.bucket && (
+                <div
+                  className={`inline-flex items-center gap-1.5 px-1 text-xs font-semibold uppercase tracking-wide ${
+                    group.bucket === "overdue" ? "" : "text-[var(--app-fg-muted)]"
+                  }`}
+                  style={
+                    group.bucket === "overdue"
+                      ? {
+                          color: "var(--app-danger)",
+                          background: "rgba(220,38,38,0.10)",
+                          border: "1px solid rgba(220,38,38,0.35)",
+                          borderRadius: 6,
+                          padding: "3px 8px",
+                        }
+                      : undefined
+                  }
+                >
+                  {group.bucket === "overdue" && <AlertTriangle size={12} />}
+                  {s(BUCKET_STR[group.bucket])} · {group.rows.length}
                 </div>
               )}
               {group.rows.map((t) => (
@@ -422,11 +689,18 @@ export default function HousekeepingClient({
                   s={s}
                   mine={!!currentUserId && t.assigned_to === currentUserId}
                   roomNum={roomNumber.get(t.room_id) ?? "—"}
-                  assignee={t.assigned_to ? memberName.get(t.assigned_to) ?? null : null}
+                  assigneeName={
+                    t.assigned_to ? memberName.get(t.assigned_to) ?? null : null
+                  }
+                  members={members}
                   canAssign={!!currentUserId}
                   busy={busyId === t.id}
+                  editing={editId === t.id}
+                  onToggleEdit={() => setEditId(editId === t.id ? null : t.id)}
+                  onSavePatch={(patch) => savePatch(t, patch)}
                   onAdvance={() => advance(t)}
                   onSkip={() => skip(t)}
+                  onReopen={() => reopen(t)}
                   onTake={() => take(t)}
                   onDelete={() => del(t)}
                 />
@@ -504,6 +778,15 @@ export default function HousekeepingClient({
               </div>
             </div>
             <div>
+              <label className={label}>{s("due")}</label>
+              <input
+                type="date"
+                className={field}
+                value={draft.due_date}
+                onChange={(e) => setDraft({ ...draft, due_date: e.target.value })}
+              />
+            </div>
+            <div>
               <label className={label}>{s("notes")}</label>
               <textarea
                 className={`${field} min-h-[72px] resize-y`}
@@ -519,16 +802,52 @@ export default function HousekeepingClient({
   );
 }
 
+function Kpi({
+  icon,
+  label,
+  value,
+  bg,
+  fg,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  bg: string;
+  fg: string;
+}) {
+  return (
+    <div className="app-surface flex items-center gap-3 rounded-2xl border border-[var(--app-border)] p-3">
+      <div
+        className="grid h-9 w-9 shrink-0 place-items-center rounded-lg"
+        style={{ background: bg, color: fg }}
+      >
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <div className="truncate text-[11px] font-medium uppercase tracking-wide text-[var(--app-fg-muted)]">
+          {label}
+        </div>
+        <div className="text-xl font-semibold tabular-nums">{value}</div>
+      </div>
+    </div>
+  );
+}
+
 function TaskRow({
   t,
   s,
   mine,
   roomNum,
-  assignee,
+  assigneeName,
+  members,
   canAssign,
   busy,
+  editing,
+  onToggleEdit,
+  onSavePatch,
   onAdvance,
   onSkip,
+  onReopen,
   onTake,
   onDelete,
 }: {
@@ -536,97 +855,266 @@ function TaskRow({
   s: (k: string) => string;
   mine: boolean;
   roomNum: string;
-  assignee: string | null;
+  assigneeName: string | null;
+  members: TenantMember[];
   canAssign: boolean;
   busy: boolean;
+  editing: boolean;
+  onToggleEdit: () => void;
+  onSavePatch: (patch: {
+    priority?: Priority;
+    task_type?: HousekeepingType;
+    assigned_to?: string | null;
+    due_date?: string;
+    notes?: string | null;
+  }) => void;
   onAdvance: () => void;
   onSkip: () => void;
+  onReopen: () => void;
   onTake: () => void;
   onDelete: () => void;
 }) {
   const nextLabelKey = NEXT_LABEL[t.status];
   const isTerminal = t.status === "inspected" || t.status === "skipped";
+  const overdue = isOverdue(t);
 
   return (
     <div
-      className="app-surface flex flex-wrap items-center gap-3 rounded-2xl border p-4"
+      className="app-surface flex flex-col gap-3 rounded-2xl border p-4"
       style={{
-        borderColor: mine ? "var(--app-accent)" : "var(--app-border)",
-        borderLeftWidth: mine ? 3 : 1,
+        borderColor: overdue
+          ? "rgba(220,38,38,0.5)"
+          : mine
+            ? "var(--app-accent)"
+            : "var(--app-border)",
+        borderLeftWidth: overdue || mine ? 3 : 1,
+        opacity: busy ? 0.6 : 1,
       }}
     >
-      {/* room number */}
-      <div className="min-w-[3rem] text-lg font-semibold tabular-nums">{roomNum}</div>
+      <div className="flex flex-wrap items-center gap-3">
+        {/* room number */}
+        <div className="min-w-[3rem] text-lg font-semibold tabular-nums">{roomNum}</div>
 
-      {/* chips */}
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-        <Chip bg="var(--app-surface-2)" fg="var(--app-fg-muted)">
-          {s(`t${t.task_type}`)}
-        </Chip>
-        <Chip bg={priColors(t.priority).bg} fg={priColors(t.priority).fg}>
-          {s(`p${cap(t.priority)}`)}
-        </Chip>
-        <Chip bg={statusColors(t.status).bg} fg={statusColors(t.status).fg}>
-          {s(statusStrKey(t.status))}
-        </Chip>
-        {assignee ? (
-          <span className="text-xs text-[var(--app-fg-muted)]">{assignee}</span>
-        ) : (
-          <span className="text-xs italic text-[var(--app-fg-muted)]">
-            {s("unassigned")}
+        {/* chips */}
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+          <Chip bg="var(--app-surface-2)" fg="var(--app-fg-muted)">
+            {s(`t${t.task_type}`)}
+          </Chip>
+          <Chip bg={priColors(t.priority).bg} fg={priColors(t.priority).fg}>
+            {s(`p${cap(t.priority)}`)}
+          </Chip>
+          <Chip bg={statusColors(t.status).bg} fg={statusColors(t.status).fg}>
+            {s(statusStrKey(t.status))}
+          </Chip>
+          {overdue && (
+            <Chip bg="rgba(220,38,38,0.14)" fg="var(--app-danger)">
+              <AlertTriangle size={11} className="mr-0.5 inline" />
+              {s("overdue")}
+            </Chip>
+          )}
+          <span className="inline-flex items-center gap-1 text-xs text-[var(--app-fg-muted)]">
+            <Clock size={12} /> {t.due_date}
           </span>
-        )}
-        {t.notes && (
-          <span className="basis-full truncate text-sm text-[var(--app-fg-muted)]">
-            {t.notes}
-          </span>
-        )}
+          {assigneeName ? (
+            <span className="text-xs text-[var(--app-fg-muted)]">{assigneeName}</span>
+          ) : (
+            <span className="text-xs italic text-[var(--app-fg-muted)]">
+              {s("unassigned")}
+            </span>
+          )}
+          {t.notes && (
+            <span className="basis-full truncate text-sm text-[var(--app-fg-muted)]">
+              {t.notes}
+            </span>
+          )}
+        </div>
+
+        {/* actions */}
+        <div className="flex items-center gap-1.5">
+          {!t.assigned_to && canAssign && !isTerminal && (
+            <Button variant="ghost" size="sm" onClick={onTake} loading={busy}>
+              <UserPlus size={14} /> {s("assignMe")}
+            </Button>
+          )}
+
+          {isTerminal ? (
+            <>
+              {t.status === "inspected" && (
+                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--app-success)]">
+                  <CheckCheck size={16} /> {s("done")}
+                </span>
+              )}
+              <button
+                onClick={onReopen}
+                disabled={busy}
+                aria-label={s("reopen")}
+                title={s("reopen")}
+                className="grid h-8 w-8 place-items-center rounded-lg text-[var(--app-fg-muted)] transition-colors hover:bg-[var(--app-surface-2)] hover:text-[var(--app-fg)] disabled:opacity-50"
+              >
+                <RotateCcw size={15} />
+              </button>
+            </>
+          ) : (
+            <>
+              {nextLabelKey && (
+                <Button size="sm" onClick={onAdvance} loading={busy}>
+                  {t.status === "dirty" && <Play size={14} />}
+                  {t.status === "in-progress" && <Check size={14} />}
+                  {t.status === "clean" && <CheckCheck size={14} />}
+                  {s(nextLabelKey)}
+                </Button>
+              )}
+              <button
+                onClick={onSkip}
+                disabled={busy}
+                aria-label={s("skip")}
+                title={s("skip")}
+                className="grid h-8 w-8 place-items-center rounded-lg text-[var(--app-fg-muted)] transition-colors hover:bg-[var(--app-surface-2)] hover:text-[var(--app-fg)] disabled:opacity-50"
+              >
+                <SkipForward size={15} />
+              </button>
+            </>
+          )}
+
+          <button
+            onClick={onToggleEdit}
+            disabled={busy}
+            aria-label={s("edit")}
+            title={s("edit")}
+            className="grid h-8 w-8 place-items-center rounded-lg text-[var(--app-fg-muted)] transition-colors hover:bg-[var(--app-surface-2)] hover:text-[var(--app-fg)] disabled:opacity-50"
+          >
+            {editing ? <X size={15} /> : <Pencil size={15} />}
+          </button>
+
+          <button
+            onClick={onDelete}
+            disabled={busy}
+            aria-label="Delete"
+            className="grid h-8 w-8 place-items-center rounded-lg text-[var(--app-fg-muted)] transition-colors hover:text-[var(--app-danger)] disabled:opacity-50"
+          >
+            <Trash2 size={15} />
+          </button>
+        </div>
       </div>
 
-      {/* actions */}
-      <div className="flex items-center gap-1.5">
-        {!t.assigned_to && canAssign && !isTerminal && (
-          <Button variant="ghost" size="sm" onClick={onTake} loading={busy}>
-            <UserPlus size={14} /> {s("assignMe")}
-          </Button>
-        )}
+      {/* inline editor */}
+      {editing && (
+        <InlineEditor t={t} s={s} members={members} busy={busy} onSave={onSavePatch} onCancel={onToggleEdit} />
+      )}
+    </div>
+  );
+}
 
-        {isTerminal ? (
-          t.status === "inspected" ? (
-            <span className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--app-success)]">
-              <CheckCheck size={16} /> {s("done")}
-            </span>
-          ) : null
-        ) : (
-          <>
-            {nextLabelKey && (
-              <Button size="sm" onClick={onAdvance} loading={busy}>
-                {t.status === "dirty" && <Play size={14} />}
-                {t.status === "in-progress" && <Check size={14} />}
-                {t.status === "clean" && <CheckCheck size={14} />}
-                {s(nextLabelKey)}
-              </Button>
-            )}
-            <button
-              onClick={onSkip}
-              disabled={busy}
-              aria-label={s("skip")}
-              title={s("skip")}
-              className="grid h-8 w-8 place-items-center rounded-lg text-[var(--app-fg-muted)] transition-colors hover:bg-[var(--app-surface-2)] hover:text-[var(--app-fg)] disabled:opacity-50"
-            >
-              <SkipForward size={15} />
-            </button>
-          </>
-        )}
+function InlineEditor({
+  t,
+  s,
+  members,
+  busy,
+  onSave,
+  onCancel,
+}: {
+  t: HousekeepingTask;
+  s: (k: string) => string;
+  members: TenantMember[];
+  busy: boolean;
+  onSave: (patch: {
+    priority?: Priority;
+    task_type?: HousekeepingType;
+    assigned_to?: string | null;
+    due_date?: string;
+    notes?: string | null;
+  }) => void;
+  onCancel: () => void;
+}) {
+  const [taskType, setTaskType] = useState<HousekeepingType>(t.task_type);
+  const [priority, setPriority] = useState<Priority>(t.priority);
+  const [assigned, setAssigned] = useState<string>(t.assigned_to ?? "");
+  const [due, setDue] = useState<string>(t.due_date);
+  const [notes, setNotes] = useState<string>(t.notes ?? "");
 
-        <button
-          onClick={onDelete}
-          disabled={busy}
-          aria-label="Delete"
-          className="grid h-8 w-8 place-items-center rounded-lg text-[var(--app-fg-muted)] transition-colors hover:text-[var(--app-danger)] disabled:opacity-50"
+  return (
+    <div className="rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-2)] p-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div>
+          <label className={label}>{s("taskType")}</label>
+          <select
+            className={field}
+            value={taskType}
+            onChange={(e) => setTaskType(e.target.value as HousekeepingType)}
+          >
+            {TASK_TYPES.map((tt) => (
+              <option key={tt} value={tt}>
+                {s(`t${tt}`)}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className={label}>{s("priority")}</label>
+          <select
+            className={field}
+            value={priority}
+            onChange={(e) => setPriority(e.target.value as Priority)}
+          >
+            {PRIORITIES.map((p) => (
+              <option key={p} value={p}>
+                {s(`p${cap(p)}`)}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className={label}>{s("assignedTo")}</label>
+          <select
+            className={field}
+            value={assigned}
+            onChange={(e) => setAssigned(e.target.value)}
+          >
+            <option value="">{s("unassigned")}</option>
+            {members.map((u) => (
+              <option key={u.user_id} value={u.user_id}>
+                {u.display_name || u.email || "—"}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className={label}>{s("due")}</label>
+          <input
+            type="date"
+            className={field}
+            value={due}
+            onChange={(e) => setDue(e.target.value)}
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <label className={label}>{s("notes")}</label>
+          <textarea
+            className={`${field} min-h-[60px] resize-y`}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        </div>
+      </div>
+      <div className="mt-3 flex justify-end gap-2">
+        <Button variant="ghost" size="sm" onClick={onCancel}>
+          {s("cancel")}
+        </Button>
+        <Button
+          size="sm"
+          loading={busy}
+          onClick={() =>
+            onSave({
+              task_type: taskType,
+              priority,
+              assigned_to: assigned || null,
+              due_date: due || undefined,
+              notes: notes.trim() || null,
+            })
+          }
         >
-          <Trash2 size={15} />
-        </button>
+          {s("save")}
+        </Button>
       </div>
     </div>
   );

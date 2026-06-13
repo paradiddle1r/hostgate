@@ -1,11 +1,44 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CalendarRange, User, Phone } from "lucide-react";
+import { CalendarRange, User, Phone, Hash, Globe } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import Modal from "@/components/app/ui/Modal";
 import Button from "@/components/app/ui/Button";
 import { parseBookingText } from "@/lib/booking-parse";
+
+// Known OTA / source names to recognize in pasted confirmation text. Kept in
+// sync with the BookingModal OTA <select> options.
+const OTA_NAMES: { match: RegExp; name: string }[] = [
+  { match: /agoda/i, name: "Agoda" },
+  { match: /booking\.?com/i, name: "Booking.com" },
+  { match: /expedia/i, name: "Expedia" },
+  { match: /airbnb/i, name: "Airbnb" },
+  { match: /traveloka/i, name: "Traveloka" },
+  { match: /trip\.?com/i, name: "Trip.com" },
+];
+
+/** Detect the OTA/source from the pasted text, else undefined. */
+function detectOta(text: string): string | undefined {
+  for (const o of OTA_NAMES) if (o.match.test(text)) return o.name;
+  return undefined;
+}
+
+/**
+ * Pull a reservation/booking number. Prefers a labelled line
+ * ("Reservation no: 12345", "Booking ID: ABC-123", "เลขที่จอง: ..."), else
+ * undefined. Conservative — avoids phone numbers and dates.
+ */
+function detectReservationNo(text: string): string | undefined {
+  const m = text.match(
+    /(?:reservation\s*(?:no|number|id)?|booking\s*(?:no|number|id)|confirmation\s*(?:no|number|code)|itinerary|เลขที่จอง|หมายเลขการจอง)\s*[#:：]?\s*([A-Za-z0-9][A-Za-z0-9-]{3,})/i
+  );
+  if (m) {
+    const v = m[1].trim();
+    if (v.length >= 4 && v.length <= 32) return v;
+  }
+  return undefined;
+}
 
 const STR: Record<"th" | "en", Record<string, string>> = {
   th: {
@@ -18,6 +51,8 @@ const STR: Record<"th" | "en", Record<string, string>> = {
     checkOut: "วันออก",
     guest: "ชื่อผู้เข้าพัก",
     phone: "โทรศัพท์",
+    ota: "ช่องทาง",
+    resNo: "เลขที่จอง",
     use: "ใช้ข้อมูลนี้",
     cancel: "ยกเลิก",
   },
@@ -31,6 +66,8 @@ const STR: Record<"th" | "en", Record<string, string>> = {
     checkOut: "Check-out",
     guest: "Guest name",
     phone: "Phone",
+    ota: "Source",
+    resNo: "Reservation no.",
     use: "Use these details",
     cancel: "Cancel",
   },
@@ -44,12 +81,24 @@ export default function PasteImportModal({
   onSeed,
 }: {
   onClose: () => void;
-  onSeed: (seed: { checkIn?: string; checkOut?: string; guestName?: string; phone?: string }) => void;
+  onSeed: (seed: {
+    checkIn?: string;
+    checkOut?: string;
+    guestName?: string;
+    phone?: string;
+    ota?: string;
+    reservationNo?: string;
+  }) => void;
 }) {
   const { locale: raw } = useI18n();
   const s = STR[raw === "en" ? "en" : "th"];
   const [text, setText] = useState("");
-  const parsed = useMemo(() => parseBookingText(text), [text]);
+  // parseBookingText covers dates/name/phone; OTA + reservation no. are
+  // extracted here (the shared parser lib isn't in this domain's files).
+  const parsed = useMemo(() => {
+    const base = parseBookingText(text);
+    return { ...base, ota: detectOta(text), reservationNo: detectReservationNo(text) };
+  }, [text]);
   const usable = !!parsed.checkIn;
 
   return (
@@ -103,6 +152,16 @@ export default function PasteImportModal({
                   {parsed.phone && (
                     <Row icon={<Phone size={14} />}>
                       {s.phone}: <b>{parsed.phone}</b>
+                    </Row>
+                  )}
+                  {parsed.ota && (
+                    <Row icon={<Globe size={14} />}>
+                      {s.ota}: <b>{parsed.ota}</b>
+                    </Row>
+                  )}
+                  {parsed.reservationNo && (
+                    <Row icon={<Hash size={14} />}>
+                      {s.resNo}: <b>{parsed.reservationNo}</b>
                     </Row>
                   )}
                 </div>

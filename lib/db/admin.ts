@@ -17,6 +17,9 @@ export interface ActivityEntry {
   entity_id: string | null;
   detail: Record<string, unknown> | null;
   created_at: string;
+  // ── parity (migration 15) ──────────────────────────────────────────────────
+  summary: string | null;
+  actor_role: string | null;
 }
 
 export async function listActivity(tenantId: string, limit = 200): Promise<ActionResult<ActivityEntry[]>> {
@@ -78,6 +81,34 @@ export async function setMemberRole(
     const { error } = await supabase.rpc("app_set_member_role", {
       p_tenant: tenantId, p_user: userId, p_role: role,
     });
+    if (error) throw error;
+    return ok({ ok: true });
+  } catch (e) {
+    return mapPgError(e);
+  }
+}
+
+/**
+ * Enable/disable a member (parity `tenant_members.is_active`). Direct,
+ * RLS-scoped UPDATE — there is no `app_set_member_active` RPC, and this file may
+ * only touch lib/db.
+ *
+ * ⚠️ Runtime-gated: migration 01 defines SELECT/INSERT/DELETE policies on
+ * `tenant_members` but NO UPDATE policy, so RLS denies this write (0 rows
+ * affected) for non-service-role callers. Type-ready for the UI now; a follow-up
+ * migration must add an owner/admin UPDATE policy (or an `app_set_member_active`
+ * definer RPC) for it to take effect at runtime.
+ */
+export async function setMemberActive(
+  tenantId: string, userId: string, isActive: boolean
+): Promise<ActionResult<{ ok: true }>> {
+  try {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("tenant_members")
+      .update({ is_active: isActive })
+      .eq("tenant_id", tenantId)
+      .eq("user_id", userId);
     if (error) throw error;
     return ok({ ok: true });
   } catch (e) {

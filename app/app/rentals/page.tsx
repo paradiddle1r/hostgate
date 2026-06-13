@@ -18,9 +18,10 @@ export default async function RentalsPage() {
   ]);
 
   const tenants = tenantsRes.ok ? tenantsRes.data : [];
+  const bookings = bookingsRes.ok ? bookingsRes.data : [];
   const tenantBookingIds = new Set(tenants.map((t) => t.booking.id));
   // Bookings not yet attached to a rental config — candidates to convert.
-  const candidates = (bookingsRes.ok ? bookingsRes.data : []).filter(
+  const candidates = bookings.filter(
     (b) => !tenantBookingIds.has(b.id) && b.status !== "cancelled"
   );
 

@@ -1,266 +1,255 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Users, Search, Plus, Phone, Mail, Globe, Star, Ban } from "lucide-react";
-import type { Guest, GuestInput, GuestStays } from "@/lib/db/guests";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useMemo, useRef, useState } from "react";
+import { Users, Search, Plus, Phone, Mail, Star, Ban, Crown, X } from "lucide-react";
+import type { Guest, GuestInput } from "@/lib/db/guests";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/components/app/ui/Toast";
 import Button from "@/components/app/ui/Button";
 import Modal from "@/components/app/ui/Modal";
 import EmptyState from "@/components/app/ui/EmptyState";
-import { saveGuest, searchGuestsAction, guestStaysAction } from "@/app/app/guests/actions";
+import { saveGuest } from "@/app/app/guests/actions";
+
+// Per-guest rolled-up history, computed server-side in page.tsx.
+export type GuestStat = {
+  visits: number;
+  nights: number;
+  spend: number;
+  lastStay: string | null;
+  inHouseRoomId: string | null;
+};
 
 // Local bilingual strings, keyed off useI18n().locale — same shape lib/app-i18n.ts uses.
 const STR: Record<"th" | "en", Record<string, string>> = {
   th: {
     title: "แขก",
-    searchPlaceholder: "ค้นหาด้วยชื่อ หรือเบอร์โทร…",
+    subtitle: "ฐานข้อมูลลูกค้า — ประวัติการเข้าพัก ยอดใช้จ่าย และบันทึก",
+    searchPlaceholder: "ค้นหา ชื่อ ชื่อไทย เบอร์โทร อีเมล เลขบัตร ทะเบียนรถ…",
     newGuest: "เพิ่มแขก",
     name: "ชื่อ-นามสกุล",
+    thaiName: "ชื่อภาษาไทย",
     phone: "เบอร์โทรศัพท์",
     email: "อีเมล",
-    idNumber: "เลขบัตรประชาชน / พาสปอร์ต",
-    nationality: "สัญชาติ",
-    notes: "บันทึก",
+    preferences: "ความต้องการพิเศษ",
     save: "บันทึก",
-    saved: "บันทึกแล้ว",
+    creating: "กำลังสร้าง…",
+    create: "สร้างแขก",
     cancel: "ยกเลิก",
-    edit: "แก้ไขแขก",
+    optional: "(ไม่บังคับ)",
     emptyTitle: "ยังไม่มีแขก",
     emptyHint: "เพิ่มแขกคนแรกเพื่อเริ่มเก็บข้อมูลลูกค้า",
     noMatchTitle: "ไม่พบแขก",
-    noMatchHint: "ลองค้นหาด้วยชื่อหรือเบอร์โทรอื่น",
+    noMatchHint: "ลองค้นหาด้วยคำอื่น",
     vip: "VIP",
     blacklist: "บัญชีดำ",
-    visits: "เข้าพัก",
-    nights: "คืน",
-    spend: "ยอดใช้จ่าย",
-    lastStay: "เข้าพักล่าสุด",
-    never: "ยังไม่เคยเข้าพัก",
+    returning: "ลูกค้าประจำ",
+    inHouse: "กำลังพัก",
+    unnamed: "ไม่ระบุชื่อ",
+    // filters
+    fAll: "ทั้งหมด",
+    fVip: "VIP",
+    fReturning: "ลูกค้าประจำ",
+    fInHouse: "กำลังพัก",
+    fBlacklist: "บัญชีดำ",
+    // columns
+    cGuest: "แขก",
+    cContact: "การติดต่อ",
+    cVisits: "เข้าพัก",
+    cNights: "คืน",
+    cSpend: "ยอดใช้จ่าย",
+    cLastStay: "เข้าพักล่าสุด",
+    cStatus: "สถานะ",
+    never: "—",
   },
   en: {
     title: "Guests",
-    searchPlaceholder: "Search by name or phone…",
+    subtitle: "Your guest CRM — stay history, lifetime spend, and notes.",
+    searchPlaceholder: "Search name, Thai name, phone, email, ID, plate…",
     newGuest: "New guest",
     name: "Full name",
+    thaiName: "Thai name",
     phone: "Phone",
     email: "Email",
-    idNumber: "ID / passport number",
-    nationality: "Nationality",
-    notes: "Notes",
+    preferences: "Preferences",
     save: "Save",
-    saved: "Saved",
+    creating: "Creating…",
+    create: "Create guest",
     cancel: "Cancel",
-    edit: "Edit guest",
+    optional: "(optional)",
     emptyTitle: "No guests yet",
     emptyHint: "Add your first guest to start building your CRM.",
     noMatchTitle: "No guests found",
-    noMatchHint: "Try a different name or phone number.",
+    noMatchHint: "Try a different search term.",
     vip: "VIP",
     blacklist: "Blacklisted",
-    visits: "Visits",
-    nights: "Nights",
-    spend: "Spend",
-    lastStay: "Last stay",
-    never: "No stays yet",
+    returning: "Returning",
+    inHouse: "In-house",
+    unnamed: "Unnamed guest",
+    // filters
+    fAll: "All",
+    fVip: "VIP",
+    fReturning: "Returning",
+    fInHouse: "In-house",
+    fBlacklist: "Blacklist",
+    // columns
+    cGuest: "Guest",
+    cContact: "Contact",
+    cVisits: "Visits",
+    cNights: "Nights",
+    cSpend: "Spend",
+    cLastStay: "Last stay",
+    cStatus: "Status",
+    never: "—",
   },
 };
 
 const field =
   "rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] px-2.5 py-1.5 text-sm outline-none focus:border-[var(--app-accent)]";
 
-type FormState = {
-  id?: string;
-  full_name: string;
-  phone: string;
-  email: string;
-  id_number: string;
-  nationality: string;
-  notes: string;
-  is_vip: boolean;
-  is_blacklisted: boolean;
+type FilterId = "all" | "vip" | "returning" | "in_house" | "blacklist";
+
+const FILTERS: { id: FilterId; key: string }[] = [
+  { id: "all", key: "fAll" },
+  { id: "vip", key: "fVip" },
+  { id: "returning", key: "fReturning" },
+  { id: "in_house", key: "fInHouse" },
+  { id: "blacklist", key: "fBlacklist" },
+];
+
+const EMPTY_STAT: GuestStat = {
+  visits: 0,
+  nights: 0,
+  spend: 0,
+  lastStay: null,
+  inHouseRoomId: null,
 };
 
-const EMPTY_FORM: FormState = {
-  full_name: "",
-  phone: "",
-  email: "",
-  id_number: "",
-  nationality: "",
-  notes: "",
-  is_vip: false,
-  is_blacklisted: false,
-};
-
-function toForm(g: Guest): FormState {
-  return {
-    id: g.id,
-    full_name: g.full_name,
-    phone: g.phone ?? "",
-    email: g.email ?? "",
-    id_number: g.id_number ?? "",
-    nationality: g.nationality ?? "",
-    notes: g.notes ?? "",
-    is_vip: g.is_vip,
-    is_blacklisted: g.is_blacklisted,
-  };
+function fmtSpend(n: number, currency: string): string {
+  const sym = currency === "THB" ? "฿" : "";
+  return `${sym}${Math.round(n).toLocaleString()}${sym ? "" : ` ${currency}`}`;
 }
 
-// Money: property currency isn't threaded here, so use ฿ + locale grouping.
-function fmtSpend(n: number): string {
-  return `฿${Math.round(n).toLocaleString()}`;
+function initials(name: string | null | undefined): string {
+  if (!name) return "?";
+  const parts = String(name).trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
 }
 
-// Lazy stay-history summary for a guest, shown inside the edit modal.
-function GuestStaysSummary({ guestId, s }: { guestId: string; s: (k: string) => string }) {
-  const [stays, setStays] = useState<GuestStays | null>(null);
-  const [loading, setLoading] = useState(true);
+const badge =
+  "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium";
 
-  useEffect(() => {
-    let alive = true;
-    setLoading(true);
-    guestStaysAction(guestId).then((res) => {
-      if (!alive) return;
-      if (res.ok) setStays(res.data);
-      setLoading(false);
-    });
-    return () => {
-      alive = false;
-    };
-  }, [guestId]);
-
-  const cell = (label: string, value: string) => (
-    <div>
-      <div className="text-xs text-[var(--app-fg-muted)]">{label}</div>
-      <div className="text-sm font-semibold">{value}</div>
-    </div>
-  );
-
-  return (
-    <div className="rounded-lg border border-[var(--app-border)] bg-[var(--app-surface-2)] px-3 py-2.5">
-      {loading || !stays ? (
-        <div className="text-xs text-[var(--app-fg-muted)]">…</div>
-      ) : (
-        <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
-          {cell(s("visits"), String(stays.visits))}
-          {cell(s("nights"), String(stays.nights))}
-          {cell(s("spend"), fmtSpend(stays.spend))}
-          {cell(s("lastStay"), stays.lastStay ?? s("never"))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default function GuestsClient({ initialGuests }: { initialGuests: Guest[] }) {
+export default function GuestsClient({
+  initialGuests,
+  statsByGuestId,
+  roomNumberById,
+  currency,
+}: {
+  initialGuests: Guest[];
+  statsByGuestId: Record<string, GuestStat>;
+  roomNumberById: Record<string, string>;
+  currency: string;
+}) {
   const { locale } = useI18n();
   const s = (k: string) => STR[locale][k] ?? k;
   const toast = useToast();
+  const router = useRouter();
 
-  const [guests, setGuests] = useState<Guest[]>(initialGuests);
   const [query, setQuery] = useState("");
-  const [editing, setEditing] = useState<FormState | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [filter, setFilter] = useState<FilterId>("all");
+  const [showNew, setShowNew] = useState(false);
 
-  // Track the latest query so a slow response can't clobber a newer one.
-  const queryRef = useRef("");
-  queryRef.current = query;
+  const stat = (id: string): GuestStat => statsByGuestId[id] ?? EMPTY_STAT;
 
-  // Re-run the current search and replace the list.
-  async function runSearch(q: string) {
-    const res = await searchGuestsAction(q);
-    // Drop stale responses.
-    if (queryRef.current !== q) return;
-    if (res.ok) setGuests(res.data);
-    else toast.error(`${res.code} · ${res.message}`);
-  }
+  // Search (over name/thai_name/phone/email/id/plate) + filter chips + sort,
+  // all client-side over the full list the loader provided.
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    let rows = initialGuests.filter((g) => {
+      if (!q) return true;
+      const hay = [
+        g.full_name,
+        g.thai_name,
+        g.phone,
+        g.email,
+        g.citizen_id,
+        g.id_number,
+        g.car_plate,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return hay.includes(q);
+    });
 
-  // Debounced search on query change (~300ms). Skip the very first render so we
-  // keep the server-provided initial list.
-  const firstRun = useRef(true);
-  useEffect(() => {
-    if (firstRun.current) {
-      firstRun.current = false;
-      return;
-    }
-    const handle = setTimeout(() => {
-      runSearch(query);
-    }, 300);
-    return () => clearTimeout(handle);
+    if (filter === "vip") rows = rows.filter((g) => g.is_vip);
+    if (filter === "blacklist") rows = rows.filter((g) => g.is_blacklisted);
+    if (filter === "returning") rows = rows.filter((g) => stat(g.id).visits >= 2);
+    if (filter === "in_house") rows = rows.filter((g) => stat(g.id).inHouseRoomId);
+
+    return rows;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query]);
+  }, [initialGuests, query, filter, statsByGuestId]);
 
-  function openNew() {
-    setEditing({ ...EMPTY_FORM });
-  }
-  function openEdit(g: Guest) {
-    setEditing(toForm(g));
-  }
-  function closeModal() {
-    setEditing(null);
-  }
-
-  function patchForm(patch: Partial<FormState>) {
-    setEditing((cur) => (cur ? { ...cur, ...patch } : cur));
-  }
-
-  async function submit() {
-    if (!editing) return;
-    const name = editing.full_name.trim();
-    if (!name) return;
-
-    const input: GuestInput & { id?: string } = {
-      id: editing.id,
-      full_name: name,
-      phone: editing.phone.trim() || undefined,
-      email: editing.email.trim() || undefined,
-      id_number: editing.id_number.trim() || undefined,
-      nationality: editing.nationality.trim() || undefined,
-      notes: editing.notes.trim() || undefined,
-      is_vip: editing.is_vip,
-      is_blacklisted: editing.is_blacklisted,
-    };
-
-    setSaving(true);
-    const res = await saveGuest(input);
-    setSaving(false);
-
-    if (res.ok) {
-      toast.success(s("saved"));
-      closeModal();
-      runSearch(queryRef.current);
-    } else {
-      toast.error(`${res.code} · ${res.message}`);
-    }
-  }
-
-  const isSearching = query.trim().length > 0;
+  const isSearching = query.trim().length > 0 || filter !== "all";
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-5xl">
       {/* Header */}
-      <div className="mb-5 flex items-center gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">{s("title")}</h1>
-        <span className="text-sm text-[var(--app-fg-muted)]">{guests.length}</span>
-        <Button className="ml-auto" onClick={openNew}>
+      <div className="mb-2 flex flex-wrap items-end gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">{s("title")}</h1>
+          <p className="mt-1 text-sm text-[var(--app-fg-muted)]">{s("subtitle")}</p>
+        </div>
+        <span className="text-sm text-[var(--app-fg-muted)]">{initialGuests.length}</span>
+        <Button className="ml-auto" onClick={() => setShowNew(true)}>
           <Plus size={16} /> {s("newGuest")}
         </Button>
       </div>
 
-      {/* Search */}
-      <div className="mb-4 flex items-center gap-2 rounded-xl border border-[var(--app-border)] bg-[var(--app-surface)] px-3 py-2">
-        <Search size={16} className="shrink-0 text-[var(--app-fg-muted)]" />
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={s("searchPlaceholder")}
-          className="w-full bg-transparent text-sm outline-none placeholder:text-[var(--app-fg-muted)]"
-        />
+      {/* Toolbar: search + filter chips */}
+      <div className="mb-4 mt-4 flex flex-wrap items-center gap-3">
+        <div className="flex min-w-[260px] flex-1 items-center gap-2 rounded-xl border border-[var(--app-border)] bg-[var(--app-surface)] px-3 py-2">
+          <Search size={16} className="shrink-0 text-[var(--app-fg-muted)]" />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={s("searchPlaceholder")}
+            className="w-full bg-transparent text-sm outline-none placeholder:text-[var(--app-fg-muted)]"
+          />
+          {query && (
+            <button
+              onClick={() => setQuery("")}
+              className="text-[var(--app-fg-muted)] hover:text-[var(--app-fg)]"
+              aria-label="clear"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {FILTERS.map((f) => (
+            <button
+              key={f.id}
+              onClick={() => setFilter(f.id)}
+              className={
+                "rounded-full px-3 py-1.5 text-xs font-medium transition-colors " +
+                (filter === f.id
+                  ? "bg-[var(--app-accent)] text-[var(--app-accent-fg)]"
+                  : "border border-[var(--app-border)] bg-transparent text-[var(--app-fg)] hover:bg-[var(--app-surface-2)]")
+              }
+            >
+              {s(f.key)}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* List / empty */}
-      {guests.length === 0 ? (
+      {/* Stats table / empty */}
+      {visible.length === 0 ? (
         <div className="app-surface rounded-2xl border border-[var(--app-border)]">
           <EmptyState
             icon={<Users size={22} />}
@@ -268,7 +257,7 @@ export default function GuestsClient({ initialGuests }: { initialGuests: Guest[]
             hint={isSearching ? s("noMatchHint") : s("emptyHint")}
             action={
               !isSearching ? (
-                <Button onClick={openNew}>
+                <Button onClick={() => setShowNew(true)}>
                   <Plus size={16} /> {s("newGuest")}
                 </Button>
               ) : undefined
@@ -276,152 +265,246 @@ export default function GuestsClient({ initialGuests }: { initialGuests: Guest[]
           />
         </div>
       ) : (
-        <div className="app-surface overflow-hidden rounded-2xl border border-[var(--app-border)]">
-          <ul>
-            {guests.map((g) => (
-              <li
-                key={g.id}
-                onClick={() => openEdit(g)}
-                className="cursor-pointer border-t border-[var(--app-border)] px-4 py-3 transition-colors first:border-t-0 hover:bg-[var(--app-surface-2)]"
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-semibold">{g.full_name}</span>
-                  {g.is_vip && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-[#f59e0b]/15 px-2.5 py-0.5 text-xs font-medium text-[#b45309]">
-                      <Star size={11} /> {s("vip")}
-                    </span>
-                  )}
-                  {g.is_blacklisted && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--app-danger)]/15 px-2.5 py-0.5 text-xs font-medium text-[var(--app-danger)]">
-                      <Ban size={11} /> {s("blacklist")}
-                    </span>
-                  )}
-                </div>
-                <div className="mt-0.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--app-fg-muted)]">
-                  {g.phone && (
-                    <span className="inline-flex items-center gap-1">
-                      <Phone size={12} /> {g.phone}
-                    </span>
-                  )}
-                  {g.email && (
-                    <span className="inline-flex items-center gap-1">
-                      <Mail size={12} /> {g.email}
-                    </span>
-                  )}
-                  {g.nationality && (
-                    <span className="inline-flex items-center gap-1">
-                      <Globe size={12} /> {g.nationality}
-                    </span>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
+        <div className="app-surface overflow-x-auto rounded-2xl border border-[var(--app-border)]">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[var(--app-border)] text-left text-xs uppercase tracking-wide text-[var(--app-fg-muted)]">
+                <th className="px-4 py-2.5 font-medium">{s("cGuest")}</th>
+                <th className="px-4 py-2.5 font-medium">{s("cContact")}</th>
+                <th className="px-4 py-2.5 text-right font-medium">{s("cVisits")}</th>
+                <th className="px-4 py-2.5 text-right font-medium">{s("cNights")}</th>
+                <th className="px-4 py-2.5 text-right font-medium">{s("cSpend")}</th>
+                <th className="px-4 py-2.5 font-medium">{s("cLastStay")}</th>
+                <th className="px-4 py-2.5 font-medium">{s("cStatus")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((g) => {
+                const st = stat(g.id);
+                const roomNo = st.inHouseRoomId ? roomNumberById[st.inHouseRoomId] : null;
+                return (
+                  <tr
+                    key={g.id}
+                    onClick={() => router.push(`/app/guests/${g.id}`)}
+                    className="cursor-pointer border-t border-[var(--app-border)] transition-colors first:border-t-0 hover:bg-[var(--app-surface-2)]"
+                  >
+                    {/* Guest */}
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[var(--app-accent)] text-xs font-bold text-[var(--app-accent-fg)]">
+                          {initials(g.full_name)}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="flex items-center gap-1.5 font-semibold">
+                            {g.full_name || s("unnamed")}
+                            {g.is_vip && <Crown size={12} className="text-[#b45309]" />}
+                            {g.is_blacklisted && (
+                              <Ban size={12} className="text-[var(--app-danger)]" />
+                            )}
+                          </span>
+                          {g.thai_name && (
+                            <span className="block text-xs text-[var(--app-fg-muted)]">
+                              {g.thai_name}
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    </td>
+                    {/* Contact */}
+                    <td className="px-4 py-3 text-xs text-[var(--app-fg-muted)]">
+                      {g.phone && (
+                        <span className="flex items-center gap-1">
+                          <Phone size={12} /> {g.phone}
+                        </span>
+                      )}
+                      {g.email && (
+                        <span className="mt-0.5 flex items-center gap-1">
+                          <Mail size={12} /> {g.email}
+                        </span>
+                      )}
+                      {!g.phone && !g.email && s("never")}
+                    </td>
+                    {/* Visits / Nights / Spend */}
+                    <td className="px-4 py-3 text-right tabular-nums">{st.visits}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">{st.nights}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">
+                      {st.spend ? fmtSpend(st.spend, currency) : s("never")}
+                    </td>
+                    {/* Last stay */}
+                    <td className="px-4 py-3 text-[var(--app-fg-muted)]">
+                      {st.lastStay ?? s("never")}
+                    </td>
+                    {/* Status */}
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1">
+                        {st.inHouseRoomId && (
+                          <span className={`${badge} bg-[var(--app-success)]/15 text-[var(--app-success)]`}>
+                            {s("inHouse")}
+                            {roomNo ? ` · #${roomNo}` : ""}
+                          </span>
+                        )}
+                        {g.is_vip && !st.inHouseRoomId && (
+                          <span className={`${badge} bg-[#f59e0b]/15 text-[#b45309]`}>
+                            <Star size={10} /> {s("vip")}
+                          </span>
+                        )}
+                        {g.is_blacklisted && (
+                          <span className={`${badge} bg-[var(--app-danger)]/15 text-[var(--app-danger)]`}>
+                            <Ban size={10} /> {s("blacklist")}
+                          </span>
+                        )}
+                        {!st.inHouseRoomId &&
+                          !g.is_vip &&
+                          !g.is_blacklisted &&
+                          st.visits >= 2 && (
+                            <span className={`${badge} bg-[var(--app-accent)]/15 text-[var(--app-accent)]`}>
+                              {s("returning")}
+                            </span>
+                          )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
-      {/* Add / edit modal */}
-      <Modal
-        open={editing !== null}
-        onClose={closeModal}
-        title={editing?.id ? s("edit") : s("newGuest")}
-        footer={
-          <>
-            <Button variant="ghost" onClick={closeModal}>
-              {s("cancel")}
-            </Button>
-            <Button onClick={submit} loading={saving} disabled={!editing?.full_name.trim()}>
-              {s("save")}
-            </Button>
-          </>
-        }
-      >
-        {editing && (
-          <div className="space-y-3">
-            {/* Stay history — only existing guests have any. */}
-            {editing.id && <GuestStaysSummary guestId={editing.id} s={s} />}
-
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium text-[var(--app-fg-muted)]">{s("name")}</span>
-              <input
-                autoFocus
-                value={editing.full_name}
-                onChange={(e) => patchForm({ full_name: e.target.value })}
-                className={`${field} w-full`}
-              />
-            </label>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label className="block">
-                <span className="mb-1 block text-xs font-medium text-[var(--app-fg-muted)]">{s("phone")}</span>
-                <input
-                  value={editing.phone}
-                  onChange={(e) => patchForm({ phone: e.target.value })}
-                  className={`${field} w-full`}
-                />
-              </label>
-              <label className="block">
-                <span className="mb-1 block text-xs font-medium text-[var(--app-fg-muted)]">{s("email")}</span>
-                <input
-                  type="email"
-                  value={editing.email}
-                  onChange={(e) => patchForm({ email: e.target.value })}
-                  className={`${field} w-full`}
-                />
-              </label>
-              <label className="block">
-                <span className="mb-1 block text-xs font-medium text-[var(--app-fg-muted)]">{s("idNumber")}</span>
-                <input
-                  value={editing.id_number}
-                  onChange={(e) => patchForm({ id_number: e.target.value })}
-                  className={`${field} w-full`}
-                />
-              </label>
-              <label className="block">
-                <span className="mb-1 block text-xs font-medium text-[var(--app-fg-muted)]">{s("nationality")}</span>
-                <input
-                  value={editing.nationality}
-                  onChange={(e) => patchForm({ nationality: e.target.value })}
-                  className={`${field} w-full`}
-                />
-              </label>
-            </div>
-
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium text-[var(--app-fg-muted)]">{s("notes")}</span>
-              <textarea
-                rows={3}
-                value={editing.notes}
-                onChange={(e) => patchForm({ notes: e.target.value })}
-                className={`${field} w-full resize-none`}
-              />
-            </label>
-
-            <div className="flex flex-wrap gap-2">
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] px-3 py-1.5 text-sm">
-                <input
-                  type="checkbox"
-                  checked={editing.is_vip}
-                  onChange={(e) => patchForm({ is_vip: e.target.checked })}
-                  className="accent-[#f59e0b]"
-                />
-                <Star size={14} className="text-[#b45309]" />
-                <span className="font-medium">{s("vip")}</span>
-              </label>
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] px-3 py-1.5 text-sm">
-                <input
-                  type="checkbox"
-                  checked={editing.is_blacklisted}
-                  onChange={(e) => patchForm({ is_blacklisted: e.target.checked })}
-                  className="accent-[var(--app-danger)]"
-                />
-                <Ban size={14} className="text-[var(--app-danger)]" />
-                <span className="font-medium">{s("blacklist")}</span>
-              </label>
-            </div>
-          </div>
-        )}
-      </Modal>
+      {/* Quick-create modal */}
+      {showNew && (
+        <NewGuestModal
+          s={s}
+          onClose={() => setShowNew(false)}
+          onCreated={(id) => {
+            setShowNew(false);
+            router.push(`/app/guests/${id}`);
+          }}
+          onError={(msg) => toast.error(msg)}
+        />
+      )}
     </div>
+  );
+}
+
+// ── New-guest modal ───────────────────────────────────────────────────────
+// Minimal — name is enough to create a profile. The detail page covers the
+// rest (Thai ID, address, preferences, tags, etc.).
+function NewGuestModal({
+  s,
+  onClose,
+  onCreated,
+  onError,
+}: {
+  s: (k: string) => string;
+  onClose: () => void;
+  onCreated: (id: string) => void;
+  onError: (msg: string) => void;
+}) {
+  const [form, setForm] = useState({
+    full_name: "",
+    thai_name: "",
+    phone: "",
+    email: "",
+    preferences: "",
+  });
+  const [saving, setSaving] = useState(false);
+  const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
+  const savingRef = useRef(false);
+
+  async function submit() {
+    if (savingRef.current) return;
+    const name = form.full_name.trim();
+    if (!name) return;
+    savingRef.current = true;
+    setSaving(true);
+    const input: GuestInput & { id?: string } = {
+      full_name: name,
+      thai_name: form.thai_name.trim() || null,
+      phone: form.phone.trim() || undefined,
+      email: form.email.trim() || undefined,
+      preferences: form.preferences.trim() || null,
+    };
+    const res = await saveGuest(input);
+    savingRef.current = false;
+    setSaving(false);
+    if (res.ok) onCreated(res.data.id);
+    else onError(`${res.code} · ${res.message}`);
+  }
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={s("newGuest")}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            {s("cancel")}
+          </Button>
+          <Button onClick={submit} loading={saving} disabled={!form.full_name.trim()}>
+            {saving ? s("creating") : s("create")}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        <label className="block">
+          <span className="mb-1 block text-xs font-medium text-[var(--app-fg-muted)]">
+            {s("name")} *
+          </span>
+          <input
+            autoFocus
+            value={form.full_name}
+            onChange={(e) => set("full_name", e.target.value)}
+            className={`${field} w-full`}
+          />
+        </label>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-[var(--app-fg-muted)]">
+              {s("thaiName")} {s("optional")}
+            </span>
+            <input
+              value={form.thai_name}
+              onChange={(e) => set("thai_name", e.target.value)}
+              className={`${field} w-full`}
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-[var(--app-fg-muted)]">
+              {s("phone")}
+            </span>
+            <input
+              value={form.phone}
+              onChange={(e) => set("phone", e.target.value)}
+              className={`${field} w-full`}
+            />
+          </label>
+        </div>
+        <label className="block">
+          <span className="mb-1 block text-xs font-medium text-[var(--app-fg-muted)]">
+            {s("email")}
+          </span>
+          <input
+            type="email"
+            value={form.email}
+            onChange={(e) => set("email", e.target.value)}
+            className={`${field} w-full`}
+          />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-xs font-medium text-[var(--app-fg-muted)]">
+            {s("preferences")} {s("optional")}
+          </span>
+          <textarea
+            rows={3}
+            value={form.preferences}
+            onChange={(e) => set("preferences", e.target.value)}
+            className={`${field} w-full resize-none`}
+          />
+        </label>
+      </div>
+    </Modal>
   );
 }

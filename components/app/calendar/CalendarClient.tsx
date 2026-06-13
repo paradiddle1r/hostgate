@@ -2,13 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Plus, BedDouble, LogIn, LogOut, ClipboardPaste, Coins } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, BedDouble, LogIn, LogOut, ClipboardPaste, Coins, Search, X } from "lucide-react";
 import type { Room } from "@/lib/db/rooms";
-import type { Booking, BookingStatus } from "@/lib/db/bookings";
+import type { Booking, BookingStatus, BookingType } from "@/lib/db/bookings";
 import type { RateMap } from "@/lib/db/rates";
 import type { RatePlan } from "@/lib/db/rate-plans";
 import { stayTotal } from "@/lib/booking-calc";
 import { useAppT } from "@/lib/app-i18n";
+import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/components/app/ui/Toast";
 import EmptyState from "@/components/app/ui/EmptyState";
 import Button from "@/components/app/ui/Button";
@@ -26,6 +27,90 @@ export interface RoomTypeBrief {
 const COL = 46; // px per day column
 const LABEL = 60; // px room-label column
 
+// ── Bilingual copy (local STR — app-i18n is owned elsewhere) ──────────────────
+const STR: Record<"th" | "en", Record<string, string>> = {
+  th: {
+    availLabel: "ว่าง",
+    occupancy: "อัตราเข้าพัก",
+    gross: "รวมทุกประเภท",
+    net: "ห้องขายได้",
+    excludeOOS: "ไม่รวมห้องปิด",
+    excludeMonthly: "ไม่รวมรายเดือน",
+    legend: "คำอธิบาย",
+    regular: "รายวัน",
+    monthly: "รายเดือน",
+    blocked: "บล็อก",
+    oos: "ห้องเสีย",
+    analytics: "ภาพรวมช่วงนี้",
+    kBookings: "การจอง",
+    kRevenue: "รายได้",
+    kADR: "ADR (ราคาเฉลี่ย)",
+    kRevPAR: "RevPAR",
+    kAvgStay: "พักเฉลี่ย",
+    kCheckins: "เช็คอินวันนี้",
+    occTrend: "แนวโน้มอัตราเข้าพัก",
+    dailyRev: "รายได้รายวัน",
+    search: "ค้นหา ชื่อ/เลขจอง/เบอร์โทร…",
+    matches: "ตรง",
+    floor: "ชั้น",
+    nights: "คืน",
+    unset: "—",
+    room: "ห้อง",
+    dates: "วันที่",
+    res: "เลขจอง",
+    total: "ยอดรวม",
+    phone: "โทร",
+    statusPending: "รอยืนยัน",
+    statusConfirmed: "ยืนยันแล้ว",
+    statusCheckedIn: "เข้าพักแล้ว",
+    statusCheckedOut: "ออกแล้ว",
+    typeMonthly: "รายเดือน",
+    typeBlocked: "บล็อก",
+    typeOOS: "ห้องเสีย",
+    openEnded: "ไม่มีกำหนด",
+  },
+  en: {
+    availLabel: "avail",
+    occupancy: "Occupancy",
+    gross: "Gross",
+    net: "Net (sellable)",
+    excludeOOS: "Exclude OOS",
+    excludeMonthly: "Exclude monthly",
+    legend: "Legend",
+    regular: "Nightly",
+    monthly: "Monthly",
+    blocked: "Blocked",
+    oos: "Out of service",
+    analytics: "This window",
+    kBookings: "Bookings",
+    kRevenue: "Revenue",
+    kADR: "ADR",
+    kRevPAR: "RevPAR",
+    kAvgStay: "Avg stay",
+    kCheckins: "Check-ins today",
+    occTrend: "Occupancy trend",
+    dailyRev: "Daily revenue",
+    search: "Search name / code / phone…",
+    matches: "matches",
+    floor: "Floor",
+    nights: "nights",
+    unset: "—",
+    room: "Room",
+    dates: "Dates",
+    res: "Code",
+    total: "Total",
+    phone: "Phone",
+    statusPending: "Pending",
+    statusConfirmed: "Confirmed",
+    statusCheckedIn: "Checked in",
+    statusCheckedOut: "Checked out",
+    typeMonthly: "Monthly",
+    typeBlocked: "Blocked",
+    typeOOS: "Out of service",
+    openEnded: "Open-ended",
+  },
+};
+
 function addDays(iso: string, n: number): string {
   const d = new Date(iso + "T00:00:00Z");
   d.setUTCDate(d.getUTCDate() + n);
@@ -36,7 +121,16 @@ function dayIdx(from: string, date: string): number {
   const b = Date.parse(date + "T00:00:00Z");
   return Math.round((b - a) / 86_400_000);
 }
+function nightsBetween(ci: string, co: string): number {
+  return Math.max(1, dayIdx(ci, co));
+}
 
+// Bar colour by booking_type first (operational lanes), then by status.
+const TYPE_BG: Partial<Record<BookingType, string>> = {
+  monthly: "#7c3aed", // violet — long-stay lease
+  blocked: "#475569", // slate — held / blocked
+  oos: "#dc2626", // red — out of service / maintenance
+};
 const STATUS_BG: Record<BookingStatus, string> = {
   pending: "#d97706",
   confirmed: "var(--app-accent)",
@@ -44,6 +138,11 @@ const STATUS_BG: Record<BookingStatus, string> = {
   checked_out: "#6b7280",
   cancelled: "transparent",
 };
+function barBg(b: Booking): string {
+  const t = (b.booking_type ?? "standard") as BookingType;
+  if (t !== "standard" && TYPE_BG[t]) return TYPE_BG[t] as string;
+  return STATUS_BG[b.status];
+}
 
 export default function CalendarClient({
   from,
@@ -54,7 +153,9 @@ export default function CalendarClient({
   bookings,
   rates,
   plans,
+  planByDate = {},
   currency,
+  role = "staff",
 }: {
   from: string;
   windowDays: number;
@@ -64,14 +165,27 @@ export default function CalendarClient({
   bookings: Booking[];
   rates: RateMap;
   plans: RatePlan[];
+  planByDate?: Record<string, string>;
   currency: string;
+  role?: "owner" | "admin" | "staff";
 }) {
   const t = useAppT();
+  const { locale } = useI18n();
+  const lang: "th" | "en" = locale === "en" ? "en" : "th";
+  const s = STR[lang];
   const toast = useToast();
   const router = useRouter();
   const [seed, setSeed] = useState<ModalSeed | null>(null);
   const [pasteOpen, setPasteOpen] = useState(false);
   const [rateOpen, setRateOpen] = useState(false);
+
+  // Net-occupancy toggles. Operators almost always want occupancy to reflect
+  // *sellable* rooms, and monthly tenants sell on a different rate sheet.
+  const [excludeOOS, setExcludeOOS] = useState(true);
+  const [excludeMonthly, setExcludeMonthly] = useState(true);
+  const [search, setSearch] = useState("");
+
+  const canManage = role === "owner" || role === "admin";
 
   const dates = useMemo(
     () => Array.from({ length: windowDays }, (_, i) => addDays(from, i)),
@@ -79,16 +193,34 @@ export default function CalendarClient({
   );
   const live = bookings.filter((b) => b.status !== "cancelled");
 
+  // Plan lookup by id for colour chip + tooltip name.
+  const planById = useMemo(() => {
+    const m: Record<string, RatePlan> = {};
+    for (const p of plans) m[p.id] = p;
+    return m;
+  }, [plans]);
+
+  // The first two room types drive the header rate markers (parity with the
+  // hotel-pms Deluxe/Standard double-row). Marker = first letter of the type
+  // name (e.g. "D"/"S") — generalises beyond two fixed types.
+  const headerTypes = useMemo(() => roomTypes.slice(0, 2), [roomTypes]);
+  const rateFor = (rtId: string, date: string): number | null => {
+    const override = rates[rtId]?.[date];
+    if (override != null) return override;
+    const base = roomTypes.find((rt) => rt.id === rtId)?.daily_rate;
+    return base != null ? base : null;
+  };
+
   // ── drag-to-move ──────────────────────────────────────────────────────────
-  // Day shift = round(dx / COL); target room = elementFromPoint → data-room-id
-  // at drop. Commit-on-drop; the HG-BOOK-409 conflict trigger + refresh revert
-  // an illegal move. A movement threshold distinguishes drag from click.
   const [dragB, setDragB] = useState<Booking | null>(null);
   const [ghost, setGhost] = useState<{ x: number; y: number } | null>(null);
   const [dragMoved, setDragMoved] = useState(false);
   const startRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const movedRef = useRef(false);
   const justDraggedRef = useRef(false);
+
+  // Rich hover tooltip: the booking + pointer coords.
+  const [tip, setTip] = useState<{ b: Booking; x: number; y: number } | null>(null);
 
   function recomputeTotal(roomId: string | null, ci: string, co: string): number | null {
     const rtId = rooms.find((r) => r.id === roomId)?.room_type_id ?? null;
@@ -102,6 +234,7 @@ export default function CalendarClient({
     startRef.current = { x: e.clientX, y: e.clientY };
     movedRef.current = false;
     setDragMoved(false);
+    setTip(null);
     setGhost({ x: e.clientX, y: e.clientY });
     setDragB(b);
   }
@@ -189,6 +322,143 @@ export default function CalendarClient({
 
   const roomLabel = (id: string | null) => rooms.find((r) => r.id === id)?.number ?? t("cal.unassigned");
 
+  // ── Search: which booking ids match the free-text query ──────────────────
+  const matchedIds = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return null;
+    const out = new Set<string>();
+    for (const b of bookings) {
+      const hay = [
+        b.guest_name,
+        b.guest_first_name,
+        b.guest_last_name,
+        b.thai_name,
+        b.phone,
+        b.code,
+        b.reservation_no,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      if (hay.includes(q)) out.add(b.id);
+    }
+    return out;
+  }, [bookings, search]);
+
+  // ── Occupancy + KPI math (dedupe room/day) ───────────────────────────────
+  const stats = useMemo(() => {
+    const dim = windowDays;
+    const dayRegular = new Array(dim).fill(0);
+    const dayMonthly = new Array(dim).fill(0);
+    const dayBlocked = new Array(dim).fill(0);
+    const dayOOS = new Array(dim).fill(0);
+    const revByDay = new Array(dim).fill(0);
+    const seenReg = Array.from({ length: dim }, () => new Set<string>());
+    const seenMon = Array.from({ length: dim }, () => new Set<string>());
+    const seenBlk = Array.from({ length: dim }, () => new Set<string>());
+    const seenOOS = Array.from({ length: dim }, () => new Set<string>());
+
+    let totalRevenue = 0;
+    let regularRevenue = 0;
+    let regularNights = 0;
+    let stayNightsSum = 0;
+    let paidBookings = 0;
+    let checkinsToday = 0;
+
+    for (const b of live) {
+      const type = (b.booking_type ?? "standard") as BookingType;
+      const ci = b.check_in;
+      const co = b.is_open_ended ? dates[dim - 1] : b.check_out; // open-ended clamps to window end
+      const dedupeKey = b.booking_group_id || b.room_id || `b-${b.id}`;
+
+      for (let i = 0; i < dim; i++) {
+        const d = dates[i];
+        if (d >= ci && d < co) {
+          if (type === "monthly") {
+            if (!seenMon[i].has(dedupeKey)) { dayMonthly[i]++; seenMon[i].add(dedupeKey); }
+          } else if (type === "oos") {
+            if (!seenOOS[i].has(dedupeKey)) { dayOOS[i]++; seenOOS[i].add(dedupeKey); }
+          } else if (type === "blocked") {
+            if (!seenBlk[i].has(dedupeKey)) { dayBlocked[i]++; seenBlk[i].add(dedupeKey); }
+          } else {
+            if (!seenReg[i].has(dedupeKey)) { dayRegular[i]++; seenReg[i].add(dedupeKey); }
+          }
+        }
+      }
+
+      const isPaid = type === "standard" || type === "monthly";
+      if (isPaid) {
+        const totalNights = nightsBetween(ci, b.is_open_ended ? co : b.check_out);
+        const amt = Number(b.total_amount) || 0;
+        const perNight = amt / totalNights;
+        let nightsInWindow = 0;
+        for (let i = 0; i < dim; i++) {
+          const d = dates[i];
+          if (d >= ci && d < co) { revByDay[i] += perNight; nightsInWindow++; }
+        }
+        totalRevenue += perNight * nightsInWindow;
+        stayNightsSum += nightsInWindow;
+        paidBookings += 1;
+        if (type === "standard") {
+          regularRevenue += perNight * nightsInWindow;
+          regularNights += nightsInWindow;
+        }
+      }
+      if (b.check_in === today) checkinsToday++;
+    }
+
+    const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
+    return {
+      dayRegular, dayMonthly, dayBlocked, dayOOS, revByDay,
+      sumRegular: sum(dayRegular), sumMonthly: sum(dayMonthly),
+      sumBlocked: sum(dayBlocked), sumOOS: sum(dayOOS),
+      totalRevenue, regularRevenue, regularNights, stayNightsSum,
+      paidBookings, checkinsToday,
+    };
+  }, [live, dates, windowDays, today]);
+
+  const TOTAL = rooms.length;
+  const totalCells = TOTAL * windowDays;
+  const grossNum = stats.sumRegular + stats.sumMonthly + stats.sumBlocked + stats.sumOOS;
+  const grossPct = totalCells > 0 ? Math.round((grossNum / totalCells) * 100) : 0;
+
+  let netDen = totalCells;
+  if (excludeOOS) netDen -= stats.sumOOS;
+  if (excludeMonthly) netDen -= stats.sumMonthly;
+  let netNum = stats.sumRegular + stats.sumBlocked;
+  if (!excludeMonthly) netNum += stats.sumMonthly;
+  if (!excludeOOS) netNum += stats.sumOOS;
+  const netPct = netDen > 0 ? Math.round((netNum / netDen) * 100) : 0;
+
+  const adr = stats.regularNights > 0 ? Math.round(stats.regularRevenue / stats.regularNights) : 0;
+  const revpar = totalCells > 0 ? Math.round(stats.regularRevenue / totalCells) : 0;
+  const avgStay = stats.paidBookings > 0 ? Math.round((stats.stayNightsSum / stats.paidBookings) * 10) / 10 : 0;
+
+  // Per-day occupancy + remaining availability for the header.
+  const dayOccupied = (i: number) =>
+    stats.dayRegular[i] + stats.dayMonthly[i] + stats.dayBlocked[i] + stats.dayOOS[i];
+  const occNetPct = dates.map((_, i) =>
+    TOTAL > 0 ? Math.round(((stats.dayRegular[i] + stats.dayMonthly[i]) / TOTAL) * 100) : 0
+  );
+
+  const money = (n: number) => `${currency} ${Math.round(n).toLocaleString()}`;
+  const moneyK = (n: number) =>
+    n >= 1000 ? `${currency} ${(n / 1000).toFixed(1)}k` : `${currency} ${Math.round(n)}`;
+
+  // Group active rooms by floor (tinted floor band before each group).
+  // Computed here — before the early return — so the hook order stays stable.
+  const floors = useMemo(() => {
+    const m = new Map<number, Room[]>();
+    for (const r of rooms) {
+      const f = r.floor ?? 0;
+      if (!m.has(f)) m.set(f, []);
+      m.get(f)!.push(r);
+    }
+    return Array.from(m.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([floor, rs]) => ({ floor, rooms: rs }));
+  }, [rooms]);
+
   if (rooms.length === 0) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
@@ -196,17 +466,18 @@ export default function CalendarClient({
           icon={<BedDouble size={22} />}
           title={t("cal.noRooms")}
           hint={t("cal.noRoomsHint")}
-          action={
-            <Button onClick={() => router.push("/app/rooms")}>{t("nav.rooms")}</Button>
-          }
+          action={<Button onClick={() => router.push("/app/rooms")}>{t("nav.rooms")}</Button>}
         />
       </div>
     );
   }
 
+  // Thai weekday short names (matches hotel-pms tone).
+  const TH_DOW = ["อา.", "จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส."];
   const fmtCol = (iso: string) => {
     const d = new Date(iso + "T00:00:00Z");
-    return { dow: d.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" }), day: d.getUTCDate() };
+    const dow = lang === "th" ? TH_DOW[d.getUTCDay()] : d.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" });
+    return { dow, day: d.getUTCDate(), dowNum: d.getUTCDay() };
   };
 
   // Bars for one room within the window.
@@ -214,13 +485,22 @@ export default function CalendarClient({
     live
       .filter((b) => b.room_id === roomId)
       .map((b) => {
-        const s = Math.max(0, dayIdx(from, b.check_in));
-        const e = Math.min(windowDays, dayIdx(from, b.check_out));
-        return { b, s, e };
+        const s2 = Math.max(0, dayIdx(from, b.check_in));
+        const e2 = Math.min(windowDays, dayIdx(from, b.is_open_ended ? dates[windowDays - 1] : b.check_out));
+        return { b, s: s2, e: e2 };
       })
       .filter((x) => x.e > x.s);
 
   const unassigned = barsFor(null);
+
+  // Availability colour: low (<=3) red, mid (<=10) amber, else muted.
+  const availTone = (avail: number) =>
+    avail <= 3 ? "#dc2626" : avail <= 10 ? "#d97706" : "var(--app-fg-muted)";
+
+  // SVG chart geometry
+  const CW = 280;
+  const CH = 64;
+  const maxRev = Math.max(1, ...stats.revByDay);
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -239,6 +519,21 @@ export default function CalendarClient({
           </button>
         </div>
         <div className="ml-auto flex items-center gap-2">
+          {/* search */}
+          <div className="relative hidden md:block">
+            <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--app-fg-muted)]" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={s.search}
+              className="w-56 rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] py-1.5 pl-8 pr-7 text-sm outline-none focus:border-[var(--app-accent)]"
+            />
+            {search && (
+              <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--app-fg-muted)] hover:text-[var(--app-fg)]" aria-label="clear">
+                <X size={13} />
+              </button>
+            )}
+          </div>
           <Button variant="ghost" onClick={() => setRateOpen(true)}>
             <Coins size={16} /> {t("cal.rates")}
           </Button>
@@ -249,26 +544,124 @@ export default function CalendarClient({
             <Plus size={16} /> {t("cal.newBooking")}
           </Button>
         </div>
+        {matchedIds && (
+          <div className="w-full text-xs text-[var(--app-fg-muted)]">
+            {matchedIds.size} {s.matches}
+          </div>
+        )}
       </div>
+
+      {/* Occupancy legend + gross/net box */}
+      <div className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-3 rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-3">
+        <div className="flex items-center gap-4 text-sm">
+          <div>
+            <span className="text-[var(--app-fg-muted)]">{s.gross}</span>{" "}
+            <span className="font-semibold">{grossPct}%</span>
+          </div>
+          <div>
+            <span className="text-[var(--app-fg-muted)]">{s.net}</span>{" "}
+            <span className="font-semibold text-[var(--app-accent)]">{netPct}%</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 text-xs">
+          <Toggle on={excludeOOS} onClick={() => setExcludeOOS((v) => !v)} label={s.excludeOOS} />
+          <Toggle on={excludeMonthly} onClick={() => setExcludeMonthly((v) => !v)} label={s.excludeMonthly} />
+        </div>
+        <div className="ml-auto flex flex-wrap items-center gap-3 text-xs">
+          <LegendDot color="var(--app-accent)" label={s.regular} />
+          <LegendDot color={TYPE_BG.monthly!} label={s.monthly} />
+          <LegendDot color={TYPE_BG.blocked!} label={s.blocked} />
+          <LegendDot color={TYPE_BG.oos!} label={s.oos} />
+        </div>
+      </div>
+
+      {/* Admin/owner analytics block */}
+      {canManage && (
+        <div className="mb-4 rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)] p-4">
+          <h2 className="mb-3 text-sm font-semibold text-[var(--app-fg-muted)]">{s.analytics}</h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            <Kpi label={s.kBookings} value={String(stats.paidBookings)} />
+            <Kpi label={s.kRevenue} value={moneyK(stats.totalRevenue)} />
+            <Kpi label={s.kADR} value={money(adr)} />
+            <Kpi label={s.kRevPAR} value={money(revpar)} />
+            <Kpi label={s.kAvgStay} value={`${avgStay} ${s.nights}`} />
+            <Kpi label={s.kCheckins} value={String(stats.checkinsToday)} />
+          </div>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            {/* occupancy trend (line) */}
+            <Chart title={s.occTrend}>
+              <svg viewBox={`0 0 ${CW} ${CH}`} className="w-full" preserveAspectRatio="none" style={{ height: CH }}>
+                <polyline
+                  fill="none"
+                  stroke="var(--app-accent)"
+                  strokeWidth={1.5}
+                  points={occNetPct
+                    .map((p, i) => `${(i / Math.max(1, windowDays - 1)) * CW},${CH - (p / 100) * (CH - 6) - 3}`)
+                    .join(" ")}
+                />
+                {occNetPct.map((p, i) => (
+                  <circle key={i} cx={(i / Math.max(1, windowDays - 1)) * CW} cy={CH - (p / 100) * (CH - 6) - 3} r={1.6} fill="var(--app-accent)" />
+                ))}
+              </svg>
+            </Chart>
+            {/* daily revenue (bars) */}
+            <Chart title={s.dailyRev}>
+              <svg viewBox={`0 0 ${CW} ${CH}`} className="w-full" preserveAspectRatio="none" style={{ height: CH }}>
+                {stats.revByDay.map((r, i) => {
+                  const bw = CW / windowDays;
+                  const h = (r / maxRev) * (CH - 4);
+                  return <rect key={i} x={i * bw + 1} y={CH - h} width={Math.max(1, bw - 2)} height={h} rx={1} fill="var(--app-success)" opacity={0.85} />;
+                })}
+              </svg>
+            </Chart>
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
         {/* ── Grid (desktop) ── */}
         <div className="hidden overflow-x-auto rounded-2xl border border-[var(--app-border)] lg:block">
           <div style={{ width: LABEL + windowDays * COL }}>
-            {/* date header */}
+            {/* date header — weekday + day */}
             <div className="flex border-b border-[var(--app-border)] bg-[var(--app-surface-2)]">
               <div style={{ width: LABEL }} className="shrink-0" />
-              {dates.map((d) => {
-                const { dow, day } = fmtCol(d);
+              {dates.map((d, di) => {
+                const { dow, day, dowNum } = fmtCol(d);
                 const isToday = d === today;
+                const isWeekend = dowNum === 0 || dowNum === 6;
+                const planId = planByDate[d];
+                const plan = planId ? planById[planId] : undefined;
+                const avail = TOTAL - dayOccupied(di);
                 return (
                   <div
                     key={d}
                     style={{ width: COL }}
-                    className={`shrink-0 py-1.5 text-center text-[11px] ${isToday ? "bg-[var(--app-accent)] text-[var(--app-accent-fg)]" : "text-[var(--app-fg-muted)]"}`}
+                    className={`shrink-0 py-1 text-center text-[11px] ${
+                      isToday
+                        ? "bg-[var(--app-accent)] text-[var(--app-accent-fg)]"
+                        : isWeekend
+                          ? "bg-[var(--app-surface)] text-[var(--app-fg-muted)]"
+                          : "text-[var(--app-fg-muted)]"
+                    }`}
                   >
+                    {/* plan colour chip */}
+                    <div className="mx-auto mb-0.5 h-[3px] w-7 rounded-full" style={{ background: plan ? plan.color : "transparent" }} title={plan?.name} />
                     <div>{dow}</div>
                     <div className="font-semibold">{day}</div>
+                    {/* per-type rate markers (D/S parity — first letter of type) */}
+                    {headerTypes.map((rt) => {
+                      const v = rateFor(rt.id, d);
+                      const mark = (rt.name || "?").trim().charAt(0).toUpperCase();
+                      return (
+                        <div key={rt.id} className={`leading-tight ${isToday ? "" : "text-[var(--app-fg-muted)]"}`} style={{ fontSize: 9 }}>
+                          <span className="opacity-60">{mark}</span> {v != null ? Math.round(v).toLocaleString() : s.unset}
+                        </div>
+                      );
+                    })}
+                    {/* avail count — colour low (<=3) / mid (<=10) */}
+                    <div className="mt-0.5 font-semibold" style={{ fontSize: 9, color: isToday ? "inherit" : availTone(avail) }}>
+                      {avail}/{TOTAL} {s.availLabel}
+                    </div>
                   </div>
                 );
               })}
@@ -281,28 +674,46 @@ export default function CalendarClient({
                 label={t("cal.unassigned")}
                 bars={unassigned}
                 dates={dates}
+                today={today}
                 draggingId={dragMoved ? dragB?.id ?? null : null}
+                matchedIds={matchedIds}
                 onCell={() => {}}
                 onBar={(b) => setSeed({ booking: b })}
                 onBarPointerDown={onBarPointerDown}
+                onBarHover={(b, x, y) => setTip({ b, x, y })}
+                onBarLeave={() => setTip(null)}
                 justDraggedRef={justDraggedRef}
               />
             )}
 
-            {/* room rows */}
-            {rooms.map((r) => (
-              <Row
-                key={r.id}
-                roomId={r.id}
-                label={r.number}
-                bars={barsFor(r.id)}
-                dates={dates}
-                draggingId={dragMoved ? dragB?.id ?? null : null}
-                onCell={(date) => setSeed({ roomId: r.id, checkIn: date, checkOut: addDays(date, 1) })}
-                onBar={(b) => setSeed({ booking: b })}
-                onBarPointerDown={onBarPointerDown}
-                justDraggedRef={justDraggedRef}
-              />
+            {/* floor-grouped room rows */}
+            {floors.map((fl) => (
+              <div key={fl.floor}>
+                <div
+                  className="flex items-center px-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--app-fg-muted)]"
+                  style={{ background: "color-mix(in srgb, var(--app-accent) 8%, transparent)", height: 18 }}
+                >
+                  {s.floor} {fl.floor}
+                </div>
+                {fl.rooms.map((r) => (
+                  <Row
+                    key={r.id}
+                    roomId={r.id}
+                    label={r.number}
+                    bars={barsFor(r.id)}
+                    dates={dates}
+                    today={today}
+                    draggingId={dragMoved ? dragB?.id ?? null : null}
+                    matchedIds={matchedIds}
+                    onCell={(date) => setSeed({ roomId: r.id, checkIn: date, checkOut: addDays(date, 1) })}
+                    onBar={(b) => setSeed({ booking: b })}
+                    onBarPointerDown={onBarPointerDown}
+                    onBarHover={(b, x, y) => setTip({ b, x, y })}
+                    onBarLeave={() => setTip(null)}
+                    justDraggedRef={justDraggedRef}
+                  />
+                ))}
+              </div>
             ))}
           </div>
         </div>
@@ -348,6 +759,11 @@ export default function CalendarClient({
         </aside>
       </div>
 
+      {/* rich hover tooltip */}
+      {tip && !dragB && (
+        <BookingTooltip b={tip.b} x={tip.x} y={tip.y} s={s} currency={currency} roomLabel={roomLabel(tip.b.room_id)} />
+      )}
+
       {/* drag ghost — follows the pointer, must not catch elementFromPoint */}
       {dragB && ghost && dragMoved && (
         <div
@@ -356,7 +772,7 @@ export default function CalendarClient({
             left: ghost.x + 10,
             top: ghost.y - 12,
             maxWidth: 180,
-            background: STATUS_BG[dragB.status] === "transparent" ? "var(--app-accent)" : STATUS_BG[dragB.status],
+            background: barBg(dragB) === "transparent" ? "var(--app-accent)" : barBg(dragB),
           }}
         >
           {dragB.guest_name}
@@ -404,20 +820,28 @@ function Row({
   label,
   bars,
   dates,
+  today,
   draggingId,
+  matchedIds,
   onCell,
   onBar,
   onBarPointerDown,
+  onBarHover,
+  onBarLeave,
   justDraggedRef,
 }: {
   roomId: string; // "" for the unassigned lane
   label: string;
   bars: { b: Booking; s: number; e: number }[];
   dates: string[];
+  today: string;
   draggingId: string | null;
+  matchedIds: Set<string> | null;
   onCell: (date: string) => void;
   onBar: (b: Booking) => void;
   onBarPointerDown: (e: React.PointerEvent, b: Booking) => void;
+  onBarHover: (b: Booking, x: number, y: number) => void;
+  onBarLeave: () => void;
   justDraggedRef: React.MutableRefObject<boolean>;
 }) {
   const windowDays = dates.length;
@@ -432,41 +856,154 @@ function Row({
       <div className="relative" style={{ width: windowDays * COL, height: 38 }} data-room-id={roomId}>
         {/* empty-cell click targets + column separators */}
         <div className="absolute inset-0 flex">
-          {dates.map((d) => (
-            <button
-              key={d}
-              onClick={() => onCell(d)}
-              style={{ width: COL }}
-              className="h-full border-r border-[var(--app-border)] last:border-r-0 hover:bg-[var(--app-surface-2)]"
-              aria-label={d}
-            />
-          ))}
+          {dates.map((d) => {
+            const dn = new Date(d + "T00:00:00Z").getUTCDay();
+            const isWeekend = dn === 0 || dn === 6;
+            return (
+              <button
+                key={d}
+                onClick={() => onCell(d)}
+                style={{ width: COL, background: d === today ? "color-mix(in srgb, var(--app-accent) 6%, transparent)" : isWeekend ? "color-mix(in srgb, var(--app-fg-muted) 5%, transparent)" : undefined }}
+                className="h-full border-r border-[var(--app-border)] last:border-r-0 hover:bg-[var(--app-surface-2)]"
+                aria-label={d}
+              />
+            );
+          })}
         </div>
         {/* bars */}
-        {bars.map(({ b, s, e }) => (
-          <button
-            key={b.id}
-            onPointerDown={(ev) => onBarPointerDown(ev, b)}
-            onClick={() => {
-              if (justDraggedRef.current) return; // suppress the click that ends a drag
-              onBar(b);
-            }}
-            title={b.guest_name}
-            style={{
-              left: s * COL + 2,
-              width: (e - s) * COL - 4,
-              background: STATUS_BG[b.status],
-              touchAction: "none",
-              opacity: draggingId === b.id ? 0.4 : 1,
-              // @ts-expect-error CSS var consumed by .app-cal-bar's frosted recipe
-              "--bc": STATUS_BG[b.status],
-            }}
-            className="app-cal-bar absolute top-1 h-[30px] cursor-grab truncate px-2.5 text-left text-xs font-medium text-white shadow-sm active:cursor-grabbing"
-          >
-            {b.guest_name}
-          </button>
-        ))}
+        {bars.map(({ b, s, e }) => {
+          const dimmed = matchedIds != null && !matchedIds.has(b.id);
+          const bg = barBg(b);
+          return (
+            <button
+              key={b.id}
+              onPointerDown={(ev) => onBarPointerDown(ev, b)}
+              onPointerEnter={(ev) => onBarHover(b, ev.clientX, ev.clientY)}
+              onPointerMove={(ev) => onBarHover(b, ev.clientX, ev.clientY)}
+              onPointerLeave={onBarLeave}
+              onClick={() => {
+                if (justDraggedRef.current) return; // suppress the click that ends a drag
+                onBar(b);
+              }}
+              style={{
+                left: s * COL + 2,
+                width: (e - s) * COL - 4,
+                background: bg,
+                touchAction: "none",
+                opacity: draggingId === b.id ? 0.4 : dimmed ? 0.25 : 1,
+                // @ts-expect-error CSS var consumed by .app-cal-bar's frosted recipe
+                "--bc": bg,
+              }}
+              className="app-cal-bar absolute top-1 h-[30px] cursor-grab truncate px-2.5 text-left text-xs font-medium text-white shadow-sm active:cursor-grabbing"
+            >
+              {b.guest_name}
+            </button>
+          );
+        })}
       </div>
+    </div>
+  );
+}
+
+// ── Rich hover tooltip ──
+function BookingTooltip({
+  b,
+  x,
+  y,
+  s,
+  currency,
+  roomLabel,
+}: {
+  b: Booking;
+  x: number;
+  y: number;
+  s: Record<string, string>;
+  currency: string;
+  roomLabel: string;
+}) {
+  const W = 250;
+  const flipLeft = typeof window !== "undefined" && x + W + 24 > window.innerWidth;
+  const left = flipLeft ? x - W - 12 : x + 16;
+  const top = Math.max(8, y - 40);
+  const type = (b.booking_type ?? "standard") as BookingType;
+  const statusLabel =
+    type === "monthly" ? s.typeMonthly
+      : type === "blocked" ? s.typeBlocked
+        : type === "oos" ? s.typeOOS
+          : b.status === "checked_in" ? s.statusCheckedIn
+            : b.status === "checked_out" ? s.statusCheckedOut
+              : b.status === "pending" ? s.statusPending
+                : s.statusConfirmed;
+  const color = barBg(b);
+  const nights = b.is_open_ended ? null : nightsBetween(b.check_in, b.check_out);
+  return (
+    <div
+      className="pointer-events-none fixed z-[80] rounded-xl border border-[var(--app-border)] bg-[var(--app-surface)] p-3 text-xs shadow-xl"
+      style={{ left, top, width: W }}
+    >
+      <div className="mb-1.5 flex items-center gap-2">
+        <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: color }} />
+        <strong className="min-w-0 flex-1 truncate">{b.guest_name}</strong>
+        <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide" style={{ background: `${color}22`, border: `1px solid ${color}55` }}>
+          {statusLabel}
+        </span>
+      </div>
+      <TipRow label={s.room} value={roomLabel} />
+      <TipRow label={s.dates} value={`${b.check_in} → ${b.is_open_ended ? s.openEnded : b.check_out}${nights ? ` · ${nights} ${s.nights}` : ""}`} />
+      {b.code && <TipRow label={s.res} value={b.reservation_no || b.code} />}
+      {b.total_amount != null && <TipRow label={s.total} value={`${currency} ${Number(b.total_amount).toLocaleString()}`} />}
+      {b.phone && <TipRow label={s.phone} value={b.phone} />}
+      {b.notes && (
+        <div className="mt-1.5 border-t border-[var(--app-border)] pt-1.5 text-[var(--app-fg-muted)]">
+          {b.notes.length > 120 ? b.notes.slice(0, 117) + "…" : b.notes}
+        </div>
+      )}
+    </div>
+  );
+}
+function TipRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex gap-2 leading-relaxed">
+      <span className="w-12 shrink-0 text-[10px] uppercase tracking-wide text-[var(--app-fg-muted)]">{label}</span>
+      <span className="min-w-0 flex-1 break-words">{value}</span>
+    </div>
+  );
+}
+
+function Toggle({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 transition ${
+        on ? "border-[var(--app-accent)] bg-[var(--app-accent)] text-[var(--app-accent-fg)]" : "border-[var(--app-border)] text-[var(--app-fg-muted)] hover:bg-[var(--app-surface-2)]"
+      }`}
+    >
+      <span className={`h-2 w-2 rounded-full ${on ? "bg-[var(--app-accent-fg)]" : "bg-[var(--app-fg-muted)]"}`} />
+      {label}
+    </button>
+  );
+}
+function LegendDot({ color, label }: { color: string; label: string }) {
+  return (
+    <span className="flex items-center gap-1.5 text-[var(--app-fg-muted)]">
+      <span className="h-2.5 w-2.5 rounded-sm" style={{ background: color }} />
+      {label}
+    </span>
+  );
+}
+function Kpi({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-2)] px-3 py-2">
+      <div className="text-[11px] text-[var(--app-fg-muted)]">{label}</div>
+      <div className="mt-0.5 text-lg font-semibold tabular-nums">{value}</div>
+    </div>
+  );
+}
+function Chart({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-2)] p-3">
+      <div className="mb-2 text-[11px] text-[var(--app-fg-muted)]">{title}</div>
+      {children}
     </div>
   );
 }

@@ -8,7 +8,12 @@ import type { TenantMember } from "@/lib/db/operations";
 import { useToast } from "@/components/app/ui/Toast";
 import Button from "@/components/app/ui/Button";
 import EmptyState from "@/components/app/ui/EmptyState";
-import { inviteMember, changeRole, kickMember } from "@/app/app/team/actions";
+import {
+  inviteMember,
+  changeRole,
+  toggleMemberActive,
+  kickMember,
+} from "@/app/app/team/actions";
 
 type Role = "owner" | "admin" | "staff";
 
@@ -34,6 +39,16 @@ const STR: Record<"th" | "en", Record<string, string>> = {
     needEmail: "กรอกอีเมลก่อน",
     empty: "ยังไม่มีสมาชิก",
     emptyHint: "เชิญเพื่อนร่วมงานเข้ามาในที่พักนี้",
+    position: "ตำแหน่ง",
+    positionPh: "เช่น แม่บ้าน, แคชเชียร์",
+    active: "ใช้งานอยู่",
+    disabled: "ปิดใช้งาน",
+    enable: "เปิดใช้งาน",
+    disable: "ปิดใช้งาน",
+    enabled: "เปิดใช้งานแล้ว",
+    disabledToast: "ปิดใช้งานแล้ว",
+    cantDisableSelf: "ปิดใช้งานบัญชีตัวเองไม่ได้",
+    joined: "เข้าร่วมเมื่อ",
   },
   en: {
     title: "Team",
@@ -56,6 +71,16 @@ const STR: Record<"th" | "en", Record<string, string>> = {
     needEmail: "Enter an email first",
     empty: "No members yet",
     emptyHint: "Invite a teammate to this property.",
+    position: "Position",
+    positionPh: "e.g. Housekeeper, Cashier",
+    active: "Active",
+    disabled: "Disabled",
+    enable: "Enable",
+    disable: "Disable",
+    enabled: "Member enabled",
+    disabledToast: "Member disabled",
+    cantDisableSelf: "You can't disable your own account",
+    joined: "Joined",
   },
 };
 
@@ -88,12 +113,14 @@ export default function TeamClient({
   myRole,
   tenantName,
   plan,
+  joinedAt,
 }: {
   members: TenantMember[];
   currentUserId: string | null;
   myRole: "owner" | "admin" | "staff";
   tenantName: string;
   plan: string;
+  joinedAt?: Record<string, string>;
 }) {
   const { locale: raw } = useI18n();
   const locale = raw === "en" ? "en" : "th";
@@ -105,10 +132,22 @@ export default function TeamClient({
 
   const [email, setEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<Role>("staff");
+  const [invitePosition, setInvitePosition] = useState("");
   const [inviting, setInviting] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const roleLabel = (r: Role) => s(r);
+
+  const fmtJoined = (iso?: string) => {
+    if (!iso) return null;
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return null;
+    return d.toLocaleDateString(locale === "en" ? "en-GB" : "th-TH", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  };
 
   async function invite() {
     const value = email.trim();
@@ -117,12 +156,30 @@ export default function TeamClient({
       return;
     }
     setInviting(true);
-    const res = await inviteMember(value, inviteRole);
+    const res = await inviteMember(value, inviteRole, invitePosition.trim() || undefined);
     setInviting(false);
     if (res.ok) {
       toast.success(s("added"));
       setEmail("");
       setInviteRole("staff");
+      setInvitePosition("");
+      router.refresh();
+    } else {
+      toast.error(`${res.code} · ${res.message}`);
+    }
+  }
+
+  async function onToggleActive(m: TenantMember) {
+    if (m.user_id === currentUserId) {
+      toast.error(s("cantDisableSelf"));
+      return;
+    }
+    setBusyId(m.user_id);
+    const next = !m.is_active;
+    const res = await toggleMemberActive(m.user_id, next);
+    setBusyId(null);
+    if (res.ok) {
+      toast.success(next ? s("enabled") : s("disabledToast"));
       router.refresh();
     } else {
       toast.error(`${res.code} · ${res.message}`);
@@ -181,17 +238,36 @@ export default function TeamClient({
                 className="app-surface flex items-center gap-3 rounded-2xl border border-[var(--app-border)] p-4"
               >
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="truncate font-semibold">{fallbackName(m)}</span>
                     {isMe && (
                       <span className="flex-none rounded-full bg-[var(--app-surface-2)] px-2 py-0.5 text-[11px] font-medium text-[var(--app-fg-muted)]">
                         {s("you")}
                       </span>
                     )}
+                    {/* Active / Disabled status chip — parity with hotel-pms
+                        users screen. Backed by tenant_members.is_active. */}
+                    <span
+                      className={`flex-none rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                        m.is_active
+                          ? "bg-[rgba(16,185,129,0.15)] text-[#10b981]"
+                          : "bg-[var(--app-surface-2)] text-[var(--app-fg-muted)]"
+                      }`}
+                    >
+                      {m.is_active ? s("active") : s("disabled")}
+                    </span>
                   </div>
                   {m.email && (
                     <div className="truncate text-sm text-[var(--app-fg-muted)]">{m.email}</div>
                   )}
+                  <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-[var(--app-fg-muted)]">
+                    {m.position && m.position.trim() && <span>{m.position.trim()}</span>}
+                    {fmtJoined(joinedAt?.[m.user_id]) && (
+                      <span>
+                        {s("joined")} {fmtJoined(joinedAt?.[m.user_id])}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {canManage ? (
@@ -199,7 +275,9 @@ export default function TeamClient({
                     <select
                       className={field}
                       value={m.role}
-                      disabled={busy}
+                      // Disable on your OWN row to prevent self-demotion (e.g.
+                      // an owner accidentally dropping themselves to staff).
+                      disabled={busy || isMe}
                       onChange={(e) => onChangeRole(m.user_id, e.target.value)}
                       aria-label={s("role")}
                     >
@@ -209,6 +287,15 @@ export default function TeamClient({
                         </option>
                       ))}
                     </select>
+                    {!isMe && (
+                      <button
+                        onClick={() => onToggleActive(m)}
+                        disabled={busy}
+                        className="flex-none text-xs font-medium text-[var(--app-fg-muted)] transition-colors hover:text-[var(--app-fg)] disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {m.is_active ? s("disable") : s("enable")}
+                      </button>
+                    )}
                     {!isMe && (
                       <button
                         onClick={() => onKick(m)}
@@ -270,6 +357,18 @@ export default function TeamClient({
                 ))}
               </select>
             </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-[var(--app-fg-muted)]">
+              {s("position")}
+            </label>
+            <input
+              type="text"
+              className={`${field} w-full`}
+              value={invitePosition}
+              onChange={(e) => setInvitePosition(e.target.value)}
+              placeholder={s("positionPh")}
+            />
           </div>
           <div className="flex items-center gap-3 pt-1">
             <Button onClick={invite} loading={inviting}>

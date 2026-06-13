@@ -44,7 +44,13 @@ export async function assignTaskToMe(id: string): Promise<ActionResult<Housekeep
 
 export async function patchTask(
   id: string,
-  patch: { priority?: HousekeepingTask["priority"]; notes?: string | null; assigned_to?: string | null }
+  patch: {
+    priority?: HousekeepingTask["priority"];
+    notes?: string | null;
+    assigned_to?: string | null;
+    task_type?: HousekeepingTask["task_type"];
+    due_date?: string;
+  }
 ): Promise<ActionResult<HousekeepingTask>> {
   const res = await updateHousekeepingTask(id, patch);
   if (res.ok) revalidatePath("/app/housekeeping");

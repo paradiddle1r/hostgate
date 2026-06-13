@@ -15,14 +15,40 @@ export interface TenantMember {
   display_name: string | null;
   email: string | null;
   role: "owner" | "admin" | "staff";
+  // ── parity (migration 15) — staff position + active/disable ─────────────────
+  // display_name/email come from the SECURITY DEFINER RPC (user_profiles is
+  // self-select under RLS); position/is_active come from a direct tenant_members
+  // read, merged by user_id. Defaults applied for any member row that predates
+  // the columns.
+  position: string | null;
+  is_active: boolean;
 }
 
 export async function listTenantMembers(tenantId: string): Promise<ActionResult<TenantMember[]>> {
   try {
     const supabase = createClient();
+    // Names/emails via the definer RPC (reaches user_profiles + auth.users).
     const { data, error } = await supabase.rpc("app_tenant_members", { p_tenant: tenantId });
     if (error) throw error;
-    return ok((data ?? []) as TenantMember[]);
+    const base = (data ?? []) as Array<Omit<TenantMember, "position" | "is_active">>;
+
+    // position/is_active live on tenant_members itself — direct, RLS-scoped read
+    // (members can SELECT all rows in their tenant). Merge by user_id.
+    const { data: extra } = await supabase
+      .from("tenant_members")
+      .select("user_id, position, is_active")
+      .eq("tenant_id", tenantId);
+    const byId = new Map(
+      ((extra ?? []) as Array<{ user_id: string; position: string | null; is_active: boolean | null }>).map(
+        (r) => [r.user_id, r]
+      )
+    );
+
+    const rows: TenantMember[] = base.map((m) => {
+      const e = byId.get(m.user_id);
+      return { ...m, position: e?.position ?? null, is_active: e?.is_active ?? true };
+    });
+    return ok(rows);
   } catch (e) {
     return mapPgError(e);
   }
@@ -52,6 +78,9 @@ export interface HousekeepingTask {
   inspected_at: string | null;
   inspected_by: string | null;
   created_at: string;
+  // ── parity (migration 15) ──────────────────────────────────────────────────
+  due_date: string; // NOT NULL default current_date
+  created_by: string | null;
 }
 
 export interface HousekeepingInput {
@@ -61,6 +90,9 @@ export interface HousekeepingInput {
   priority?: Priority;
   notes?: string | null;
   assigned_to?: string | null;
+  // ── parity (migration 15) ──────────────────────────────────────────────────
+  due_date?: string;
+  created_by?: string | null;
 }
 
 export async function listHousekeeping(
@@ -98,6 +130,10 @@ export async function createHousekeepingTask(
         priority: input.priority ?? "normal",
         notes: input.notes ?? null,
         assigned_to: input.assigned_to ?? null,
+        // ── parity (migration 15) — omit due_date when unset so the DB
+        // default (current_date) applies. ──────────────────────────────────
+        ...(input.due_date ? { due_date: input.due_date } : {}),
+        created_by: input.created_by ?? null,
       })
       .select()
       .single();
@@ -142,7 +178,7 @@ export async function setHousekeepingStatus(
 
 export async function updateHousekeepingTask(
   id: string,
-  patch: Partial<Pick<HousekeepingTask, "priority" | "notes" | "assigned_to" | "task_type">>
+  patch: Partial<Pick<HousekeepingTask, "priority" | "notes" | "assigned_to" | "task_type" | "due_date">>
 ): Promise<ActionResult<HousekeepingTask>> {
   try {
     const supabase = createClient();
@@ -254,6 +290,9 @@ export async function deleteShift(id: string): Promise<ActionResult<{ id: string
 // ── maintenance ──────────────────────────────────────────────────────────────
 export type MaintenanceStatus = "open" | "in-progress" | "resolved";
 
+export type MaintenanceIssueType =
+  | "water" | "electricity" | "air-conditioner" | "furniture" | "toilet" | "other";
+
 export interface MaintenanceOrder {
   id: string;
   tenant_id: string;
@@ -270,6 +309,8 @@ export interface MaintenanceOrder {
   reported_at: string;
   resolved_at: string | null;
   created_at: string;
+  // ── parity (migration 15) ──────────────────────────────────────────────────
+  issue_type: MaintenanceIssueType | null;
 }
 
 export interface MaintenanceInput {
@@ -282,6 +323,8 @@ export interface MaintenanceInput {
   revenue_lost?: number | null;
   oos_from?: string | null;
   oos_to?: string | null;
+  // ── parity (migration 15) ──────────────────────────────────────────────────
+  issue_type?: MaintenanceIssueType | null;
 }
 
 export async function listMaintenance(
@@ -321,6 +364,7 @@ export async function createMaintenance(
         revenue_lost: input.revenue_lost ?? null,
         oos_from: input.oos_from ?? null,
         oos_to: input.oos_to ?? null,
+        issue_type: input.issue_type ?? null,
       })
       .select()
       .single();
