@@ -146,12 +146,15 @@ export default function AppShell({
 
   return (
     <ActivePropertyProvider property={property} properties={properties} plan={plan}>
-      <ToastProvider>
-        <div
-          data-theme={theme}
-          className="app-shell relative flex min-h-screen flex-col"
-          style={{ background: "var(--app-bg)", color: "var(--app-fg)" }}
-        >
+      {/* data-theme MUST be the outer element so the toast container (rendered by
+          ToastProvider) inherits the theme tokens — otherwise --app-bg etc. are
+          undefined on the toasts and they render transparent. */}
+      <div
+        data-theme={theme}
+        className="app-shell relative flex min-h-screen flex-col"
+        style={{ background: "var(--app-bg)", color: "var(--app-fg)" }}
+      >
+        <ToastProvider>
           <div className="app-mesh" aria-hidden>
             <i /><i /><i /><i />
           </div>
@@ -255,8 +258,8 @@ export default function AppShell({
 
           {/* Floating team-notes launcher (bottom-right on every page). */}
           <NotesWidget />
-        </div>
-      </ToastProvider>
+        </ToastProvider>
+      </div>
     </ActivePropertyProvider>
   );
 }
