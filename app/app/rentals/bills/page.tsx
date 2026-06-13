@@ -5,6 +5,7 @@ import type { MonthlyTenantRow } from "@/lib/db/rentals";
 import { createClient } from "@/lib/supabase/server";
 import { isOpenEnded } from "@/lib/rental-calc";
 import BatchBillsClient from "@/components/app/rentals/BatchBillsClient";
+import RentalsTabs from "@/components/app/rentals/RentalsTabs";
 
 export const dynamic = "force-dynamic";
 
@@ -122,10 +123,13 @@ export default async function BatchBillsPage() {
   });
 
   return (
+    <>
+      <RentalsTabs />
     <BatchBillsClient
       tenants={tenants}
       existingBills={existingBills}
       currency={property.currency}
     />
+    </>
   );
 }

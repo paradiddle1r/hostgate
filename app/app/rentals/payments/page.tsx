@@ -5,6 +5,7 @@ import type { MonthlyTenantRow } from "@/lib/db/rentals";
 import { createClient } from "@/lib/supabase/server";
 import { isOpenEnded } from "@/lib/rental-calc";
 import PaymentsClient from "@/components/app/rentals/PaymentsClient";
+import RentalsTabs from "@/components/app/rentals/RentalsTabs";
 
 export const dynamic = "force-dynamic";
 
@@ -82,5 +83,10 @@ export default async function RentalPaymentsPage() {
     }));
   }
 
-  return <PaymentsClient tenants={tenants} bills={bills} currency={property.currency} />;
+  return (
+    <>
+      <RentalsTabs />
+      <PaymentsClient tenants={tenants} bills={bills} currency={property.currency} />
+    </>
+  );
 }

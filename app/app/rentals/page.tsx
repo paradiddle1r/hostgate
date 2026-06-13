@@ -3,6 +3,7 @@ import { listRooms } from "@/lib/db/rooms";
 import { listAllBookings } from "@/lib/db/bookings";
 import { listMonthlyTenants } from "@/lib/db/rentals";
 import RentalsClient from "@/components/app/rentals/RentalsClient";
+import RentalsTabs from "@/components/app/rentals/RentalsTabs";
 
 export const dynamic = "force-dynamic";
 
@@ -26,11 +27,14 @@ export default async function RentalsPage() {
   );
 
   return (
+    <>
+      <RentalsTabs />
     <RentalsClient
       tenants={tenants}
       candidates={candidates}
       rooms={(roomsRes.ok ? roomsRes.data : []).filter((r) => r.status === "active")}
       currency={property.currency}
     />
+    </>
   );
 }

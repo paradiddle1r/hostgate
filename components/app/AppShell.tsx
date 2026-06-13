@@ -8,7 +8,7 @@
 import { ReactNode, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { CalendarDays, Users, BedDouble, Settings, LayoutDashboard, Menu, X, Building2, BookOpen, Tag, Receipt, BarChart3, SprayCan, CalendarClock, Wrench, KeyRound, ShoppingCart, UserCog, Activity } from "lucide-react";
+import { CalendarDays, Users, BedDouble, Settings, LayoutDashboard, Menu, X, Building2, BookOpen, Tag, Receipt, BarChart3, SprayCan, CalendarClock, Wrench, KeyRound, ShoppingCart, UserCog, Activity, Megaphone } from "lucide-react";
 import type { Property } from "@/lib/db/properties";
 import { useAppT } from "@/lib/app-i18n";
 import { ToastProvider } from "@/components/app/ui/Toast";
@@ -17,6 +17,8 @@ import PropertySwitcher from "./PropertySwitcher";
 import ThemeToggle from "./ThemeToggle";
 import LocaleToggle from "./LocaleToggle";
 import SignOutButton from "@/app/app/SignOutButton";
+import NotesWidget from "@/components/app/NotesWidget";
+import AnnouncementBanner from "@/components/app/AnnouncementBanner";
 
 const NAV = [
   { href: "/app", icon: LayoutDashboard, key: "nav.home", exact: true },
@@ -33,6 +35,7 @@ const NAV = [
   { href: "/app/pos", icon: ShoppingCart, key: "nav.pos" },
   { href: "/app/reports", icon: BarChart3, key: "nav.reports" },
   { href: "/app/team", icon: UserCog, key: "nav.team" },
+  { href: "/app/announcements", icon: Megaphone, key: "nav.announcements" },
   { href: "/app/activity", icon: Activity, key: "nav.activity" },
   { href: "/app/settings", icon: Settings, key: "nav.settings" },
 ];
@@ -154,8 +157,14 @@ export default function AppShell({
             </div>
           )}
 
+          {/* Pinned announcements — sticky banner above the page content. */}
+          <AnnouncementBanner />
+
           {/* Content */}
           <main className="relative z-10 min-w-0 flex-1 overflow-x-hidden p-4 md:p-6">{children}</main>
+
+          {/* Floating team-notes launcher (bottom-right on every page). */}
+          <NotesWidget />
         </div>
       </ToastProvider>
     </ActivePropertyProvider>
