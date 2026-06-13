@@ -5,6 +5,7 @@ import Link from "next/link";
 import { StickyNote, X, Plus, ExternalLink, ChevronDown } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import type { Note } from "@/lib/db/notes";
+import { useToast } from "@/components/app/ui/Toast";
 import { getNotesForWidget, newNote } from "@/app/app/notes/actions";
 
 const STR: Record<"th" | "en", Record<string, string>> = {
@@ -17,6 +18,7 @@ const STR: Record<"th" | "en", Record<string, string>> = {
     empty: "ไม่มีโน้ตที่ค้างอยู่",
     emptyHint: "โน้ตใหม่จากทีมจะมาแสดงที่นี่",
     moreLink: "ดูทั้งหมด",
+    added: "เพิ่มโน้ตแล้ว",
   },
   en: {
     title: "Notes",
@@ -27,6 +29,7 @@ const STR: Record<"th" | "en", Record<string, string>> = {
     empty: "No active notes",
     emptyHint: "New notes from the team show up here.",
     moreLink: "View all",
+    added: "Note added",
   },
 };
 
@@ -50,6 +53,7 @@ export default function NotesWidget() {
   const { locale: raw } = useI18n();
   const locale = raw === "en" ? "en" : "th";
   const s = (k: string) => STR[locale][k] ?? k;
+  const toast = useToast();
 
   const [open, setOpen] = useState(false);
   const [notes, setNotes] = useState<Note[]>([]);
@@ -76,7 +80,13 @@ export default function NotesWidget() {
     setAdding(false);
     if (res.ok) {
       setQuick("");
+      // Optimistically prepend so the new note shows immediately, then
+      // re-fetch to reconcile (ordering/author/timestamps) — no page reload.
+      setNotes((prev) => [res.data, ...prev]);
+      toast.success(s("added"));
       void refresh();
+    } else {
+      toast.error(`${res.code} · ${res.message}`);
     }
   }
 

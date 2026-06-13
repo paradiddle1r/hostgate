@@ -348,7 +348,7 @@ export default function ShiftsClient({
   }
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-[1500px]">
       {/* Header */}
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <div>

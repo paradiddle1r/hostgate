@@ -788,7 +788,7 @@ export default function TenantDetailClient({
   );
 
   return (
-    <div className="mx-auto max-w-5xl pb-10">
+    <div className="mx-auto max-w-[1500px] pb-10">
       {/* ── 1. Header ──────────────────────────────────────────────────────── */}
       <div className="mb-5">
         <button

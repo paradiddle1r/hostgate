@@ -373,7 +373,7 @@ export default function InvoiceDetailClient({
   const printHref = `/print/invoice/${invoice.id}?lang=${docLang}`;
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-[1500px]">
       {/* Header */}
       <div className="mb-5 flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">

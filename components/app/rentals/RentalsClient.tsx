@@ -239,7 +239,7 @@ export default function RentalsClient({
   );
 
   return (
-    <div className="mx-auto max-w-5xl pb-10">
+    <div className="mx-auto max-w-[1500px] pb-10">
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{s("title")}</h1>

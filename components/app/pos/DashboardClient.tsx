@@ -123,7 +123,7 @@ export default function DashboardClient({
   }, [items, validSales]);
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-[1500px]">
       <div className="mb-4">
         <h1 className="text-2xl font-semibold tracking-tight">{tr.title}</h1>
         <p className="text-sm text-[var(--app-fg-muted)]">{tr.sub}</p>

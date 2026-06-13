@@ -26,7 +26,7 @@ export default function HomeClient({
   ];
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-[1500px]">
       <p className="text-sm text-[var(--app-fg-muted)]">{t("home.welcome")}</p>
       <h1 className="mb-6 text-2xl font-semibold tracking-tight">{propertyName}</h1>
 

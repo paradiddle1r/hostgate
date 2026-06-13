@@ -80,7 +80,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={t.id}
             role={t.kind === "error" ? "alert" : "status"}
-            className="app-toast-in app-surface pointer-events-auto flex items-start gap-3 rounded-xl border border-[var(--app-border)] px-4 py-3 text-sm text-[var(--app-fg)] shadow-lg"
+            className="app-toast-in app-toast-solid pointer-events-auto flex items-start gap-3 rounded-xl border border-[var(--app-border)] px-4 py-3 text-sm text-[var(--app-fg)] shadow-xl"
           >
             <span
               className="mt-1.5 h-2 w-2 shrink-0 rounded-full"

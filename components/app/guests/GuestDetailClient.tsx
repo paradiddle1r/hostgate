@@ -278,7 +278,7 @@ export default function GuestDetailClient({
   const inHouseRoomNo = stats.inHouseRoomId ? roomNumberById[stats.inHouseRoomId] : null;
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-[1500px]">
       <Link
         href="/app/guests"
         className="mb-3 inline-flex items-center gap-1.5 text-xs text-[var(--app-fg-muted)] hover:text-[var(--app-fg)]"

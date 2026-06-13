@@ -340,12 +340,12 @@ h1, h2 { letter-spacing: -0.028em; }
 }
 
 [data-theme="light-glass"] {
-  --app-bg: #eaf1fb;
-  --app-surface: rgba(255, 255, 255, 0.55);
-  --app-surface-2: rgba(247, 250, 255, 0.42);
+  --app-bg: #eef4fc;
+  --app-surface: rgba(255, 255, 255, 0.38);
+  --app-surface-2: rgba(247, 250, 255, 0.26);
   --app-fg: #0b1220;
   --app-fg-muted: #5a6678;
-  --app-border: rgba(255, 255, 255, 0.5);
+  --app-border: rgba(255, 255, 255, 0.42);
   --app-accent: #0a84ff;
   --app-accent-fg: #ffffff;
   --app-danger: #dc2626;
@@ -355,11 +355,11 @@ h1, h2 { letter-spacing: -0.028em; }
 
 [data-theme="dark-glass"] {
   --app-bg: #0a0e14;
-  --app-surface: rgba(28, 34, 52, 0.5);
-  --app-surface-2: rgba(40, 48, 68, 0.4);
+  --app-surface: rgba(22, 28, 44, 0.34);
+  --app-surface-2: rgba(34, 42, 60, 0.24);
   --app-fg: #f2f6fc;
   --app-fg-muted: #9aa6b8;
-  --app-border: rgba(255, 255, 255, 0.12);
+  --app-border: rgba(255, 255, 255, 0.1);
   --app-accent: #64d2ff;
   --app-accent-fg: #06121c;
   --app-danger: #f87171;
@@ -432,6 +432,12 @@ h1, h2 { letter-spacing: -0.028em; }
   backdrop-filter: blur(var(--app-glass-blur));
   -webkit-backdrop-filter: blur(var(--app-glass-blur));
 }
+
+/* Toasts stay OPAQUE on every theme (incl. glass) so stacked toasts never
+   bleed through into each other / the page underneath. */
+[data-theme] .app-toast-solid { background: var(--app-surface); }
+[data-theme="light-glass"] .app-toast-solid { background: #ffffff; }
+[data-theme="dark-glass"] .app-toast-solid { background: #161c2c; }
 
 /* ── Liquid mesh (Pro / glass tiers only) ──────────────────────────────────
    The signature drifting glow of the hotel-pms liquid themes. Rendered by the

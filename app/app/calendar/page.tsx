@@ -8,7 +8,9 @@ import CalendarClient, { RoomTypeBrief } from "@/components/app/calendar/Calenda
 
 export const dynamic = "force-dynamic";
 
-const WINDOW_DAYS = 14;
+// Selectable time-frame windows. Default 14 (preserves prior behaviour).
+const ALLOWED_DAYS = [7, 14, 30] as const;
+const DEFAULT_DAYS = 14;
 
 function addDays(iso: string, n: number): string {
   const d = new Date(iso + "T00:00:00Z");
@@ -19,7 +21,7 @@ function addDays(iso: string, n: number): string {
 export default async function CalendarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string }>;
+  searchParams: Promise<{ from?: string; days?: string }>;
 }) {
   const sp = await searchParams;
   const active = await getActiveProperty();
@@ -28,9 +30,15 @@ export default async function CalendarPage({
   const tenant = active.data.tenant;
   const supabase = createClient();
 
+  // Clamp ?days= to one of the allowed windows; anything else → default 14.
+  const parsedDays = Number(sp?.days);
+  const windowDays = (ALLOWED_DAYS as readonly number[]).includes(parsedDays)
+    ? parsedDays
+    : DEFAULT_DAYS;
+
   const today = new Date().toISOString().slice(0, 10);
   const from = /^\d{4}-\d{2}-\d{2}$/.test(sp?.from ?? "") ? (sp!.from as string) : today;
-  const to = addDays(from, WINDOW_DAYS);
+  const to = addDays(from, windowDays);
 
   const [roomsRes, typesRes, bookingsRes, plansRes, membersRes] = await Promise.all([
     listRooms(property.id),
@@ -82,7 +90,7 @@ export default async function CalendarPage({
   return (
     <CalendarClient
       from={from}
-      windowDays={WINDOW_DAYS}
+      windowDays={windowDays}
       today={today}
       rooms={rooms}
       roomTypes={roomTypes}

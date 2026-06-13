@@ -175,7 +175,7 @@ export default function NotesClient({ initialNotes }: { initialNotes: Note[] }) 
   ];
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-[1500px]">
       <div className="mb-5 flex items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{s("title")}</h1>

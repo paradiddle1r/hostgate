@@ -140,7 +140,7 @@ export default function InvoicesClient({
   }
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="mx-auto max-w-[1700px]">
       {/* Header */}
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">{tr.title}</h1>

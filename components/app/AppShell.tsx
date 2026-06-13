@@ -251,7 +251,7 @@ export default function AppShell({
           <AnnouncementBanner />
 
           {/* Content */}
-          <main className="relative z-10 min-w-0 flex-1 overflow-x-hidden p-4 md:p-6">{children}</main>
+          <main className="relative z-10 min-w-0 flex-1 overflow-x-hidden p-3 md:px-5 md:py-5">{children}</main>
 
           {/* Floating team-notes launcher (bottom-right on every page). */}
           <NotesWidget />

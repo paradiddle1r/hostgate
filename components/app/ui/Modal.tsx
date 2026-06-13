@@ -64,14 +64,14 @@ export default function Modal({
       <div
         ref={cardRef}
         className={
-          "app-surface relative z-10 w-full overflow-hidden rounded-t-2xl border " +
+          "app-surface relative z-10 flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-2xl border " +
           "border-[var(--app-border)] text-[var(--app-fg)] shadow-2xl " +
-          "sm:rounded-2xl " +
+          "sm:max-h-[90vh] sm:rounded-2xl " +
           className
         }
       >
         {title != null && (
-          <div className="flex items-center justify-between gap-4 border-b border-[var(--app-border)] px-5 py-4">
+          <div className="flex flex-none items-center justify-between gap-4 border-b border-[var(--app-border)] px-5 py-4">
             <h2 className="text-base font-semibold text-[var(--app-fg)]">
               {title}
             </h2>
@@ -93,10 +93,10 @@ export default function Modal({
           </div>
         )}
 
-        <div className="px-5 py-4">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
 
         {footer != null && (
-          <div className="flex items-center justify-end gap-2 border-t border-[var(--app-border)] px-5 py-3">
+          <div className="flex flex-none items-center justify-end gap-2 border-t border-[var(--app-border)] px-5 py-3">
             {footer}
           </div>
         )}

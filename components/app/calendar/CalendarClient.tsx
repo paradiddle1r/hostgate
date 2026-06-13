@@ -24,8 +24,19 @@ export interface RoomTypeBrief {
   daily_rate: number | null;
 }
 
-const COL = 46; // px per day column
 const LABEL = 60; // px room-label column
+
+// Day-column width shrinks as the window widens so a 30-day frame still fits
+// (and the grid's own overflow-x-auto scrolls when it doesn't).
+function colWidth(windowDays: number): number {
+  if (windowDays >= 30) return 30;
+  if (windowDays >= 14) return 46;
+  return 64;
+}
+
+// Selectable time frames (must mirror page.tsx ALLOWED_DAYS).
+const DAY_OPTIONS = [7, 14, 30] as const;
+const DAYS_LS_KEY = "hg.cal.days";
 
 // ── Bilingual copy (local STR — app-i18n is owned elsewhere) ──────────────────
 const STR: Record<"th" | "en", Record<string, string>> = {
@@ -60,6 +71,10 @@ const STR: Record<"th" | "en", Record<string, string>> = {
     res: "เลขจอง",
     total: "ยอดรวม",
     phone: "โทร",
+    timeframe: "ช่วงเวลา",
+    days7: "7 วัน",
+    days14: "14 วัน",
+    days30: "30 วัน",
     statusPending: "รอยืนยัน",
     statusConfirmed: "ยืนยันแล้ว",
     statusCheckedIn: "เข้าพักแล้ว",
@@ -100,6 +115,10 @@ const STR: Record<"th" | "en", Record<string, string>> = {
     res: "Code",
     total: "Total",
     phone: "Phone",
+    timeframe: "Time frame",
+    days7: "7 days",
+    days14: "14 days",
+    days30: "30 days",
     statusPending: "Pending",
     statusConfirmed: "Confirmed",
     statusCheckedIn: "Checked in",
@@ -187,6 +206,9 @@ export default function CalendarClient({
 
   const canManage = role === "owner" || role === "admin";
 
+  // Day-column width follows the selected window (7→64, 14→46, 30→30).
+  const COL = colWidth(windowDays);
+
   const dates = useMemo(
     () => Array.from({ length: windowDays }, (_, i) => addDays(from, i)),
     [from, windowDays]
@@ -212,12 +234,23 @@ export default function CalendarClient({
   };
 
   // ── drag-to-move ──────────────────────────────────────────────────────────
-  const [dragB, setDragB] = useState<Booking | null>(null);
-  const [ghost, setGhost] = useState<{ x: number; y: number } | null>(null);
-  const [dragMoved, setDragMoved] = useState(false);
+  // Smoothness rule: NO setState during pointermove. The dragged bar is dimmed
+  // once (on threshold cross), and a fixed GHOST clone of the bar tracks the
+  // cursor by writing `transform` directly to a ref'd node every move (rAF-
+  // coalesced). The drop-target row + day-cell highlight is also toggled via
+  // direct DOM class flips, never React state.
+  const [dragB, setDragB] = useState<Booking | null>(null); // identity only — for ghost render + opacity
   const startRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const grabOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 }); // pointer → bar top-left
+  const ghostSizeRef = useRef<{ w: number; h: number }>({ w: 120, h: 30 });
   const movedRef = useRef(false);
   const justDraggedRef = useRef(false);
+  const ghostRef = useRef<HTMLDivElement | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const lastPtRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const hiRowRef = useRef<HTMLElement | null>(null); // currently highlighted room row
+  const hiCellRef = useRef<HTMLElement | null>(null); // currently highlighted day cell
+  const srcBarRef = useRef<HTMLElement | null>(null); // the bar being dragged (dimmed in place)
 
   // Rich hover tooltip: the booking + pointer coords.
   const [tip, setTip] = useState<{ b: Booking; x: number; y: number } | null>(null);
@@ -229,47 +262,114 @@ export default function CalendarClient({
     return stayTotal(rm, Number(base) || 0, ci, co).total || null;
   }
 
+  function clearHighlights() {
+    hiRowRef.current?.classList.remove("app-cal-droprow");
+    hiCellRef.current?.classList.remove("app-cal-dropcell");
+    hiRowRef.current = null;
+    hiCellRef.current = null;
+  }
+  function restoreSrcBar() {
+    if (srcBarRef.current) {
+      srcBarRef.current.style.opacity = "";
+      srcBarRef.current.style.pointerEvents = "";
+      srcBarRef.current = null;
+    }
+  }
+
   function onBarPointerDown(e: React.PointerEvent, b: Booking) {
     if (e.button !== 0) return;
     startRef.current = { x: e.clientX, y: e.clientY };
+    lastPtRef.current = { x: e.clientX, y: e.clientY };
+    // Capture where inside the bar the user grabbed, so the ghost sits under
+    // the cursor exactly (no jump). Also snapshot the bar's rendered size + node
+    // (so we can dim it in place + disable its hit-testing only once a real drag
+    // begins — keeping a plain click a click that opens the edit modal).
+    const node = e.currentTarget as HTMLElement;
+    const rect = node.getBoundingClientRect();
+    srcBarRef.current = node;
+    grabOffsetRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    ghostSizeRef.current = { w: rect.width, h: rect.height };
     movedRef.current = false;
-    setDragMoved(false);
     setTip(null);
-    setGhost({ x: e.clientX, y: e.clientY });
     setDragB(b);
   }
 
   useEffect(() => {
     if (!dragB) return;
-    document.body.style.userSelect = "none";
+    document.body.style.userSelect = "";
+
+    function applyGhost() {
+      rafRef.current = null;
+      const g = ghostRef.current;
+      if (!g) return;
+      const { x, y } = lastPtRef.current;
+      const ox = grabOffsetRef.current.x;
+      const oy = grabOffsetRef.current.y;
+      g.style.transform = `translate3d(${x - ox}px, ${y - oy}px, 0)`;
+    }
+
+    function updateHighlight(x: number, y: number) {
+      const el = document.elementFromPoint(x, y) as HTMLElement | null;
+      const rowEl = (el?.closest("[data-room-id]") as HTMLElement | null) ?? null;
+      if (rowEl !== hiRowRef.current) {
+        hiRowRef.current?.classList.remove("app-cal-droprow");
+        rowEl?.classList.add("app-cal-droprow");
+        hiRowRef.current = rowEl;
+      }
+      const cellEl = (el?.closest("[data-day-cell]") as HTMLElement | null) ?? null;
+      if (cellEl !== hiCellRef.current) {
+        hiCellRef.current?.classList.remove("app-cal-dropcell");
+        cellEl?.classList.add("app-cal-dropcell");
+        hiCellRef.current = cellEl;
+      }
+    }
 
     function move(e: PointerEvent) {
       const dx = e.clientX - startRef.current.x;
       const dy = e.clientY - startRef.current.y;
+      lastPtRef.current = { x: e.clientX, y: e.clientY };
       if (!movedRef.current && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) {
         movedRef.current = true;
-        setDragMoved(true);
+        document.body.style.userSelect = "none";
+        // Reveal the ghost only once a real drag begins (so a click stays a click).
+        // Position it synchronously at reveal so it never flashes at (0,0).
+        if (ghostRef.current) {
+          applyGhost();
+          ghostRef.current.style.display = "block";
+        }
+        // Dim the original in place + let the pointer fall through it, so the
+        // drop highlight + elementFromPoint lookup see the grid, not this bar.
+        if (srcBarRef.current) {
+          srcBarRef.current.style.opacity = "0.4";
+          srcBarRef.current.style.pointerEvents = "none";
+        }
       }
-      setGhost({ x: e.clientX, y: e.clientY });
+      if (!movedRef.current) return;
+      // Coalesce visual updates into a single rAF — zero per-move setState.
+      if (rafRef.current == null) rafRef.current = requestAnimationFrame(applyGhost);
+      updateHighlight(e.clientX, e.clientY);
     }
 
     async function up(e: PointerEvent) {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
+      if (rafRef.current != null) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
       document.body.style.userSelect = "";
       const b = dragB!;
       const moved = movedRef.current;
+      // Read the drop target BEFORE restoring the source bar (it's pointer-events
+      // none right now, so elementFromPoint correctly sees the grid beneath).
+      const dropEl = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
+      clearHighlights();
+      restoreSrcBar();
       setDragB(null);
-      setGhost(null);
-      setDragMoved(false);
       if (!moved) return;
       justDraggedRef.current = true;
       setTimeout(() => (justDraggedRef.current = false), 0);
 
       const dx = e.clientX - startRef.current.x;
       const deltaDays = Math.round(dx / COL);
-      const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
-      const rowEl = el?.closest("[data-room-id]") as HTMLElement | null;
+      const rowEl = dropEl?.closest("[data-room-id]") as HTMLElement | null;
       const newRoomId = rowEl ? rowEl.getAttribute("data-room-id") || null : b.room_id;
       const newCI = deltaDays ? addDays(b.check_in, deltaDays) : b.check_in;
       const newCO = deltaDays ? addDays(b.check_out, deltaDays) : b.check_out;
@@ -293,17 +393,43 @@ export default function CalendarClient({
     return () => {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
+      if (rafRef.current != null) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+      clearHighlights();
+      restoreSrcBar();
       document.body.style.userSelect = "";
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dragB]);
 
+  // Carry BOTH from + days through every navigation so changing one never
+  // silently resets the other.
+  function pushWindow(nextFrom: string, nextDays: number) {
+    router.push(`/app/calendar?from=${nextFrom}&days=${nextDays}`);
+  }
   function nav(deltaDays: number) {
-    router.push(`/app/calendar?from=${addDays(from, deltaDays)}`);
+    pushWindow(addDays(from, deltaDays), windowDays);
   }
   function goToday() {
-    router.push(`/app/calendar?from=${today}`);
+    pushWindow(today, windowDays);
   }
+  function setDays(n: number) {
+    if (n === windowDays) return;
+    try { localStorage.setItem(DAYS_LS_KEY, String(n)); } catch { /* ignore */ }
+    pushWindow(from, n);
+  }
+
+  // On mount, restore the saved time frame — but ONLY when the URL didn't
+  // already pin ?days= (avoids fighting an explicit choice / redirect loops).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (new URLSearchParams(window.location.search).has("days")) return;
+    let saved: number | null = null;
+    try { saved = Number(localStorage.getItem(DAYS_LS_KEY)) || null; } catch { /* ignore */ }
+    if (saved && DAY_OPTIONS.includes(saved as (typeof DAY_OPTIONS)[number]) && saved !== windowDays) {
+      pushWindow(from, saved);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function quick(b: Booking, status: BookingStatus) {
     const res = await setStatusAction(b.id, status);
@@ -503,7 +629,13 @@ export default function CalendarClient({
   const maxRev = Math.max(1, ...stats.revByDay);
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="w-full">
+      {/* Drag drop-target highlight styles (toggled via classList during drag,
+          so they never round-trip through React state). */}
+      <style>{`
+        .app-cal-droprow { background: color-mix(in srgb, var(--app-accent) 9%, transparent); }
+        .app-cal-dropcell { box-shadow: inset 0 0 0 2px var(--app-accent); }
+      `}</style>
       {/* Header */}
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">{t("cal.title")}</h1>
@@ -517,6 +649,27 @@ export default function CalendarClient({
           <button onClick={() => nav(windowDays)} className="rounded-lg p-1.5 hover:bg-[var(--app-surface-2)]" aria-label={t("cal.next")}>
             <ChevronRight size={18} />
           </button>
+        </div>
+        {/* time-frame segmented control */}
+        <div
+          className="flex items-center gap-0.5 rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] p-0.5"
+          role="group"
+          aria-label={s.timeframe}
+        >
+          {DAY_OPTIONS.map((n) => (
+            <button
+              key={n}
+              onClick={() => setDays(n)}
+              aria-pressed={windowDays === n}
+              className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${
+                windowDays === n
+                  ? "bg-[var(--app-accent)] text-[var(--app-accent-fg)]"
+                  : "text-[var(--app-fg-muted)] hover:bg-[var(--app-surface-2)]"
+              }`}
+            >
+              {n === 7 ? s.days7 : n === 14 ? s.days14 : s.days30}
+            </button>
+          ))}
         </div>
         <div className="ml-auto flex items-center gap-2">
           {/* search */}
@@ -620,7 +773,9 @@ export default function CalendarClient({
 
       <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
         {/* ── Grid (desktop) ── */}
-        <div className="hidden overflow-x-auto rounded-2xl border border-[var(--app-border)] lg:block">
+        {/* min-w-0 lets this 1fr grid item shrink so its fixed-width inner div
+            scrolls internally (overflow-x-auto) instead of blowing out the page. */}
+        <div className="hidden min-w-0 overflow-x-auto rounded-2xl border border-[var(--app-border)] lg:block">
           <div style={{ width: LABEL + windowDays * COL }}>
             {/* date header — weekday + day */}
             <div className="flex border-b border-[var(--app-border)] bg-[var(--app-surface-2)]">
@@ -674,8 +829,8 @@ export default function CalendarClient({
                 label={t("cal.unassigned")}
                 bars={unassigned}
                 dates={dates}
+                col={COL}
                 today={today}
-                draggingId={dragMoved ? dragB?.id ?? null : null}
                 matchedIds={matchedIds}
                 onCell={() => {}}
                 onBar={(b) => setSeed({ booking: b })}
@@ -702,8 +857,8 @@ export default function CalendarClient({
                     label={r.number}
                     bars={barsFor(r.id)}
                     dates={dates}
+                    col={COL}
                     today={today}
-                    draggingId={dragMoved ? dragB?.id ?? null : null}
                     matchedIds={matchedIds}
                     onCell={(date) => setSeed({ roomId: r.id, checkIn: date, checkOut: addDays(date, 1) })}
                     onBar={(b) => setSeed({ booking: b })}
@@ -764,15 +919,24 @@ export default function CalendarClient({
         <BookingTooltip b={tip.b} x={tip.x} y={tip.y} s={s} currency={currency} roomLabel={roomLabel(tip.b.room_id)} />
       )}
 
-      {/* drag ghost — follows the pointer, must not catch elementFromPoint */}
-      {dragB && ghost && dragMoved && (
+      {/* drag ghost — a clean clone of the bar that tracks the cursor with zero
+          lag. Positioned via transform written directly in the rAF handler;
+          starts hidden (display:none) until the move threshold is crossed so a
+          plain click never flashes it. pointer-events:none keeps it out of the
+          elementFromPoint drop lookup. */}
+      {dragB && (
         <div
-          className="pointer-events-none fixed z-[60] truncate rounded-md px-2.5 py-1 text-xs font-medium text-white shadow-lg"
+          ref={ghostRef}
+          className="app-cal-bar pointer-events-none fixed left-0 top-0 z-[60] flex items-center truncate rounded-md px-2.5 text-left text-xs font-medium text-white shadow-lg"
           style={{
-            left: ghost.x + 10,
-            top: ghost.y - 12,
-            maxWidth: 180,
+            display: "none",
+            width: ghostSizeRef.current.w,
+            height: ghostSizeRef.current.h,
             background: barBg(dragB) === "transparent" ? "var(--app-accent)" : barBg(dragB),
+            // @ts-expect-error CSS var consumed by .app-cal-bar's frosted recipe
+            "--bc": barBg(dragB) === "transparent" ? "var(--app-accent)" : barBg(dragB),
+            willChange: "transform",
+            opacity: 0.95,
           }}
         >
           {dragB.guest_name}
@@ -820,8 +984,8 @@ function Row({
   label,
   bars,
   dates,
+  col,
   today,
-  draggingId,
   matchedIds,
   onCell,
   onBar,
@@ -834,8 +998,8 @@ function Row({
   label: string;
   bars: { b: Booking; s: number; e: number }[];
   dates: string[];
+  col: number; // px per day column (window-dependent)
   today: string;
-  draggingId: string | null;
   matchedIds: Set<string> | null;
   onCell: (date: string) => void;
   onBar: (b: Booking) => void;
@@ -853,7 +1017,7 @@ function Row({
       >
         {label}
       </div>
-      <div className="relative" style={{ width: windowDays * COL, height: 38 }} data-room-id={roomId}>
+      <div className="relative" style={{ width: windowDays * col, height: 38 }} data-room-id={roomId}>
         {/* empty-cell click targets + column separators */}
         <div className="absolute inset-0 flex">
           {dates.map((d) => {
@@ -862,8 +1026,9 @@ function Row({
             return (
               <button
                 key={d}
+                data-day-cell={d}
                 onClick={() => onCell(d)}
-                style={{ width: COL, background: d === today ? "color-mix(in srgb, var(--app-accent) 6%, transparent)" : isWeekend ? "color-mix(in srgb, var(--app-fg-muted) 5%, transparent)" : undefined }}
+                style={{ width: col, background: d === today ? "color-mix(in srgb, var(--app-accent) 6%, transparent)" : isWeekend ? "color-mix(in srgb, var(--app-fg-muted) 5%, transparent)" : undefined }}
                 className="h-full border-r border-[var(--app-border)] last:border-r-0 hover:bg-[var(--app-surface-2)]"
                 aria-label={d}
               />
@@ -886,11 +1051,11 @@ function Row({
                 onBar(b);
               }}
               style={{
-                left: s * COL + 2,
-                width: (e - s) * COL - 4,
+                left: s * col + 2,
+                width: (e - s) * col - 4,
                 background: bg,
                 touchAction: "none",
-                opacity: draggingId === b.id ? 0.4 : dimmed ? 0.25 : 1,
+                opacity: dimmed ? 0.25 : 1,
                 // @ts-expect-error CSS var consumed by .app-cal-bar's frosted recipe
                 "--bc": bg,
               }}

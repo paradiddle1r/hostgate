@@ -196,7 +196,7 @@ export default function GuestsClient({
   const isSearching = query.trim().length > 0 || filter !== "all";
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-[1500px]">
       {/* Header */}
       <div className="mb-2 flex flex-wrap items-end gap-3">
         <div>
