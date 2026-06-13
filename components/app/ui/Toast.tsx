@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import type { ReactNode } from "react";
+import { CheckCircle2, AlertCircle, Info, X } from "lucide-react";
 
 type ToastKind = "success" | "error" | "info";
 
@@ -37,6 +38,12 @@ const ACCENTS: Record<ToastKind, string> = {
   success: "var(--app-success)",
   error: "var(--app-danger)",
   info: "var(--app-accent)",
+};
+
+const ICONS: Record<ToastKind, typeof Info> = {
+  success: CheckCircle2,
+  error: AlertCircle,
+  info: Info,
 };
 
 export function ToastProvider({ children }: { children: ReactNode }) {
@@ -75,37 +82,41 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastCtx.Provider value={api}>
       {children}
-      <div className="pointer-events-none fixed right-4 top-4 z-[60] flex w-[min(92vw,22rem)] flex-col gap-2">
-        {toasts.map((t) => (
-          <div
-            key={t.id}
-            role={t.kind === "error" ? "alert" : "status"}
-            className="app-toast-in app-toast-solid pointer-events-auto flex items-start gap-3 rounded-xl border border-[var(--app-border)] px-4 py-3 text-sm text-[var(--app-fg)] shadow-xl"
-          >
-            <span
-              className="mt-1.5 h-2 w-2 shrink-0 rounded-full"
-              style={{ background: ACCENTS[t.kind] }}
-            />
-            <p className="min-w-0 flex-1 break-words leading-snug">
-              {t.message}
-            </p>
-            <button
-              type="button"
-              onClick={() => dismiss(t.id)}
-              aria-label="Dismiss"
-              className="-mr-1 -mt-1 shrink-0 rounded-md p-1 text-[var(--app-fg-muted)] transition-colors hover:bg-[var(--app-surface-2)] hover:text-[var(--app-fg)]"
+      {/* Sits BELOW the app header (h-14) so it never overlaps the top toolbar. */}
+      <div className="pointer-events-none fixed right-4 top-[4.25rem] z-[70] flex w-[min(92vw,23rem)] flex-col gap-2.5">
+        {toasts.map((t) => {
+          const Icon = ICONS[t.kind];
+          return (
+            <div
+              key={t.id}
+              role={t.kind === "error" ? "alert" : "status"}
+              className="app-toast-in app-toast-solid pointer-events-auto relative flex items-start gap-3 overflow-hidden rounded-2xl border border-[var(--app-border)] py-3 pl-4 pr-2.5 text-sm text-[var(--app-fg)] shadow-2xl"
             >
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                <path
-                  d="M4 4l8 8M12 4l-8 8"
-                  stroke="currentColor"
-                  strokeWidth="1.75"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </button>
-          </div>
-        ))}
+              {/* coloured accent edge */}
+              <span
+                aria-hidden
+                className="absolute inset-y-0 left-0 w-1"
+                style={{ background: ACCENTS[t.kind] }}
+              />
+              <Icon
+                size={17}
+                className="mt-px shrink-0"
+                style={{ color: ACCENTS[t.kind] }}
+              />
+              <p className="min-w-0 flex-1 break-words leading-snug">
+                {t.message}
+              </p>
+              <button
+                type="button"
+                onClick={() => dismiss(t.id)}
+                aria-label="Dismiss"
+                className="-mt-0.5 shrink-0 rounded-lg p-1 text-[var(--app-fg-muted)] transition-colors hover:bg-[var(--app-surface-2)] hover:text-[var(--app-fg)]"
+              >
+                <X size={15} />
+              </button>
+            </div>
+          );
+        })}
       </div>
     </ToastCtx.Provider>
   );

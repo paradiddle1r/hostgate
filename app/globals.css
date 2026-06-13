@@ -435,9 +435,13 @@ h1, h2 { letter-spacing: -0.028em; }
 
 /* Toasts stay OPAQUE on every theme (incl. glass) so stacked toasts never
    bleed through into each other / the page underneath. */
-[data-theme] .app-toast-solid { background: var(--app-surface); }
-[data-theme="light-glass"] .app-toast-solid { background: #ffffff; }
-[data-theme="dark-glass"] .app-toast-solid { background: #161c2c; }
+/* Toasts must be FULLY opaque on every theme (they float over the header +
+   page). Two stacked backgrounds: a solid --app-bg base (always an opaque hex)
+   with the themed --app-surface tint composited on top — opaque everywhere,
+   no per-theme overrides, still carries each theme's surface colour. */
+[data-theme] .app-toast-solid {
+  background: linear-gradient(var(--app-surface), var(--app-surface)), var(--app-bg);
+}
 
 /* Floating overlays (hover tooltip, dropdown menus, dialogs) need a READABLE
    background — the faded glass --app-surface is intentionally see-through for
