@@ -223,10 +223,13 @@ export default function CalendarClient({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+  // Float (not floored): when stretching, LABEL + windowDays*COL == gridW
+  // exactly, so the grid fills the viewport edge-to-edge with no right gap.
+  // Flooring lost up to `windowDays` px — very visible at the 30-day window.
   const baseCol = colWidth(windowDays);
   const COL = Math.max(
     baseCol,
-    gridW ? Math.floor((gridW - LABEL) / windowDays) : baseCol,
+    gridW ? (gridW - LABEL) / windowDays : baseCol,
   );
 
   const dates = useMemo(
