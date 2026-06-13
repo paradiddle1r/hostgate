@@ -469,22 +469,28 @@ h1, h2 { letter-spacing: -0.028em; }
   z-index: 0;
   pointer-events: none;
   overflow: hidden;
-  filter: blur(60px) saturate(1.3);
+  /* saturate stays ≤ 1 so the blobs read soft + pastel, not neon. */
+  filter: blur(64px) saturate(0.95);
 }
 .app-mesh i {
   position: absolute;
   width: 46vw;
   height: 46vw;
   border-radius: 50%;
-  opacity: 0.55;
+  opacity: 0.5;
   animation: appMeshDrift 26s ease-in-out infinite;
 }
-.app-mesh i:nth-child(1) { top: -12%; left: -8%; background: #0a84ff; animation-delay: 0s; }
-.app-mesh i:nth-child(2) { top: -6%; right: -10%; background: #64d2ff; animation-delay: -7s; }
-.app-mesh i:nth-child(3) { bottom: -14%; left: 18%; background: #bf5af2; animation-delay: -13s; }
-.app-mesh i:nth-child(4) { bottom: -10%; right: 6%; background: #5e9dff; animation-delay: -19s; }
-[data-theme="dark-glass"] .app-mesh i:nth-child(1) { background: #64d2ff; }
-[data-theme="dark-glass"] .app-mesh i:nth-child(2) { background: #0a84ff; }
+/* Pastel quartet — powder blue / cotton-candy pink / lavender / mint.
+   Base values drive light-glass; dark-glass uses slightly more luminous
+   pastels below so they still glow over the near-black base. */
+.app-mesh i:nth-child(1) { top: -12%; left: -8%; background: #bcdff7; animation-delay: 0s; }
+.app-mesh i:nth-child(2) { top: -6%; right: -10%; background: #ffd6ec; animation-delay: -7s; }
+.app-mesh i:nth-child(3) { bottom: -14%; left: 18%; background: #dcc9ff; animation-delay: -13s; }
+.app-mesh i:nth-child(4) { bottom: -10%; right: 6%; background: #c6efe1; animation-delay: -19s; }
+[data-theme="dark-glass"] .app-mesh i:nth-child(1) { background: #a9d8ff; }
+[data-theme="dark-glass"] .app-mesh i:nth-child(2) { background: #ffc7e3; }
+[data-theme="dark-glass"] .app-mesh i:nth-child(3) { background: #cbb8ff; }
+[data-theme="dark-glass"] .app-mesh i:nth-child(4) { background: #b4f0dc; }
 @keyframes appMeshDrift {
   0%, 100% { transform: translate(0, 0) scale(1); }
   33% { transform: translate(8vw, 6vh) scale(1.12); }
