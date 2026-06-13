@@ -298,14 +298,20 @@ export default function CalendarClient({
     if (!dragB) return;
     document.body.style.userSelect = "";
 
-    function applyGhost() {
+    // One rAF does BOTH the ghost transform AND the drop-target highlight.
+    // Crucially the highlight's elementFromPoint() — a synchronous layout
+    // hit-test — runs here (≤ once per frame), NOT on every raw pointermove
+    // (pointers fire 120–1000 Hz; calling it per event was the real jank).
+    function applyFrame() {
       rafRef.current = null;
-      const g = ghostRef.current;
-      if (!g) return;
       const { x, y } = lastPtRef.current;
-      const ox = grabOffsetRef.current.x;
-      const oy = grabOffsetRef.current.y;
-      g.style.transform = `translate3d(${x - ox}px, ${y - oy}px, 0)`;
+      const g = ghostRef.current;
+      if (g) {
+        const ox = grabOffsetRef.current.x;
+        const oy = grabOffsetRef.current.y;
+        g.style.transform = `translate3d(${x - ox}px, ${y - oy}px, 0)`;
+      }
+      updateHighlight(x, y);
     }
 
     function updateHighlight(x: number, y: number) {
@@ -334,7 +340,7 @@ export default function CalendarClient({
         // Reveal the ghost only once a real drag begins (so a click stays a click).
         // Position it synchronously at reveal so it never flashes at (0,0).
         if (ghostRef.current) {
-          applyGhost();
+          applyFrame();
           ghostRef.current.style.display = "block";
         }
         // Dim the original in place + let the pointer fall through it, so the
@@ -345,9 +351,9 @@ export default function CalendarClient({
         }
       }
       if (!movedRef.current) return;
-      // Coalesce visual updates into a single rAF — zero per-move setState.
-      if (rafRef.current == null) rafRef.current = requestAnimationFrame(applyGhost);
-      updateHighlight(e.clientX, e.clientY);
+      // Coalesce ghost move + drop highlight into a single rAF — zero per-move
+      // setState and at most one elementFromPoint hit-test per frame.
+      if (rafRef.current == null) rafRef.current = requestAnimationFrame(applyFrame);
     }
 
     async function up(e: PointerEvent) {
