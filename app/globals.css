@@ -341,11 +341,11 @@ h1, h2 { letter-spacing: -0.028em; }
 
 [data-theme="light-glass"] {
   --app-bg: #eef4fc;
-  --app-surface: rgba(255, 255, 255, 0.38);
-  --app-surface-2: rgba(247, 250, 255, 0.26);
+  --app-surface: rgba(255, 255, 255, 0.26);
+  --app-surface-2: rgba(247, 250, 255, 0.16);
   --app-fg: #0b1220;
   --app-fg-muted: #5a6678;
-  --app-border: rgba(255, 255, 255, 0.42);
+  --app-border: rgba(255, 255, 255, 0.34);
   --app-accent: #0a84ff;
   --app-accent-fg: #ffffff;
   --app-danger: #dc2626;
@@ -355,11 +355,11 @@ h1, h2 { letter-spacing: -0.028em; }
 
 [data-theme="dark-glass"] {
   --app-bg: #0a0e14;
-  --app-surface: rgba(22, 28, 44, 0.34);
-  --app-surface-2: rgba(34, 42, 60, 0.24);
+  --app-surface: rgba(22, 28, 44, 0.22);
+  --app-surface-2: rgba(34, 42, 60, 0.15);
   --app-fg: #f2f6fc;
   --app-fg-muted: #9aa6b8;
-  --app-border: rgba(255, 255, 255, 0.1);
+  --app-border: rgba(255, 255, 255, 0.08);
   --app-accent: #64d2ff;
   --app-accent-fg: #06121c;
   --app-danger: #f87171;
@@ -484,6 +484,19 @@ h1, h2 { letter-spacing: -0.028em; }
   border-radius: 999px;
   display: flex;
   align-items: center;
+  transition: box-shadow 0.12s, filter 0.12s;
+}
+/* Lifted bar while dragging — mirrors hotel-pms's .bbar.dragging: a real lift
+   (shadow + slight transparency + grabbing cursor). transform is written
+   inline per-frame, so it is intentionally NOT transitioned here. */
+.app-cal-bar-dragging {
+  opacity: 0.92 !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45) !important;
+  cursor: grabbing !important;
+  transition: none !important;
+}
+.app-cal-bar:hover:not(.app-cal-bar-dragging) {
+  filter: brightness(1.06) saturate(1.04);
 }
 [data-theme="light-glass"] .app-cal-bar {
   background: color-mix(in srgb, var(--bc) 26%, rgba(255, 255, 255, 0.66)) !important;

@@ -206,8 +206,28 @@ export default function CalendarClient({
 
   const canManage = role === "owner" || role === "admin";
 
-  // Day-column width follows the selected window (7→64, 14→46, 30→30).
-  const COL = colWidth(windowDays);
+  // Day-column width: starts at the window's natural base (7→64, 14→46, 30→30)
+  // but stretches to fill the grid's available width on wide screens so the
+  // table never leaves dead space on the right. We measure the scroll viewport
+  // and, when it's wider than the natural grid, grow every column evenly. When
+  // it's narrower (small laptops, 30-day window) we keep the base width and let
+  // the viewport scroll horizontally.
+  const gridViewRef = useRef<HTMLDivElement | null>(null);
+  const [gridW, setGridW] = useState(0);
+  useEffect(() => {
+    const el = gridViewRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver((entries) => {
+      setGridW(entries[0].contentRect.width);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const baseCol = colWidth(windowDays);
+  const COL = Math.max(
+    baseCol,
+    gridW ? Math.floor((gridW - LABEL) / windowDays) : baseCol,
+  );
 
   const dates = useMemo(
     () => Array.from({ length: windowDays }, (_, i) => addDays(from, i)),
@@ -233,24 +253,22 @@ export default function CalendarClient({
     return base != null ? base : null;
   };
 
-  // ── drag-to-move ──────────────────────────────────────────────────────────
-  // Smoothness rule: NO setState during pointermove. The dragged bar is dimmed
-  // once (on threshold cross), and a fixed GHOST clone of the bar tracks the
-  // cursor by writing `transform` directly to a ref'd node every move (rAF-
-  // coalesced). The drop-target row + day-cell highlight is also toggled via
-  // direct DOM class flips, never React state.
-  const [dragB, setDragB] = useState<Booking | null>(null); // identity only — for ghost render + opacity
+  // ── drag-to-move (hotel-pms feel) ──────────────────────────────────────────
+  // Smoothness rule: NO setState during pointermove. Instead of a separate ghost
+  // clone, the REAL bar lifts and tracks the cursor in 2D — its `transform` is
+  // written directly to the ref'd node every move (rAF-coalesced) and it gets a
+  // `.app-cal-bar-dragging` class (shadow + lift + grabbing cursor), exactly like
+  // hotel-pms's `.bbar.dragging`. The drop-target row + day-cell highlight is
+  // toggled via direct DOM class flips in the same rAF, never React state.
+  const [dragB, setDragB] = useState<Booking | null>(null); // identity only — tooltip suppression + listener gate
   const startRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-  const grabOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 }); // pointer → bar top-left
-  const ghostSizeRef = useRef<{ w: number; h: number }>({ w: 120, h: 30 });
   const movedRef = useRef(false);
   const justDraggedRef = useRef(false);
-  const ghostRef = useRef<HTMLDivElement | null>(null);
   const rafRef = useRef<number | null>(null);
   const lastPtRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const hiRowRef = useRef<HTMLElement | null>(null); // currently highlighted room row
   const hiCellRef = useRef<HTMLElement | null>(null); // currently highlighted day cell
-  const srcBarRef = useRef<HTMLElement | null>(null); // the bar being dragged (dimmed in place)
+  const srcBarRef = useRef<HTMLElement | null>(null); // the bar being dragged (lifted in place)
 
   // Rich hover tooltip: the booking + pointer coords.
   const [tip, setTip] = useState<{ b: Booking; x: number; y: number } | null>(null);
@@ -270,8 +288,10 @@ export default function CalendarClient({
   }
   function restoreSrcBar() {
     if (srcBarRef.current) {
-      srcBarRef.current.style.opacity = "";
+      srcBarRef.current.style.transform = "";
+      srcBarRef.current.style.zIndex = "";
       srcBarRef.current.style.pointerEvents = "";
+      srcBarRef.current.classList.remove("app-cal-bar-dragging");
       srcBarRef.current = null;
     }
   }
@@ -280,15 +300,10 @@ export default function CalendarClient({
     if (e.button !== 0) return;
     startRef.current = { x: e.clientX, y: e.clientY };
     lastPtRef.current = { x: e.clientX, y: e.clientY };
-    // Capture where inside the bar the user grabbed, so the ghost sits under
-    // the cursor exactly (no jump). Also snapshot the bar's rendered size + node
-    // (so we can dim it in place + disable its hit-testing only once a real drag
-    // begins — keeping a plain click a click that opens the edit modal).
-    const node = e.currentTarget as HTMLElement;
-    const rect = node.getBoundingClientRect();
-    srcBarRef.current = node;
-    grabOffsetRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    ghostSizeRef.current = { w: rect.width, h: rect.height };
+    // Grab the real bar node — it's the element we lift and translate. We don't
+    // touch it until the move threshold is crossed, so a plain click stays a
+    // click that opens the edit modal.
+    srcBarRef.current = e.currentTarget as HTMLElement;
     movedRef.current = false;
     setTip(null);
     setDragB(b);
@@ -298,18 +313,18 @@ export default function CalendarClient({
     if (!dragB) return;
     document.body.style.userSelect = "";
 
-    // One rAF does BOTH the ghost transform AND the drop-target highlight.
+    // One rAF does BOTH the bar's lift-transform AND the drop-target highlight.
     // Crucially the highlight's elementFromPoint() — a synchronous layout
     // hit-test — runs here (≤ once per frame), NOT on every raw pointermove
     // (pointers fire 120–1000 Hz; calling it per event was the real jank).
     function applyFrame() {
       rafRef.current = null;
       const { x, y } = lastPtRef.current;
-      const g = ghostRef.current;
-      if (g) {
-        const ox = grabOffsetRef.current.x;
-        const oy = grabOffsetRef.current.y;
-        g.style.transform = `translate3d(${x - ox}px, ${y - oy}px, 0)`;
+      const src = srcBarRef.current;
+      if (src) {
+        const dx = x - startRef.current.x;
+        const dy = y - startRef.current.y;
+        src.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
       }
       updateHighlight(x, y);
     }
@@ -337,17 +352,14 @@ export default function CalendarClient({
       if (!movedRef.current && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) {
         movedRef.current = true;
         document.body.style.userSelect = "none";
-        // Reveal the ghost only once a real drag begins (so a click stays a click).
-        // Position it synchronously at reveal so it never flashes at (0,0).
-        if (ghostRef.current) {
-          applyFrame();
-          ghostRef.current.style.display = "block";
-        }
-        // Dim the original in place + let the pointer fall through it, so the
-        // drop highlight + elementFromPoint lookup see the grid, not this bar.
+        // Lift the real bar only once a real drag begins (so a click stays a
+        // click). pointer-events:none lets the drop highlight + elementFromPoint
+        // lookup see the grid beneath, not this bar.
         if (srcBarRef.current) {
-          srcBarRef.current.style.opacity = "0.4";
+          srcBarRef.current.style.zIndex = "40";
           srcBarRef.current.style.pointerEvents = "none";
+          srcBarRef.current.classList.add("app-cal-bar-dragging");
+          applyFrame(); // position synchronously so it never flashes at origin
         }
       }
       if (!movedRef.current) return;
@@ -781,7 +793,7 @@ export default function CalendarClient({
         {/* ── Grid (desktop) ── */}
         {/* min-w-0 lets this 1fr grid item shrink so its fixed-width inner div
             scrolls internally (overflow-x-auto) instead of blowing out the page. */}
-        <div className="hidden min-w-0 overflow-x-auto rounded-2xl border border-[var(--app-border)] lg:block">
+        <div ref={gridViewRef} className="hidden min-w-0 overflow-x-auto rounded-2xl border border-[var(--app-border)] lg:block">
           <div style={{ width: LABEL + windowDays * COL }}>
             {/* date header — weekday + day */}
             <div className="flex border-b border-[var(--app-border)] bg-[var(--app-surface-2)]">
@@ -923,30 +935,6 @@ export default function CalendarClient({
       {/* rich hover tooltip */}
       {tip && !dragB && (
         <BookingTooltip b={tip.b} x={tip.x} y={tip.y} s={s} currency={currency} roomLabel={roomLabel(tip.b.room_id)} />
-      )}
-
-      {/* drag ghost — a clean clone of the bar that tracks the cursor with zero
-          lag. Positioned via transform written directly in the rAF handler;
-          starts hidden (display:none) until the move threshold is crossed so a
-          plain click never flashes it. pointer-events:none keeps it out of the
-          elementFromPoint drop lookup. */}
-      {dragB && (
-        <div
-          ref={ghostRef}
-          className="app-cal-bar pointer-events-none fixed left-0 top-0 z-[60] flex items-center truncate rounded-md px-2.5 text-left text-xs font-medium text-white shadow-lg"
-          style={{
-            display: "none",
-            width: ghostSizeRef.current.w,
-            height: ghostSizeRef.current.h,
-            background: barBg(dragB) === "transparent" ? "var(--app-accent)" : barBg(dragB),
-            // @ts-expect-error CSS var consumed by .app-cal-bar's frosted recipe
-            "--bc": barBg(dragB) === "transparent" ? "var(--app-accent)" : barBg(dragB),
-            willChange: "transform",
-            opacity: 0.95,
-          }}
-        >
-          {dragB.guest_name}
-        </div>
       )}
 
       {seed && (

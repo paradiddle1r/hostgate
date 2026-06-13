@@ -79,7 +79,7 @@ export default function AnnouncementBanner() {
   if (visible.length === 0) return null;
 
   return (
-    <div className="sticky top-0 z-40 flex flex-col">
+    <div className="sticky top-0 z-20 flex flex-col">
       {visible.map((a) => {
         const sev = SEVERITY[a.severity] ?? SEVERITY.info;
         return (

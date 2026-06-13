@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>HostGate — ระบบจัดการที่พักสำหรับเจ้าของโรงแรมยุคใหม่</title>
+<meta name="description" content="ปฏิทินจอง เช็คอิน ใบกำกับภาษี ค่าเช่ารายเดือน มินิบาร์ และแม่บ้าน — รวมงานหน้าฟรอนต์ทั้งหมดไว้ในระบบเดียว เริ่มฟรีถึง 5 ห้อง">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- fonts: injected at runtime (see inline script) so first paint never waits on
+     the two-origin Google Fonts chain; system Thai fonts paint instantly, then swap.
+     noscript users get the plain blocking stylesheet. -->
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,640;1,9..144,420&family=Anuphan:wght@400;600;700&display=swap"></noscript>
+
+<style>
+/* ============================================================
+   HOSTGATE — "The Front Desk"
+   Warm editorial luxury. Ivory paper, espresso ink, brass &
+   forest. Fraunces display / Anuphan Thai body.
+   ============================================================ */
+:root{
+  --paper:      #f6f1e7;
+  --paper-2:    #efe8d9;
+  --paper-3:    #e7ddc9;
+  --ink:        #221b12;
+  --ink-soft:   #6b5f4e;
+  --line:       #d9cdb6;
+  --brass:      #a87b2f;
+  --brass-deep: #855e1d;
+  --brass-soft: #e9d9ba;
+  --forest:     #1d3a2c;
+  --forest-2:   #16291f;
+  --forest-soft:#2c5340;
+  --clay:       #b75c3c;
+  --cream-on-dark: #f3ecdd;
+
+  --font-display: "Fraunces", "Georgia", "Anuphan", "Thonburi", serif;
+  --font-body: "Anuphan", "Thonburi", "Noto Sans Thai", system-ui, sans-serif;
+
+  --s1: 0.5rem; --s2: 1rem; --s3: 1.5rem; --s4: 2.5rem;
+  --s5: 4rem;  --s6: 6.5rem;
+
+  --r-sm: 10px; --r-md: 18px; --r-lg: 28px;
+  --shadow-card: 0 2px 6px rgba(34,27,18,.06), 0 24px 60px -18px rgba(34,27,18,.22);
+  --shadow-pop:  0 2px 4px rgba(34,27,18,.08), 0 14px 34px -10px rgba(34,27,18,.28);
+  --maxw: 1180px;
+}
+
+*{ margin:0; padding:0; box-sizing:border-box; }
+html{ scroll-behavior:smooth; }
+@media (prefers-reduced-motion: reduce){
+  html{ scroll-behavior:auto; }
+  *,*::before,*::after{ animation-duration:.001s !important; animation-iteration-count:1 !important; transition-duration:.001s !important; }
+}
+
+body{
+  font-family: var(--font-body);
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.65;
+  overflow-x: clip;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* grain — one fixed overlay; no blend mode (paint cost on mobile) */
+body::after{
+  content:""; position:fixed; inset:0; z-index:9999; pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.055'/%3E%3C/svg%3E");
+}
+
+/* below-fold sections: skip layout/paint until near viewport.
+   (dark sections + footer excluded — content-visibility makes axe mis-read
+   their background color and throw false contrast violations) */
+.features, .stats-band, .how, .pricing, .voices, .faq{
+  content-visibility:auto;
+  contain-intrinsic-size: auto 760px;
+}
+
+img,svg{ display:block; max-width:100%; }
+a{ color:inherit; }
+button{ font:inherit; cursor:pointer; }
+::selection{ background:var(--brass-soft); color:var(--ink); }
+
+.wrap{ width:100%; max-width:var(--maxw); margin-inline:auto; padding-inline: clamp(1.1rem, 4vw, 2.5rem); }
+
+/* ---------- type ---------- */
+.eyebrow{
+  display:inline-flex; align-items:center; gap:.6rem;
+  font-size:.78rem; font-weight:600; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--brass-deep);
+}
+.eyebrow::before{ content:""; width:26px; height:1px; background:var(--brass); }
+.display-accent{
+  font-family:var(--font-display); font-style:italic; font-weight:420;
+  letter-spacing:.01em;
+}
+h1,h2,h3{ line-height:1.18; font-weight:700; letter-spacing:-.01em; }
+.h-display{ font-size: clamp(2.15rem, 5.6vw, 4.1rem); }
+.h-section{ font-size: clamp(1.7rem, 3.8vw, 2.7rem); }
+.lede{ font-size: clamp(1rem, 1.6vw, 1.18rem); color:var(--ink-soft); max-width:36em; }
+
+/* ---------- buttons ---------- */
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:.55rem;
+  min-height:50px; padding:.8rem 1.7rem; border-radius:999px;
+  font-weight:600; font-size:1rem; text-decoration:none; border:1px solid transparent;
+  transition: transform .25s cubic-bezier(.2,.9,.3,1.2), box-shadow .25s, background .25s, color .25s;
+}
+.btn:active{ transform:scale(.97); }
+.btn-primary{ background:var(--ink); color:var(--paper); box-shadow:0 10px 26px -10px rgba(34,27,18,.5); }
+.btn-primary:hover{ transform:translateY(-2px); box-shadow:0 16px 34px -10px rgba(34,27,18,.55); }
+.btn-primary .arr{ transition:transform .25s; }
+.btn-primary:hover .arr{ transform:translateX(4px); }
+.btn-ghost{ background:transparent; color:var(--ink); border-color:var(--ink); }
+.btn-ghost:hover{ background:var(--ink); color:var(--paper); }
+.btn-brass{ background:var(--brass); color:#fff; }
+.btn-brass:hover{ background:var(--brass-deep); transform:translateY(-2px); }
+.btn-cream{ background:var(--cream-on-dark); color:var(--forest-2); }
+.btn-cream:hover{ transform:translateY(-2px); box-shadow:0 16px 34px -12px rgba(0,0,0,.5); }
+a:focus-visible,button:focus-visible,summary:focus-visible{
+  outline:3px solid var(--brass); outline-offset:3px; border-radius:6px;
+}
+
+/* ---------- nav ---------- */
+.nav{
+  position:fixed; top:0; left:0; right:0; z-index:100;
+  transition: background .35s, box-shadow .35s, backdrop-filter .35s;
+}
+.nav.scrolled{
+  background:color-mix(in srgb, var(--paper) 86%, transparent);
+  -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
+  box-shadow:0 1px 0 var(--line);
+}
+.nav-inner{ display:flex; align-items:center; gap:1.5rem; min-height:74px; }
+.brand{ display:flex; align-items:center; gap:.65rem; text-decoration:none; font-weight:700; font-size:1.18rem; letter-spacing:-.01em; }
+.brand-mark{
+  width:38px; height:38px; border-radius:11px; background:var(--forest);
+  display:grid; place-items:center; color:var(--cream-on-dark); flex:none;
+}
+.nav-links{ display:none; align-items:center; gap:.25rem; margin-inline:auto; }
+.nav-links a{
+  text-decoration:none; font-weight:600; font-size:.95rem; color:var(--ink-soft);
+  padding:.7rem 1rem; border-radius:999px; transition:color .2s, background .2s;
+  display:inline-flex; align-items:center; min-height:44px;
+}
+.nav-links a:hover{ color:var(--ink); background:var(--paper-2); }
+.nav-cta{ display:none; align-items:center; gap:.6rem; }
+.nav-cta .btn{ min-height:44px; padding:.55rem 1.3rem; font-size:.93rem; }
+.menu-btn{
+  margin-left:auto; width:48px; height:48px; border-radius:12px; border:1px solid var(--line);
+  background:var(--paper); position:relative;
+}
+.menu-btn span{
+  display:block; width:20px; height:2px; background:var(--ink); border-radius:2px;
+  position:absolute; left:13px; transition:transform .3s, opacity .3s, top .3s;
+}
+.menu-btn span:nth-child(1){ top:16px; }
+.menu-btn span:nth-child(2){ top:22px; }
+.menu-btn span:nth-child(3){ top:28px; }
+.menu-open .menu-btn span:nth-child(1){ top:22px; transform:rotate(45deg); }
+.menu-open .menu-btn span:nth-child(2){ opacity:0; }
+.menu-open .menu-btn span:nth-child(3){ top:22px; transform:rotate(-45deg); }
+
+.mobile-menu{
+  position:fixed; inset:0; z-index:90; background:var(--paper);
+  display:flex; flex-direction:column; padding:6.5rem 1.5rem 2rem;
+  transform:translateY(-102%); visibility:hidden;
+  transition:transform .45s cubic-bezier(.7,0,.25,1), visibility 0s .45s;
+}
+.menu-open .mobile-menu{ transform:translateY(0); visibility:visible; transition-delay:0s; }
+.mobile-menu a{
+  text-decoration:none; font-size:1.6rem; font-weight:600; padding:.85rem .25rem;
+  border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center;
+}
+.mobile-menu a .display-accent{ font-size:1rem; color:var(--brass-deep); }
+.mobile-menu .btn{ margin-top:1.6rem; }
+
+@media (min-width: 900px){
+  .nav-links, .nav-cta{ display:inline-flex; }
+  .menu-btn, .mobile-menu{ display:none; }
+}
+
+/* ---------- hero ---------- */
+.hero{ position:relative; padding-top: clamp(7rem, 16vh, 9.5rem); padding-bottom: var(--s5); }
+.hero-bg{
+  position:absolute; inset:0; overflow:hidden; pointer-events:none;
+}
+.hero-bg::before{ /* big soft brass glow */
+  content:""; position:absolute; width:70vmax; height:70vmax; right:-25vmax; top:-30vmax;
+  background:radial-gradient(closest-side, rgba(168,123,47,.16), transparent 70%);
+  border-radius:50%;
+}
+.hero-bg::after{ /* paper grid like a registry book */
+  content:""; position:absolute; inset:0;
+  background-image: linear-gradient(var(--line) 1px, transparent 1px),
+                    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 64px 64px;
+  opacity:.18;
+  -webkit-mask-image:radial-gradient(ellipse 90% 70% at 50% 0%, black 30%, transparent 75%);
+          mask-image:radial-gradient(ellipse 90% 70% at 50% 0%, black 30%, transparent 75%);
+}
+.hero-grid{ position:relative; display:grid; gap:var(--s4); align-items:center; }
+.hero-copy .eyebrow{ margin-bottom:1.2rem; }
+.hero h1{ margin-bottom:1.3rem; }
+.hero h1 .display-accent{ color:var(--brass-deep); }
+.hero .lede{ margin-bottom:2rem; }
+.hero-ctas{ display:flex; flex-wrap:wrap; gap:.8rem; align-items:center; }
+.hero-note{ width:100%; margin-top:.9rem; font-size:.88rem; color:var(--ink-soft); display:flex; align-items:center; gap:.45rem; }
+.hero-note svg{ color:var(--forest-soft); flex:none; }
+
+/* hero calendar artwork */
+.deskcard{
+  position:relative;
+  background:#fffdf8;
+  border:1px solid var(--line);
+  border-radius:var(--r-lg);
+  box-shadow:var(--shadow-card);
+  padding: clamp(.9rem, 2vw, 1.4rem);
+  transform:rotate(-1.4deg);
+}
+.deskcard-head{
+  display:flex; align-items:center; justify-content:space-between; gap:.8rem;
+  padding:.1rem .3rem .8rem;
+}
+.deskcard-title{ font-weight:700; font-size:.95rem; display:flex; align-items:center; gap:.5rem; }
+.deskcard-title .dot{ width:8px; height:8px; border-radius:50%; background:var(--forest-soft); }
+.deskcard-month{ font-family:var(--font-display); font-style:italic; font-size:.9rem; color:var(--ink-soft); }
+.calgrid{
+  --cell: minmax(0,1fr);
+  display:grid; grid-template-columns: 52px repeat(7, var(--cell));
+  border:1px solid var(--line); border-radius:var(--r-md); overflow:hidden;
+  background:var(--paper);
+  font-size:.72rem;
+}
+.calgrid .c{
+  border-right:1px solid var(--line); border-bottom:1px solid var(--line);
+  min-height:42px; position:relative; background:#fffdf8;
+}
+.calgrid .c:nth-child(8n){ border-right:none; }
+.calgrid .head{
+  background:var(--paper-2); min-height:36px; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; font-weight:600; color:var(--ink-soft); line-height:1.1;
+}
+.calgrid .head b{ color:var(--ink); font-size:.8rem; }
+.calgrid .room{
+  background:var(--paper-2); display:flex; align-items:center; justify-content:center;
+  font-weight:700; color:var(--ink); font-size:.78rem;
+}
+.calgrid .today{ background:#fbf3df; }
+.calrow{ display:contents; }
+.bar{
+  position:absolute; top:7px; bottom:7px; border-radius:999px;
+  display:flex; align-items:center; padding-inline:.6rem; gap:.3rem;
+  color:#fff; font-weight:600; font-size:.66rem; white-space:nowrap; overflow:hidden;
+  transform-origin:left center; box-shadow:0 3px 8px -3px rgba(34,27,18,.4);
+}
+.bar.b-forest{ background:var(--forest-soft); }
+.bar.b-brass{ background:#86601c; }  /* darkened for 4.5:1 white-text contrast */
+.bar.b-clay{ background:#a04526; }
+.bar.b-ink{ background:var(--ink); }
+.float-chip{
+  position:absolute; background:#fffdf8; border:1px solid var(--line); border-radius:14px;
+  box-shadow:var(--shadow-pop); padding:.6rem .9rem; font-size:.78rem; font-weight:600;
+  display:flex; align-items:center; gap:.55rem; line-height:1.3;
+}
+.float-chip .big{ font-family:var(--font-display); font-weight:640; font-size:1.25rem; letter-spacing:-.01em; }
+.chip-occ{ top:-2.3rem; right:4%; transform:rotate(2deg); }
+.chip-occ .ring{
+  width:34px; height:34px; border-radius:50%; flex:none;
+  background:conic-gradient(var(--forest-soft) 0 87%, var(--paper-3) 87% 100%);
+  display:grid; place-items:center;
+}
+.chip-occ .ring::after{ content:""; width:22px; height:22px; border-radius:50%; background:#fffdf8; position:absolute; }
+.chip-new{ bottom:-1.2rem; left:4%; transform:rotate(-2deg); color:var(--forest); }
+.chip-new .pulse{ width:9px; height:9px; border-radius:50%; background:var(--clay); flex:none; animation:pulse 2.2s infinite; }
+@keyframes pulse{ 0%{ box-shadow:0 0 0 0 rgba(183,92,60,.45);} 70%{ box-shadow:0 0 0 9px rgba(183,92,60,0);} 100%{ box-shadow:0 0 0 0 rgba(183,92,60,0);} }
+
+@media (min-width: 980px){
+  .hero-grid{ grid-template-columns: 1.05fr .95fr; gap:var(--s5); }
+}
+
+/* ---------- ticker ---------- */
+.ticker-band{ border-block:1px solid var(--line); background:var(--paper-2); overflow:hidden; }
+.ticker{ display:flex; gap:0; width:max-content; animation:tick 36s linear infinite; }
+.ticker:hover{ animation-play-state:paused; }
+@keyframes tick{ to{ transform:translateX(-50%);} }
+.ticker-set{ display:flex; align-items:center; }
+.ticker-item{
+  display:flex; align-items:center; gap:.8rem; padding:1rem 2.2rem;
+  font-weight:600; font-size:.92rem; color:var(--ink-soft); white-space:nowrap;
+}
+.ticker-item .k{ font-family:var(--font-display); font-style:italic; color:var(--brass-deep); }
+.ticker-item::after{ content:"✳"; margin-left:2.2rem; color:var(--brass); font-size:.7rem; }
+@media (prefers-reduced-motion: reduce){ .ticker{ animation:none; flex-wrap:wrap; width:auto; } }
+
+/* ---------- manifesto ---------- */
+.manifesto{ padding-block: var(--s6); }
+.manifesto .inner{ max-width:880px; }
+.manifesto p.big{
+  font-size: clamp(1.45rem, 3.4vw, 2.4rem); font-weight:600; line-height:1.45; letter-spacing:-.01em;
+}
+.manifesto p.big .display-accent{ color:var(--brass-deep); }
+.manifesto .sig{ margin-top:2rem; display:flex; align-items:center; gap:1rem; color:var(--ink-soft); font-size:.92rem; }
+.manifesto .sig::before{ content:""; width:44px; height:1px; background:var(--brass); }
+
+/* ---------- features (editorial index) ---------- */
+.features{ padding-block: var(--s5) var(--s6); }
+.features-head{ display:flex; flex-wrap:wrap; align-items:end; justify-content:space-between; gap:1.2rem; margin-bottom:var(--s4); }
+.feat-list{ border-top:1px solid var(--line); }
+.feat{
+  display:grid; grid-template-columns: auto 1fr; gap: .4rem 1.2rem;
+  padding: 1.6rem 0 1.7rem; border-bottom:1px solid var(--line);
+  position:relative; transition:background .3s;
+}
+.feat:hover{ background:linear-gradient(90deg, transparent, rgba(168,123,47,.06), transparent); }
+.feat-num{
+  grid-row:1 / span 2;
+  font-family:var(--font-display); font-style:italic; font-weight:420;
+  font-size:clamp(1.5rem, 3vw, 2rem); color:var(--brass); width:2.6ch;
+}
+.feat h3{ font-size:clamp(1.18rem, 2.3vw, 1.55rem); display:flex; align-items:center; gap:.7rem; flex-wrap:wrap; }
+.feat .tag{
+  font-size:.68rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--forest); background:rgba(44,83,64,.1); border:1px solid rgba(44,83,64,.22);
+  padding:.18rem .6rem; border-radius:999px;
+}
+.feat p{ color:var(--ink-soft); max-width:52em; font-size:.98rem; }
+.feat-icon{
+  position:absolute; right:0; top:1.7rem; color:var(--paper-3);
+  transition:color .3s, transform .3s; display:none;
+}
+.feat:hover .feat-icon{ color:var(--brass); transform:rotate(-8deg) scale(1.08); }
+@media (min-width:760px){ .feat{ grid-template-columns:auto 1fr; padding-right:84px; } .feat-icon{ display:block; } }
+
+/* ---------- showcase (dark) ---------- */
+.showcase{
+  background:var(--forest-2); color:var(--cream-on-dark);
+  padding-block: var(--s6); position:relative; overflow:hidden;
+  border-radius: clamp(20px, 4vw, 44px);
+  margin-inline: clamp(.5rem, 1.6vw, 1.2rem);
+}
+.showcase::before{
+  content:""; position:absolute; inset:0;
+  background-image:linear-gradient(rgba(243,236,221,.05) 1px, transparent 1px),
+                   linear-gradient(90deg, rgba(243,236,221,.05) 1px, transparent 1px);
+  background-size:56px 56px; pointer-events:none;
+}
+.showcase .eyebrow{ color:var(--brass-soft); }
+.showcase .eyebrow::before{ background:var(--brass-soft); }
+.showcase .h-section .display-accent{ color:var(--brass-soft); }
+.showcase .lede{ color:rgba(243,236,221,.72); }
+.show-grid{ display:grid; gap:var(--s4); align-items:center; position:relative; }
+@media (min-width:980px){ .show-grid{ grid-template-columns:.9fr 1.1fr; gap:var(--s5); } }
+
+.dash{
+  background:rgba(243,236,221,.07);
+  border:1px solid rgba(243,236,221,.16);
+  border-radius:var(--r-lg); padding:clamp(.9rem, 2vw, 1.3rem);
+  -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+}
+.dash-stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:.7rem; margin-bottom:.9rem; }
+.dstat{
+  background:rgba(243,236,221,.08); border:1px solid rgba(243,236,221,.12);
+  border-radius:var(--r-md); padding:.85rem .9rem;
+}
+.dstat .l{ font-size:.68rem; letter-spacing:.08em; text-transform:uppercase; color:rgba(243,236,221,.6); }
+.dstat .v{ font-family:var(--font-display); font-weight:640; font-size:clamp(1.05rem, 2vw, 1.5rem); margin-top:.15rem; }
+.dstat .v small{ font-size:.65em; color:var(--brass-soft); }
+.dash-chart{
+  display:flex; align-items:flex-end; gap:6px; height:120px; padding:1rem;
+  background:rgba(243,236,221,.06); border:1px solid rgba(243,236,221,.1); border-radius:var(--r-md);
+  margin-bottom:.9rem;
+}
+.dash-chart i{
+  flex:1; background:linear-gradient(to top, var(--brass), var(--brass-soft));
+  border-radius:4px 4px 0 0; transform-origin:bottom; min-width:6px;
+}
+.dash-rows{ display:flex; flex-direction:column; gap:.5rem; }
+.drow{
+  display:flex; align-items:center; gap:.7rem; font-size:.82rem;
+  background:rgba(243,236,221,.06); border:1px solid rgba(243,236,221,.1);
+  border-radius:12px; padding:.55rem .8rem;
+}
+.drow .st{ width:8px; height:8px; border-radius:50%; flex:none; }
+.st-ok{ background:#86c79b; } .st-warn{ background:#e0b14c; } .st-info{ background:#9cb8e8; }
+.drow .who{ font-weight:600; }
+.drow .meta{ margin-left:auto; color:rgba(243,236,221,.55); font-size:.74rem; white-space:nowrap; }
+
+.show-points{ display:flex; flex-direction:column; gap:1.1rem; margin-top:1.8rem; }
+.spoint{ display:flex; gap:.9rem; align-items:flex-start; }
+.spoint .ico{
+  width:38px; height:38px; flex:none; border-radius:11px; display:grid; place-items:center;
+  background:rgba(243,236,221,.1); border:1px solid rgba(243,236,221,.16); color:var(--brass-soft);
+}
+.spoint b{ display:block; font-size:1rem; }
+.spoint span{ color:rgba(243,236,221,.66); font-size:.9rem; }
+
+/* ---------- stats band ---------- */
+.stats-band{ padding-block:var(--s5); }
+.stats-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:1px; background:var(--line); border:1px solid var(--line); border-radius:var(--r-lg); overflow:hidden; }
+.stat-cell{ background:var(--paper); padding:clamp(1.4rem,3vw,2.4rem); text-align:center; }
+.stat-cell .n{
+  font-family:var(--font-display); font-weight:640; letter-spacing:-.02em;
+  font-size:clamp(2rem, 5vw, 3.4rem); color:var(--ink); line-height:1.05;
+}
+.stat-cell .n em{ font-style:italic; color:var(--brass-deep); font-weight:420; font-size:.6em; }
+.stat-cell .l{ margin-top:.4rem; color:var(--ink-soft); font-size:.9rem; }
+@media (min-width:760px){ .stats-grid{ grid-template-columns:repeat(4,1fr);} }
+.stats-note{ text-align:center; color:var(--ink-soft); font-size:.78rem; margin-top:.8rem; }
+
+/* ---------- how it works ---------- */
+.how{ padding-block:var(--s5) var(--s6); }
+.how-head{ margin-bottom:var(--s4); }
+.steps{ display:grid; gap:1rem; counter-reset:step; }
+.step{
+  background:#fffdf8; border:1px solid var(--line); border-radius:var(--r-lg);
+  padding:clamp(1.4rem, 2.6vw, 2rem); position:relative; overflow:hidden;
+  transition: transform .3s, box-shadow .3s;
+}
+.step:hover{ transform:translateY(-4px); box-shadow:var(--shadow-card); }
+.step::before{
+  counter-increment:step; content:"0" counter(step);
+  font-family:var(--font-display); font-style:italic; font-weight:420;
+  font-size:clamp(3.2rem, 7vw, 4.6rem); line-height:1; color:var(--paper-3);
+  position:absolute; right:1rem; top:.6rem; pointer-events:none;
+}
+.step h3{ font-size:1.25rem; margin-bottom:.5rem; position:relative; }
+.step p{ color:var(--ink-soft); font-size:.95rem; position:relative; max-width:30em; }
+.step .time{
+  display:inline-flex; align-items:center; gap:.4rem; margin-top:1rem;
+  font-size:.8rem; font-weight:600; color:var(--forest);
+  background:rgba(44,83,64,.09); padding:.3rem .8rem; border-radius:999px;
+}
+@media (min-width:860px){ .steps{ grid-template-columns:repeat(3,1fr); gap:1.2rem; } }
+
+/* ---------- pricing ---------- */
+.pricing{ padding-block:var(--s5) var(--s6); background:var(--paper-2); border-block:1px solid var(--line); }
+.pricing-head{ text-align:center; max-width:620px; margin-inline:auto; margin-bottom:var(--s4); }
+.pricing-head .lede{ margin-inline:auto; }
+.plans{ display:grid; gap:1.1rem; align-items:stretch; }
+.plan{
+  background:#fffdf8; border:1px solid var(--line); border-radius:var(--r-lg);
+  padding:clamp(1.5rem, 2.6vw, 2.1rem); display:flex; flex-direction:column;
+  position:relative; transition:transform .3s, box-shadow .3s;
+}
+.plan:hover{ transform:translateY(-5px); box-shadow:var(--shadow-card); }
+.plan-name{ font-weight:700; font-size:1.05rem; display:flex; align-items:center; gap:.6rem; }
+.plan-for{ color:var(--ink-soft); font-size:.86rem; margin-top:.15rem; }
+.plan-price{ margin:1.2rem 0 .2rem; font-family:var(--font-display); font-weight:640; font-size:clamp(2.1rem,4vw,2.9rem); letter-spacing:-.02em; line-height:1; }
+.plan-price small{ font-family:var(--font-body); font-weight:600; font-size:.95rem; color:var(--ink-soft); letter-spacing:0; }
+.plan ul{ list-style:none; margin:1.3rem 0 1.6rem; display:flex; flex-direction:column; gap:.55rem; }
+.plan li{ display:flex; gap:.6rem; align-items:flex-start; font-size:.92rem; color:var(--ink-soft); }
+.plan li svg{ flex:none; margin-top:.22rem; color:var(--forest-soft); }
+.plan .btn{ margin-top:auto; width:100%; }
+.plan-hot{
+  background:var(--forest); color:var(--cream-on-dark); border-color:var(--forest);
+  box-shadow:0 24px 54px -18px rgba(22,41,31,.55);
+}
+.plan-hot .plan-for, .plan-hot li{ color:rgba(243,236,221,.72); }
+.plan-hot li svg{ color:var(--brass-soft); }
+.plan-hot .plan-price small{ color:rgba(243,236,221,.6); }
+.hot-badge{
+  position:absolute; top:-13px; left:50%; transform:translateX(-50%);
+  background:var(--brass); color:#fff; font-size:.72rem; font-weight:700; letter-spacing:.08em;
+  padding:.3rem .95rem; border-radius:999px; white-space:nowrap; text-transform:uppercase;
+}
+@media (min-width:900px){ .plans{ grid-template-columns:repeat(3,1fr); gap:1.4rem; } .plan-hot{ transform:scale(1.03);} .plan-hot:hover{ transform:scale(1.03) translateY(-5px);} }
+.pricing-foot{ text-align:center; margin-top:1.4rem; color:var(--ink-soft); font-size:.85rem; }
+
+/* ---------- testimonial ---------- */
+.voices{ padding-block:var(--s6); }
+.bigquote{ max-width:900px; margin-inline:auto; text-align:center; }
+.bigquote .qmark{
+  font-family:var(--font-display); font-style:italic; font-size:4.5rem; line-height:.6;
+  color:var(--brass); display:block; margin-bottom:1.4rem;
+}
+.bigquote blockquote{ font-size:clamp(1.35rem, 3vw, 2.05rem); font-weight:600; line-height:1.5; letter-spacing:-.01em; }
+.bigquote .attr{ margin-top:1.6rem; color:var(--ink-soft); font-size:.95rem; }
+.bigquote .attr b{ color:var(--ink); }
+.voice-cards{ display:grid; gap:1rem; margin-top:var(--s5); }
+.vcard{
+  background:#fffdf8; border:1px solid var(--line); border-radius:var(--r-lg); padding:1.5rem;
+  display:flex; flex-direction:column; gap:1rem; font-size:.93rem;
+}
+.vcard p{ color:var(--ink-soft); }
+.vcard .who{ display:flex; align-items:center; gap:.8rem; margin-top:auto; }
+.vcard .av{
+  width:42px; height:42px; border-radius:50%; flex:none; display:grid; place-items:center;
+  font-family:var(--font-display); font-weight:640; color:#fff; font-size:1rem;
+}
+.vcard .who b{ display:block; font-size:.92rem; }
+.vcard .who span{ color:var(--ink-soft); font-size:.8rem; }
+@media (min-width:860px){ .voice-cards{ grid-template-columns:repeat(3,1fr); gap:1.3rem; } }
+
+/* ---------- FAQ ---------- */
+.faq{ padding-block:var(--s5) var(--s6); }
+.faq-grid{ display:grid; gap:var(--s4); }
+@media (min-width:900px){ .faq-grid{ grid-template-columns:.8fr 1.2fr; } }
+.faq details{
+  border-bottom:1px solid var(--line); padding-block:.35rem;
+}
+.faq details:first-of-type{ border-top:1px solid var(--line); }
+.faq summary{
+  list-style:none; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:1rem;
+  font-weight:600; font-size:1.02rem; padding:1.05rem .2rem; min-height:48px;
+}
+.faq summary::-webkit-details-marker{ display:none; }
+.faq summary .x{
+  flex:none; width:30px; height:30px; border-radius:50%; border:1px solid var(--line);
+  display:grid; place-items:center; transition:transform .3s, background .3s, color .3s;
+  font-weight:400; font-size:1.15rem; line-height:1; color:var(--brass-deep);
+}
+.faq details[open] summary .x{ transform:rotate(45deg); background:var(--ink); color:var(--paper); border-color:var(--ink); }
+.faq .a{ padding:0 .2rem 1.3rem; color:var(--ink-soft); font-size:.95rem; max-width:54em; }
+
+/* ---------- final CTA ---------- */
+.final{
+  margin: 0 clamp(.5rem,1.6vw,1.2rem) clamp(.5rem,1.6vw,1.2rem);
+  background:var(--forest-2); color:var(--cream-on-dark);
+  border-radius:clamp(20px,4vw,44px); position:relative; overflow:hidden;
+  padding-block:var(--s6);
+  text-align:center;
+}
+.final::before{
+  content:""; position:absolute; width:60vmax; height:60vmax; left:50%; top:100%;
+  transform:translate(-50%,-30%);
+  background:radial-gradient(closest-side, rgba(200,144,69,.22), transparent 70%);
+  border-radius:50%;
+}
+.final .keytag{
+  display:inline-flex; align-items:center; gap:.6rem; margin-bottom:1.6rem;
+  border:1px solid rgba(243,236,221,.25); border-radius:999px; padding:.45rem 1.1rem;
+  font-size:.82rem; color:var(--brass-soft); position:relative;
+}
+.final h2{ font-size:clamp(2rem, 5vw, 3.6rem); letter-spacing:-.015em; position:relative; }
+.final h2 .display-accent{ color:var(--brass-soft); }
+.final p{ color:rgba(243,236,221,.7); margin:1.1rem auto 2.2rem; max-width:34em; position:relative; padding-inline:1.2rem; }
+.final .hero-ctas{ justify-content:center; position:relative; }
+.final .hero-note{ justify-content:center; color:rgba(243,236,221,.6); }
+
+/* ---------- footer ---------- */
+footer{ background:var(--forest-2); color:rgba(243,236,221,.65); margin-top:calc(-1 * clamp(.5rem,1.6vw,1.2rem)); padding-top:clamp(.5rem,1.6vw,1.2rem); }
+.foot-inner{ padding-block:var(--s5) var(--s3); }
+.foot-grid{ display:grid; gap:2.2rem; }
+.foot-brand p{ font-size:.9rem; max-width:26em; margin-top:.8rem; }
+.foot-col h3{ color:var(--cream-on-dark); font-size:.85rem; letter-spacing:.1em; text-transform:uppercase; margin-bottom:.9rem; font-weight:700; }
+.foot-col ul{ list-style:none; display:flex; flex-direction:column; gap:.55rem; }
+.foot-col a{ text-decoration:none; font-size:.92rem; transition:color .2s; display:inline-block; padding:.15rem 0; }
+.foot-col a:hover{ color:var(--brass-soft); }
+@media (min-width:860px){ .foot-grid{ grid-template-columns: 1.4fr 1fr 1fr 1fr; gap:2rem; } }
+.foot-word{ margin-top:var(--s4); text-align:center; user-select:none; }
+.foot-word::after{
+  content:"HOSTGATE";
+  font-family:var(--font-display); font-weight:640; letter-spacing:-.02em;
+  font-size:clamp(3.2rem, 13vw, 11rem); line-height:.95; color:rgba(243,236,221,.1);
+  white-space:nowrap;
+}
+.foot-base{
+  display:flex; flex-wrap:wrap; gap:.8rem; justify-content:space-between; align-items:center;
+  border-top:1px solid rgba(243,236,221,.12); padding-block:1.4rem; font-size:.82rem;
+  color:rgba(243,236,221,.8); /* small text — keep ≥4.5:1 on forest */
+}
+
+/* ---------- reveal helpers (JS sets initial state; CSS no-JS safe) ---------- */
+.gs-reveal{ will-change:transform, opacity; }
+</style>
+</head>
+<body>
+
+<!-- ===================== NAV ===================== -->
+<header class="nav" id="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="#top" aria-label="HostGate — กลับขึ้นด้านบน">
+      <span class="brand-mark" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-3"/><path d="M9 9h.01M9 13h.01M9 17h.01"/></svg>
+      </span>
+      HostGate
+    </a>
+    <nav class="nav-links" aria-label="เมนูหลัก">
+      <a href="#features">ฟีเจอร์</a>
+      <a href="#how">วิธีเริ่มต้น</a>
+      <a href="#pricing">ราคา</a>
+      <a href="#faq">คำถามที่พบบ่อย</a>
+    </nav>
+    <div class="nav-cta">
+      <a class="btn btn-ghost" href="/login">เข้าสู่ระบบ</a>
+      <a class="btn btn-primary" href="/signup">เริ่มใช้ฟรี</a>
+    </div>
+    <button class="menu-btn" id="menuBtn" aria-label="เปิดเมนู" aria-expanded="false" aria-controls="mobileMenu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<div class="mobile-menu" id="mobileMenu" aria-hidden="true">
+  <a href="#features"><span>ฟีเจอร์</span><span class="display-accent">01</span></a>
+  <a href="#how"><span>วิธีเริ่มต้น</span><span class="display-accent">02</span></a>
+  <a href="#pricing"><span>ราคา</span><span class="display-accent">03</span></a>
+  <a href="#faq"><span>คำถามที่พบบ่อย</span><span class="display-accent">04</span></a>
+  <a class="btn btn-primary" href="/signup">เริ่มใช้ฟรี <span class="arr" aria-hidden="true">→</span></a>
+  <a class="btn btn-ghost" style="margin-top:.7rem" href="/login">เข้าสู่ระบบ</a>
+  <p style="margin-top:1rem; font-size:.85rem; color:var(--ink-soft); text-align:center">ไม่ต้องใช้บัตรเครดิต · ฟรีถึง 5 ห้อง</p>
+</div>
+
+<main id="top">
+
+<!-- ===================== HERO ===================== -->
+<section class="hero" aria-labelledby="hero-h">
+  <div class="hero-bg" aria-hidden="true"></div>
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <span class="eyebrow gs-reveal" data-rv>Property Management System</span>
+      <h1 class="h-display gs-reveal" data-rv id="hero-h">
+        ที่พักทั้งหลังของคุณ<br>
+        ในหน้าจอ<span class="display-accent">เดียว</span>
+      </h1>
+      <p class="lede gs-reveal" data-rv>
+        ปฏิทินจอง เช็คอิน ใบกำกับภาษี ค่าเช่ารายเดือน มินิบาร์ และคิวแม่บ้าน —
+        HostGate รวมงานหน้าฟรอนต์ทั้งหมดไว้ในระบบเดียว
+        ออกแบบมาเพื่อเจ้าของโรงแรม อพาร์ตเมนต์ และเกสต์เฮาส์ขนาด 5–50 ห้องโดยเฉพาะ
+      </p>
+      <div class="hero-ctas gs-reveal" data-rv>
+        <a class="btn btn-primary" href="/signup">เริ่มใช้ฟรี <span class="arr" aria-hidden="true">→</span></a>
+        <a class="btn btn-ghost" href="#showcase">ดูตัวอย่างระบบ</a>
+        <span class="hero-note">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+          ฟรีถึง 5 ห้อง · ตั้งค่าเสร็จใน 5 นาที · ไม่ต้องใช้บัตรเครดิต
+        </span>
+      </div>
+    </div>
+
+    <div class="hero-art gs-reveal" data-rv aria-hidden="true">
+      <div class="deskcard" id="deskcard">
+        <div class="deskcard-head">
+          <span class="deskcard-title"><span class="dot"></span> ปฏิทินการจอง</span>
+          <span class="deskcard-month">June 2026</span>
+        </div>
+        <div class="calgrid">
+          <div class="c head"></div>
+          <div class="c head"><span>จ</span><b>15</b></div>
+          <div class="c head"><span>อ</span><b>16</b></div>
+          <div class="c head today"><span>พ</span><b>17</b></div>
+          <div class="c head"><span>พฤ</span><b>18</b></div>
+          <div class="c head"><span>ศ</span><b>19</b></div>
+          <div class="c head"><span>ส</span><b>20</b></div>
+          <div class="c head"><span>อา</span><b>21</b></div>
+
+          <div class="c room">101</div>
+          <div class="c" style="position:relative">
+            <span class="bar b-forest cal-bar" style="left:6px; width:calc(300% - 12px); z-index:2;">คุณนภา · 3 คืน</span>
+          </div>
+          <div class="c"></div><div class="c today"></div><div class="c"></div>
+          <div class="c" style="position:relative">
+            <span class="bar b-brass cal-bar" style="left:6px; width:calc(200% - 12px); z-index:2;">Mr. Tan</span>
+          </div>
+          <div class="c"></div><div class="c"></div>
+
+          <div class="c room">102</div>
+          <div class="c"></div>
+          <div class="c" style="position:relative">
+            <span class="bar b-clay cal-bar" style="left:6px; width:calc(400% - 12px); z-index:2;">ครอบครัวศรีสุข · 4 คืน</span>
+          </div>
+          <div class="c today"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div>
+
+          <div class="c room">103</div>
+          <div class="c" style="position:relative">
+            <span class="bar b-ink cal-bar" style="left:6px; width:calc(200% - 12px); z-index:2;">Agoda #8841</span>
+          </div>
+          <div class="c"></div><div class="c today"></div>
+          <div class="c" style="position:relative">
+            <span class="bar b-forest cal-bar" style="left:6px; width:calc(300% - 12px); z-index:2;">คุณเมษ์ · 3 คืน</span>
+          </div>
+          <div class="c"></div><div class="c"></div><div class="c"></div>
+
+          <div class="c room">201</div>
+          <div class="c"></div><div class="c"></div>
+          <div class="c today" style="position:relative">
+            <span class="bar b-brass cal-bar" style="left:6px; width:calc(200% - 12px); z-index:2;">Walk-in</span>
+          </div>
+          <div class="c"></div><div class="c"></div>
+          <div class="c" style="position:relative">
+            <span class="bar b-clay cal-bar" style="left:6px; width:calc(200% - 12px); z-index:2;">Booking.com</span>
+          </div>
+          <div class="c"></div>
+
+          <div class="c room">202</div>
+          <div class="c" style="position:relative">
+            <span class="bar b-brass cal-bar" style="left:6px; width:calc(600% - 12px); z-index:2;">เช่ารายเดือน · คุณบีม</span>
+          </div>
+          <div class="c"></div><div class="c today"></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="c"></div>
+        </div>
+
+        <div class="float-chip chip-occ" id="chipOcc">
+          <span class="ring" aria-hidden="true"></span>
+          <span><span class="big">87%</span><br>อัตราเข้าพักวันนี้</span>
+        </div>
+        <div class="float-chip chip-new" id="chipNew">
+          <span class="pulse" aria-hidden="true"></span>
+          การจองใหม่จากหน้าเว็บ — ห้อง Deluxe, 2 คืน
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== TICKER ===================== -->
+<div class="ticker-band" aria-hidden="true">
+  <div class="ticker" id="ticker">
+    <div class="ticker-set">
+      <span class="ticker-item">เช็คอินเร็วขึ้น <span class="k">3 เท่า</span></span>
+      <span class="ticker-item">ใบกำกับภาษี <span class="k">ออกได้ในคลิกเดียว</span></span>
+      <span class="ticker-item">จองตรงผ่านเว็บ <span class="k">ไม่เสียค่าคอม</span></span>
+      <span class="ticker-item">คิวแม่บ้าน <span class="k">สร้างอัตโนมัติ</span></span>
+      <span class="ticker-item">มิเตอร์น้ำไฟ <span class="k">คิดบิลให้เอง</span></span>
+      <span class="ticker-item">ใช้ได้บนมือถือ <span class="k">ทุกเครื่อง</span></span>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MANIFESTO ===================== -->
+<section class="manifesto">
+  <div class="wrap inner">
+    <span class="eyebrow gs-reveal" data-rv>ทำไมต้อง HostGate</span>
+    <p class="big gs-reveal" data-rv style="margin-top:1.2rem">
+      สมุดจด ไฟล์ Excel แชทไลน์ และความจำของพนักงาน —
+      ที่พักส่วนใหญ่บริหารด้วยเครื่องมือที่<span class="display-accent">ไม่เคยถูกออกแบบ</span>มาเพื่องานนี้
+      เราสร้าง HostGate เพื่อให้เจ้าของที่พักขนาดเล็กได้ใช้ระบบระดับเดียวกับเชนใหญ่
+      ในราคาที่สมเหตุสมผล และใช้เป็นภายในวันเดียว
+    </p>
+    <div class="sig gs-reveal" data-rv>สร้างโดยคนที่ดูแลที่พักจริง ไม่ใช่แค่คนเขียนซอฟต์แวร์</div>
+  </div>
+</section>
+
+<!-- ===================== FEATURES ===================== -->
+<section class="features" id="features" aria-labelledby="features-h">
+  <div class="wrap">
+    <div class="features-head">
+      <div>
+        <span class="eyebrow gs-reveal" data-rv>ฟีเจอร์หลัก</span>
+        <h2 class="h-section gs-reveal" data-rv id="features-h" style="margin-top:.8rem">
+          ครบทุกงานหน้าฟรอนต์<br>ตั้งแต่<span class="display-accent">จองจนเช็คเอาต์</span>
+        </h2>
+      </div>
+      <p class="lede gs-reveal" data-rv style="max-width:24em">
+        ทุกฟีเจอร์เกิดจากงานจริงหน้าเคาน์เตอร์ — ไม่มีฟังก์ชันโชว์ที่ไม่ได้ใช้
+      </p>
+    </div>
+
+    <div class="feat-list">
+      <article class="feat gs-reveal" data-rv>
+        <span class="feat-num" aria-hidden="true">01</span>
+        <h3>ปฏิทินจองที่ลากได้จริง</h3>
+        <p>ย้ายห้อง เลื่อนวันเข้าพัก ด้วยการลากครั้งเดียว ระบบกันจองซ้อนให้อัตโนมัติ
+           วางข้อความยืนยันจาก Agoda หรืออีเมล ระบบดึงชื่อ วันที่ เบอร์โทร มากรอกให้เอง</p>
+        <svg class="feat-icon" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M3 9h18M8 2v4M16 2v4"/><rect x="6.5" y="12" width="7" height="3" rx="1.5" fill="currentColor" stroke="none"/></svg>
+      </article>
+
+      <article class="feat gs-reveal" data-rv>
+        <span class="feat-num" aria-hidden="true">02</span>
+        <h3>หน้ารับจองตรงของคุณเอง <span class="tag">ไม่เสียค่าคอม</span></h3>
+        <p>ลิงก์จองส่วนตัวสำหรับที่พักของคุณ — แขกเห็นห้องว่างและราคาจริง จองเองได้ทันที
+           การจองวิ่งเข้าปฏิทินเป็นรายการรอยืนยัน ให้ทีมงานกดรับและจัดห้อง</p>
+        <svg class="feat-icon" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3.5 9h17M3.5 15h17M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+      </article>
+
+      <article class="feat gs-reveal" data-rv>
+        <span class="feat-num" aria-hidden="true">03</span>
+        <h3>ใบกำกับภาษีและบัญชีครบ</h3>
+        <p>ออกใบกำกับภาษี ใบเสร็จรับเงิน พร้อมเลขรันอัตโนมัติ รองรับ VAT รวม/แยก
+           รับชำระหลายงวด พิมพ์เอกสารขนาด A4 สวยพร้อมส่งบัญชี และดูรายงานรายได้ย้อนหลังได้ทันที</p>
+        <svg class="feat-icon" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2Z"/><path d="M9.5 8h5M9.5 12h5"/></svg>
+      </article>
+
+      <article class="feat gs-reveal" data-rv>
+        <span class="feat-num" aria-hidden="true">04</span>
+        <h3>ระบบเช่ารายเดือนในตัว</h3>
+        <p>สำหรับอพาร์ตเมนต์และห้องเช่าระยะยาว — จดมิเตอร์น้ำไฟ ระบบคำนวณบิลรายเดือนให้
+           ออกสัญญาเช่าไทย-อังกฤษ และสรุปยอดคืนเงินประกันตอนย้ายออกอย่างโปร่งใส</p>
+        <svg class="feat-icon" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      </article>
+
+      <article class="feat gs-reveal" data-rv>
+        <span class="feat-num" aria-hidden="true">05</span>
+        <h3>แม่บ้านและงานซ่อมไม่ตกหล่น</h3>
+        <p>เช็คเอาต์ปุ๊บ คิวทำความสะอาดขึ้นทันที พนักงานกดรับงาน-ปิดงานจากมือถือ
+           แจ้งซ่อมพร้อมติดตามค่าใช้จ่ายและรายได้ที่เสียไปจากห้องที่ปิดซ่อม</p>
+        <svg class="feat-icon" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 21 6.5-6.5M14 4l6 6-8.5 8.5a3 3 0 0 1-4.24-4.24Z"/><path d="m16 2 6 6"/></svg>
+      </article>
+
+      <article class="feat gs-reveal" data-rv>
+        <span class="feat-num" aria-hidden="true">06</span>
+        <h3>มินิบาร์และของขายหน้าเคาน์เตอร์</h3>
+        <p>ระบบขายในตัว — กดขายน้ำ ขนม ของใช้ ตัดสต็อกอัตโนมัติ
+           เก็บเงินสด โอน บัตร หรือลงบิลห้องไว้เก็บตอนเช็คเอาต์ก็ได้</p>
+        <svg class="feat-icon" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.6"/><circle cx="17" cy="20" r="1.6"/><path d="M3 3h2l2.6 12.5a2 2 0 0 0 2 1.5h7.3a2 2 0 0 0 2-1.6L21 7H6"/></svg>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== SHOWCASE (dark) ===================== -->
+<section class="showcase" id="showcase" aria-labelledby="show-h">
+  <div class="wrap show-grid">
+    <div>
+      <span class="eyebrow gs-reveal" data-rv>หน้าจอจริงของระบบ</span>
+      <h2 class="h-section gs-reveal" data-rv id="show-h" style="margin-top:.8rem">
+        เปิดมาก็เห็นทั้งวัน<br>ของที่พักคุณ<span class="display-accent">ทันที</span>
+      </h2>
+      <p class="lede gs-reveal" data-rv style="margin-top:1rem">
+        ใครเข้าวันนี้ ใครออกวันนี้ ห้องไหนยังไม่ได้ทำความสะอาด รายได้ถึงไหนแล้ว —
+        คำตอบทั้งหมดอยู่บนหน้าแรก ไม่ต้องเปิดสิบแท็บ
+      </p>
+      <div class="show-points">
+        <div class="spoint gs-reveal" data-rv>
+          <span class="ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20V10M18 20V4M6 20v-4"/></svg></span>
+          <div><b>ตัวเลขที่เจ้าของอยากเห็น</b><span>อัตราเข้าพัก รายได้วันนี้ ยอดค้างชำระ — สดทุกวินาที</span></div>
+        </div>
+        <div class="spoint gs-reveal" data-rv>
+          <span class="ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="m2 8 10 6L22 8"/></svg></span>
+          <div><b>การจองเว็บแจ้งเตือนถึงทีม</b><span>แขกจองผ่านหน้าเว็บปุ๊บ อีเมลแจ้งทีมงานทันที</span></div>
+        </div>
+        <div class="spoint gs-reveal" data-rv>
+          <span class="ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></svg></span>
+          <div><b>มือถือเครื่องเดียวก็พอ</b><span>ทุกหน้าจอออกแบบให้ใช้บนมือถือได้เต็มรูปแบบ</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dash gs-reveal" data-rv aria-hidden="true">
+      <div class="dash-stats">
+        <div class="dstat"><div class="l">เข้าพักวันนี้</div><div class="v">87<small>%</small></div></div>
+        <div class="dstat"><div class="l">รายได้วันนี้</div><div class="v">฿42,800</div></div>
+        <div class="dstat"><div class="l">รอเช็คอิน</div><div class="v">6 <small>ห้อง</small></div></div>
+      </div>
+      <div class="dash-chart" id="dashChart">
+        <i style="height:34%"></i><i style="height:48%"></i><i style="height:42%"></i>
+        <i style="height:61%"></i><i style="height:55%"></i><i style="height:70%"></i>
+        <i style="height:64%"></i><i style="height:78%"></i><i style="height:72%"></i>
+        <i style="height:86%"></i><i style="height:80%"></i><i style="height:94%"></i>
+      </div>
+      <div class="dash-rows">
+        <div class="drow"><span class="st st-ok"></span><span class="who">ห้อง 103 · คุณเมษ์</span> เช็คอินแล้ว <span class="meta">14:02</span></div>
+        <div class="drow"><span class="st st-warn"></span><span class="who">ห้อง 102</span> รอทำความสะอาด <span class="meta">เช็คเอาต์ 12:00</span></div>
+        <div class="drow"><span class="st st-info"></span><span class="who">จองใหม่ · หน้าเว็บ</span> Deluxe · 2 คืน <span class="meta">เมื่อครู่</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== STATS ===================== -->
+<section class="stats-band" aria-label="ตัวเลขจากผู้ใช้งาน">
+  <div class="wrap">
+    <div class="stats-grid">
+      <div class="stat-cell gs-reveal" data-rv><div class="n"><span class="count" data-to="120">0</span><em>+</em></div><div class="l">ที่พักที่ใช้งานจริง</div></div>
+      <div class="stat-cell gs-reveal" data-rv><div class="n"><span class="count" data-to="38500" data-fmt="th">0</span><em>+</em></div><div class="l">คืนที่จองผ่านระบบ</div></div>
+      <div class="stat-cell gs-reveal" data-rv><div class="n"><span class="count" data-to="99.9" data-dec="1">0</span><em>%</em></div><div class="l">ระบบพร้อมใช้งาน</div></div>
+      <div class="stat-cell gs-reveal" data-rv><div class="n"><span class="count" data-to="4.9" data-dec="1">0</span><em>★</em></div><div class="l">คะแนนจากผู้ใช้</div></div>
+    </div>
+    <p class="stats-note">* ตัวเลขตัวอย่างเพื่อการออกแบบ</p>
+  </div>
+</section>
+
+<!-- ===================== HOW ===================== -->
+<section class="how" id="how" aria-labelledby="how-h">
+  <div class="wrap">
+    <div class="how-head">
+      <span class="eyebrow gs-reveal" data-rv>เริ่มต้นใช้งาน</span>
+      <h2 class="h-section gs-reveal" data-rv id="how-h" style="margin-top:.8rem">
+        คืนนี้สมัคร <span class="display-accent">พรุ่งนี้เช็คอิน</span>
+      </h2>
+    </div>
+    <div class="steps">
+      <div class="step gs-reveal" data-rv>
+        <h3>สร้างผังห้องของคุณ</h3>
+        <p>บอกจำนวนชั้นและห้องต่อชั้น ระบบสร้างเลขห้องและประเภทห้องให้อัตโนมัติ
+           สมัครเสร็จก็มีปฏิทินพร้อมใช้ทันที</p>
+        <span class="time">⏱ ประมาณ 5 นาที</span>
+      </div>
+      <div class="step gs-reveal" data-rv>
+        <h3>ตั้งราคาและเปิดรับจอง</h3>
+        <p>กำหนดราคาต่อคืน ทำแผนราคาช่วงไฮซีซั่น แล้วแชร์ลิงก์จองตรงของคุณ
+           ให้แขกจองเองได้เลย</p>
+        <span class="time">⏱ ประมาณ 10 นาที</span>
+      </div>
+      <div class="step gs-reveal" data-rv>
+        <h3>รับแขกคนแรกผ่านระบบ</h3>
+        <p>เช็คอิน เก็บเงิน ออกใบเสร็จ — จบในหน้าจอเดียว
+           มีอะไรติดขัด ทีมงานคนไทยพร้อมช่วยทางแชท</p>
+        <span class="time">⏱ วันแรกที่ใช้งาน</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== PRICING ===================== -->
+<section class="pricing" id="pricing" aria-labelledby="pricing-h">
+  <div class="wrap">
+    <div class="pricing-head">
+      <span class="eyebrow gs-reveal" data-rv style="justify-content:center">ราคา</span>
+      <h2 class="h-section gs-reveal" data-rv id="pricing-h" style="margin-top:.8rem">
+        เริ่มฟรี <span class="display-accent">โตแล้วค่อยจ่าย</span>
+      </h2>
+      <p class="lede gs-reveal" data-rv style="margin-top:.9rem">
+        ไม่มีค่าติดตั้ง ไม่มีสัญญาผูกมัด ยกเลิกหรือลดแพ็กเกจได้ทุกเมื่อ
+      </p>
+    </div>
+
+    <div class="plans">
+      <div class="plan gs-reveal" data-rv>
+        <div class="plan-name">Free</div>
+        <div class="plan-for">เกสต์เฮาส์เล็ก เริ่มจัดระบบครั้งแรก</div>
+        <div class="plan-price">฿0 <small>/ เดือน</small></div>
+        <ul>
+          <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> สูงสุด 5 ห้อง</li>
+          <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> ปฏิทินจอง + เช็คอิน/เอาต์</li>
+          <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> หน้ารับจองตรงของคุณเอง</li>
+          <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> ทะเบียนแขก + รายงานพื้นฐาน</li>
+        </ul>
+        <a class="btn btn-ghost" href="/signup">เริ่มใช้ฟรี</a>
+      </div>
+
+      <div class="plan plan-hot gs-reveal" data-rv>
+        <span class="hot-badge">คุ้มที่สุด</span>
+        <div class="plan-name">Pro</div>
+        <div class="plan-for">โรงแรมและอพาร์ตเมนต์ที่จริงจัง</div>
+        <div class="plan-price">฿1,290 <small>/ เดือน</small></div>
+        <ul>
+          <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> ไม่จำกัดห้อง ไม่จำกัดผู้ใช้</li>
+          <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> ใบกำกับภาษี + ใบเสร็จ + รายงานรายได้</li>
+          <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> เช่ารายเดือน + มิเตอร์ + สัญญา</li>
+          <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> แม่บ้าน + งานซ่อม + มินิบาร์ POS</li>
+          <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> หลายสาขาในบัญชีเดียว + ธีมพรีเมียม</li>
+        </ul>
+        <a class="btn btn-cream" href="/signup">ทดลองใช้ Pro ฟรี 14 วัน</a>
+      </div>
+
+      <div class="plan gs-reveal" data-rv>
+        <div class="plan-name">Enterprise</div>
+        <div class="plan-for">เชนที่พักหรือมากกว่า 50 ห้อง</div>
+        <div class="plan-price" style="font-size:clamp(1.5rem,3vw,2rem)">คุยกับเรา</div>
+        <ul>
+          <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> ทุกอย่างใน Pro</li>
+          <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> ย้ายข้อมูลจากระบบเดิมให้</li>
+          <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> อบรมทีมงานถึงที่</li>
+          <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> ผู้ดูแลบัญชีส่วนตัว</li>
+        </ul>
+        <a class="btn btn-ghost" href="/contact">นัดคุยกับทีมงาน</a>
+      </div>
+    </div>
+    <p class="pricing-foot">ราคาตัวอย่างเพื่อการออกแบบ · ยังไม่รวม VAT 7%</p>
+  </div>
+</section>
+
+<!-- ===================== VOICES ===================== -->
+<section class="voices" aria-labelledby="voices-h">
+  <div class="wrap">
+    <div class="bigquote gs-reveal" data-rv>
+      <span class="qmark" aria-hidden="true">&ldquo;</span>
+      <h2 class="visually-hidden" id="voices-h" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">เสียงจากผู้ใช้งาน</h2>
+      <blockquote>
+        เมื่อก่อนปิดยอดสิ้นเดือนใช้เวลาสามวัน ตอนนี้กดดูได้ทุกเช้า
+        พนักงานใหม่ใช้เป็นภายในชั่วโมงเดียว — มันควรเป็นแบบนี้ตั้งนานแล้ว
+      </blockquote>
+      <p class="attr"><b>คุณนิว</b> · เจ้าของ Sukhumvit Boutique Apartment, กรุงเทพฯ <span style="opacity:.6">(ข้อความตัวอย่าง)</span></p>
+    </div>
+
+    <div class="voice-cards">
+      <div class="vcard gs-reveal" data-rv>
+        <p>&ldquo;ยอดจองตรงผ่านหน้าเว็บเพิ่มขึ้นชัดเจนตั้งแต่เดือนแรก ไม่ต้องแบ่งค่าคอมให้ใคร&rdquo;</p>
+        <div class="who"><span class="av" style="background:var(--forest-soft)">ม</span><div><b>คุณเมย์</b><span>Riverside Resort, เชียงใหม่</span></div></div>
+      </div>
+      <div class="vcard gs-reveal" data-rv>
+        <p>&ldquo;ระบบเช่ารายเดือนตอบโจทย์หอพักมาก จดมิเตอร์ปุ๊บบิลออกเลย ไม่ต้องนั่งคิดเองอีกแล้ว&rdquo;</p>
+        <div class="who"><span class="av" style="background:var(--brass)">บ</span><div><b>คุณบอย</b><span>หอพักนักศึกษา, ขอนแก่น</span></div></div>
+      </div>
+      <div class="vcard gs-reveal" data-rv>
+        <p>&ldquo;เปิดจากมือถือสวยเหมือนบนคอม เช็คยอดได้แม้ตอนอยู่ต่างประเทศ คุ้มเกินราคา&rdquo;</p>
+        <div class="who"><span class="av" style="background:var(--clay)">พ</span><div><b>คุณพิม</b><span>Pool Villa, ภูเก็ต</span></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== FAQ ===================== -->
+<section class="faq" id="faq" aria-labelledby="faq-h">
+  <div class="wrap faq-grid">
+    <div>
+      <span class="eyebrow gs-reveal" data-rv>คำถามที่พบบ่อย</span>
+      <h2 class="h-section gs-reveal" data-rv id="faq-h" style="margin-top:.8rem">
+        สงสัยอะไร<br>ถามได้<span class="display-accent">เลย</span>
+      </h2>
+      <p class="lede gs-reveal" data-rv style="margin-top:1rem">
+        ไม่เจอคำตอบที่ต้องการ? ทักหาทีมงานได้ที่
+        <a href="/contact" style="color:var(--brass-deep); font-weight:600">หน้าติดต่อเรา</a>
+      </p>
+    </div>
+    <div class="gs-reveal" data-rv>
+      <details>
+        <summary>ใช้ฟรีได้นานแค่ไหน? <span class="x" aria-hidden="true">+</span></summary>
+        <p class="a">ฟรีตลอดไปสำหรับที่พักไม่เกิน 5 ห้อง ไม่ใช่ช่วงทดลอง ไม่มีวันหมดอายุ
+        เมื่อห้องเกิน 5 ห้องหรืออยากใช้ฟีเจอร์ Pro ค่อยอัปเกรด</p>
+      </details>
+      <details>
+        <summary>ต้องลงโปรแกรมอะไรไหม? <span class="x" aria-hidden="true">+</span></summary>
+        <p class="a">ไม่ต้อง — HostGate ทำงานบนเบราว์เซอร์ทั้งหมด ใช้ได้ทั้งคอมพิวเตอร์ แท็บเล็ต
+        และมือถือ ข้อมูลซิงก์กันอัตโนมัติทุกเครื่อง</p>
+      </details>
+      <details>
+        <summary>ข้อมูลที่พักของเราปลอดภัยแค่ไหน? <span class="x" aria-hidden="true">+</span></summary>
+        <p class="a">ข้อมูลของแต่ละที่พักถูกแยกจากกันโดยสมบูรณ์ในระดับฐานข้อมูล
+        เข้ารหัสตลอดการรับส่ง และสำรองข้อมูลอัตโนมัติ ทีมที่พักอื่นไม่มีทางเห็นข้อมูลของคุณ</p>
+      </details>
+      <details>
+        <summary>ย้ายข้อมูลจาก Excel หรือระบบเดิมได้ไหม? <span class="x" aria-hidden="true">+</span></summary>
+        <p class="a">ได้ — แพ็กเกจ Pro ขึ้นไปมีเครื่องมือนำเข้าข้อมูล และทีมงานช่วยย้ายรายชื่อแขก
+        การจองล่วงหน้า และผังห้องให้ฟรีในช่วงเริ่มต้น</p>
+      </details>
+      <details>
+        <summary>ยกเลิกยากไหม มีค่าปรับหรือเปล่า? <span class="x" aria-hidden="true">+</span></summary>
+        <p class="a">ยกเลิกได้ทุกเมื่อจากหน้าตั้งค่า ไม่มีสัญญาผูกมัด ไม่มีค่าปรับ
+        และดาวน์เกรดกลับมาใช้แพ็กเกจฟรีได้โดยข้อมูลไม่หาย</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== FINAL CTA ===================== -->
+<section class="final" aria-labelledby="final-h">
+  <div class="wrap">
+    <span class="keytag gs-reveal" data-rv>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7.5" cy="15.5" r="4.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/></svg>
+      ห้องแรกของคุณ รอเช็คอินอยู่
+    </span>
+    <h2 class="gs-reveal" data-rv id="final-h">คืนเวลาให้ตัวเอง<br>ตั้งแต่<span class="display-accent">คืนนี้</span></h2>
+    <p class="gs-reveal" data-rv>สมัครฟรี สร้างผังห้องเสร็จใน 5 นาที แล้วปล่อยให้ระบบจัดการงานซ้ำ ๆ แทนคุณ</p>
+    <div class="hero-ctas gs-reveal" data-rv>
+      <a class="btn btn-cream" href="/signup">เริ่มใช้ฟรีวันนี้ <span class="arr" aria-hidden="true">→</span></a>
+      <span class="hero-note">ไม่ต้องใช้บัตรเครดิต · ยกเลิกได้ทุกเมื่อ</span>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ===================== FOOTER ===================== -->
+<footer>
+  <div class="wrap foot-inner">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <a class="brand" href="#top" style="color:var(--cream-on-dark)">
+          <span class="brand-mark" style="background:var(--cream-on-dark); color:var(--forest-2)" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-3"/><path d="M9 9h.01M9 13h.01M9 17h.01"/></svg>
+          </span>
+          HostGate
+        </a>
+        <p>ระบบจัดการที่พักสำหรับเจ้าของโรงแรม อพาร์ตเมนต์ และเกสต์เฮาส์ยุคใหม่ สร้างด้วยความเข้าใจงานหน้าเคาน์เตอร์จริง</p>
+      </div>
+      <div class="foot-col">
+        <h3>ผลิตภัณฑ์</h3>
+        <ul>
+          <li><a href="#features">ฟีเจอร์</a></li>
+          <li><a href="#pricing">ราคา</a></li>
+          <li><a href="#showcase">ตัวอย่างระบบ</a></li>
+          <li><a href="/blog">บทความ</a></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h3>บริษัท</h3>
+        <ul>
+          <li><a href="/contact">ติดต่อเรา</a></li>
+          <li><a href="/blog">บล็อก</a></li>
+          <li><a href="#faq">คำถามที่พบบ่อย</a></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h3>ข้อกำหนด</h3>
+        <ul>
+          <li><a href="/terms">ข้อกำหนดการใช้งาน</a></li>
+          <li><a href="/privacy">นโยบายความเป็นส่วนตัว</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot-word" aria-hidden="true"></div>
+    <div class="foot-base">
+      <span>© <span id="year">2026</span> HostGate · สงวนลิขสิทธิ์</span>
+      <span>Made with care for hospitality owners 🛏️</span>
+    </div>
+  </div>
+</footer>
+
+<!-- GSAP (deferred — page renders fully without it) -->
+<script defer src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" integrity="sha384-g4NTh/Iv5PPU4xPyhEWqPcwtNXOvdaDI8LLnyYfyNZOjKJeYQyjzQ9X5275eBjpt" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js" integrity="sha384-Z3REaz79l2IaAZqJsSABtTbhjgOUYyV3p90XNnAPCSHg3EMTz1fouunq9WZRtj3d" crossorigin="anonymous"></script>
+<script>
+(function(){
+  "use strict";
+  var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* web fonts — injected after load so first paint never waits on the
+     two-origin Google Fonts chain; system Thai stack paints instantly. */
+  function loadFonts(){
+    var fontCss = document.createElement("link");
+    fontCss.rel = "stylesheet";
+    fontCss.href = "https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,640;1,9..144,420&family=Anuphan:wght@400;600;700&display=swap";
+    document.head.appendChild(fontCss);
+  }
+  /* strictly after the first painted frame, everywhere — rAF queues before the
+     next paint, the timeout fires after it commits */
+  function loadFontsAfterPaint(){ requestAnimationFrame(function(){ setTimeout(loadFonts, 60); }); }
+  if (document.readyState === "complete") loadFontsAfterPaint();
+  else window.addEventListener("load", loadFontsAfterPaint);
+
+  /* year */
+  var y = document.getElementById("year");
+  if (y) y.textContent = new Date().getFullYear();
+
+  /* nav scroll state */
+  var nav = document.getElementById("nav");
+  var onScroll = function(){ nav.classList.toggle("scrolled", window.scrollY > 14); };
+  onScroll();
+  window.addEventListener("scroll", onScroll, { passive:true });
+
+  /* mobile menu */
+  var menuBtn = document.getElementById("menuBtn");
+  var mobileMenu = document.getElementById("mobileMenu");
+  function closeMenu(){
+    document.body.classList.remove("menu-open");
+    menuBtn.setAttribute("aria-expanded","false");
+    mobileMenu.setAttribute("aria-hidden","true");
+    document.body.style.overflow = "";
+  }
+  menuBtn.addEventListener("click", function(){
+    var open = document.body.classList.toggle("menu-open");
+    menuBtn.setAttribute("aria-expanded", open ? "true" : "false");
+    mobileMenu.setAttribute("aria-hidden", open ? "false" : "true");
+    document.body.style.overflow = open ? "hidden" : "";
+  });
+  mobileMenu.querySelectorAll("a").forEach(function(a){ a.addEventListener("click", closeMenu); });
+
+  /* duplicate ticker content for seamless loop */
+  var ticker = document.getElementById("ticker");
+  if (ticker && !reduced){
+    ticker.appendChild(ticker.querySelector(".ticker-set").cloneNode(true));
+  }
+
+  /* counters — IntersectionObserver, no GSAP dependency */
+  var fmtTH = new Intl.NumberFormat("th-TH");
+  function runCounter(el){
+    var to = parseFloat(el.dataset.to || "0");
+    var dec = parseInt(el.dataset.dec || "0", 10);
+    var fmt = el.dataset.fmt === "th";
+    if (reduced){ el.textContent = fmt ? fmtTH.format(to) : to.toFixed(dec); return; }
+    var t0 = null, dur = 1400;
+    function frame(t){
+      if (!t0) t0 = t;
+      var p = Math.min((t - t0) / dur, 1);
+      var e = 1 - Math.pow(1 - p, 3); /* easeOutCubic */
+      var v = to * e;
+      el.textContent = fmt ? fmtTH.format(Math.round(v)) : v.toFixed(dec);
+      if (p < 1) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }
+  var counters = document.querySelectorAll(".count");
+  if ("IntersectionObserver" in window){
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        if (en.isIntersecting){ runCounter(en.target); io.unobserve(en.target); }
+      });
+    }, { threshold:.5 });
+    counters.forEach(function(c){ io.observe(c); });
+  } else {
+    counters.forEach(runCounter);
+  }
+
+  /* GSAP orchestration — entirely optional; page is fully visible without it */
+  window.addEventListener("load", function(){
+    if (reduced || !window.gsap) return;
+    var g = window.gsap;
+    if (window.ScrollTrigger) g.registerPlugin(window.ScrollTrigger);
+
+    /* hero load sequence */
+    var heroEls = document.querySelectorAll(".hero [data-rv]");
+    g.set(heroEls, { y:26, opacity:0 });
+    g.to(heroEls, { y:0, opacity:1, duration:.9, ease:"power3.out", stagger:.09, delay:.05 });
+
+    /* hero calendar bars draw in */
+    var bars = document.querySelectorAll(".cal-bar");
+    g.set(bars, { scaleX:0 });
+    g.to(bars, { scaleX:1, duration:.7, ease:"power2.inOut", stagger:.1, delay:.55 });
+
+    /* floating chips pop */
+    var chips = [document.getElementById("chipOcc"), document.getElementById("chipNew")].filter(Boolean);
+    g.set(chips, { scale:.6, opacity:0 });
+    g.to(chips, { scale:1, opacity:1, duration:.6, ease:"back.out(1.8)", stagger:.15, delay:1.25 });
+    /* gentle idle float */
+    chips.forEach(function(ch, i){
+      g.to(ch, { y: i ? 7 : -7, duration: 2.6 + i * .5, ease:"sine.inOut", yoyo:true, repeat:-1, delay:1.9 });
+    });
+
+    if (!window.ScrollTrigger) return;
+
+    /* scroll reveals everywhere else */
+    document.querySelectorAll("[data-rv]").forEach(function(el){
+      if (el.closest(".hero")) return;
+      g.set(el, { y:34, opacity:0 });
+      g.to(el, {
+        y:0, opacity:1, duration:.85, ease:"power3.out",
+        scrollTrigger:{ trigger:el, start:"top 86%", once:true }
+      });
+    });
+
+    /* dashboard chart grows when visible */
+    var chart = document.getElementById("dashChart");
+    if (chart){
+      var cols = chart.querySelectorAll("i");
+      g.set(cols, { scaleY:0 });
+      g.to(cols, {
+        scaleY:1, duration:.8, ease:"power2.out", stagger:.05,
+        scrollTrigger:{ trigger:chart, start:"top 85%", once:true }
+      });
+    }
+
+    /* deskcard slight parallax straighten on scroll */
+    var card = document.getElementById("deskcard");
+    if (card){
+      g.to(card, {
+        rotate:0, ease:"none",
+        scrollTrigger:{ trigger:card, start:"top 80%", end:"bottom 20%", scrub:true }
+      });
+    }
+  });
+})();
+</script>
+</body>
+</html>

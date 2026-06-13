@@ -157,7 +157,7 @@ export default function AppShell({
           </div>
 
           {/* Top bar */}
-          <header className="relative z-20 flex h-14 flex-none items-center gap-2 border-b border-[var(--app-border)] px-3 md:px-4">
+          <header className="relative z-30 flex h-14 flex-none items-center gap-2 border-b border-[var(--app-border)] px-3 md:px-4">
             <button className="lg:hidden" onClick={() => setDrawer(true)} aria-label="Open menu">
               <Menu size={22} />
             </button>
