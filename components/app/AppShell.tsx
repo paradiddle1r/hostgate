@@ -199,7 +199,7 @@ export default function AppShell({
                       <ChevronDown size={13} className={`transition-transform ${open ? "rotate-180" : ""}`} />
                     </button>
                     {open && (
-                      <div className="app-surface absolute left-0 top-[calc(100%+6px)] z-30 min-w-[200px] rounded-xl border border-[var(--app-border)] p-1.5 shadow-xl">
+                      <div className="app-popover absolute left-0 top-[calc(100%+6px)] z-30 min-w-[200px] rounded-xl border border-[var(--app-border)] p-1.5 shadow-xl">
                         {g.items.map(({ href, icon: Icon, key }) => {
                           const on = isActive(href);
                           return (
@@ -235,7 +235,7 @@ export default function AppShell({
           {drawer && (
             <div className="fixed inset-0 z-40 lg:hidden">
               <div className="absolute inset-0 bg-black/40" onClick={() => setDrawer(false)} aria-hidden />
-              <aside className="app-surface absolute left-0 top-0 flex h-full w-64 flex-col border-r border-[var(--app-border)]">
+              <aside className="app-popover absolute left-0 top-0 flex h-full w-64 flex-col border-r border-[var(--app-border)]">
                 <div className="flex h-14 flex-none items-center justify-between gap-2 px-5">
                   <span className="truncate text-base font-semibold">{property.name}</span>
                   <button onClick={() => setDrawer(false)} aria-label="Close menu" className="flex-none">

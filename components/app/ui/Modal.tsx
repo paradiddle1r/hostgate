@@ -64,7 +64,7 @@ export default function Modal({
       <div
         ref={cardRef}
         className={
-          "app-surface relative z-10 flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-2xl border " +
+          "app-popover relative z-10 flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-2xl border " +
           "border-[var(--app-border)] text-[var(--app-fg)] shadow-2xl " +
           "sm:max-h-[90vh] sm:rounded-2xl " +
           className

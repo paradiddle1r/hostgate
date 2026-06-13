@@ -439,6 +439,20 @@ h1, h2 { letter-spacing: -0.028em; }
 [data-theme="light-glass"] .app-toast-solid { background: #ffffff; }
 [data-theme="dark-glass"] .app-toast-solid { background: #161c2c; }
 
+/* Floating overlays (hover tooltip, dropdown menus, dialogs) need a READABLE
+   background — the faded glass --app-surface is intentionally see-through for
+   page cards, but content that floats over arbitrary stuff beneath must stay
+   legible. Near-opaque + a blur keeps the frosted look without bleed-through. */
+[data-theme] .app-popover { background: var(--app-surface); }
+[data-theme="light-glass"] .app-popover {
+  background: rgba(255, 255, 255, 0.93);
+  backdrop-filter: blur(14px);
+}
+[data-theme="dark-glass"] .app-popover {
+  background: rgba(18, 23, 36, 0.93);
+  backdrop-filter: blur(14px);
+}
+
 /* ── Liquid mesh (Pro / glass tiers only) ──────────────────────────────────
    The signature drifting glow of the hotel-pms liquid themes. Rendered by the
    AppShell as a fixed layer behind everything; hidden on the flat free themes

@@ -1235,7 +1235,7 @@ function BookingTooltip({
   const nights = b.is_open_ended ? null : nightsBetween(b.check_in, b.check_out);
   return (
     <div
-      className="pointer-events-none fixed z-[80] rounded-xl border border-[var(--app-border)] bg-[var(--app-surface)] p-3 text-xs shadow-xl"
+      className="app-popover pointer-events-none fixed z-[80] rounded-xl border border-[var(--app-border)] p-3 text-xs shadow-xl"
       style={{ left, top, width: W }}
     >
       <div className="mb-1.5 flex items-center gap-2">
