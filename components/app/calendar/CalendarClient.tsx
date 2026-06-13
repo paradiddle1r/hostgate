@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, Plus, BedDouble, LogIn, LogOut, ClipboardPaste, Coins, Search, X } from "lucide-react";
 import type { Room } from "@/lib/db/rooms";
@@ -181,8 +181,8 @@ function barBg(b: Booking): string {
 }
 
 export default function CalendarClient({
-  from,
-  windowDays,
+  from: fromProp,
+  windowDays: windowDaysProp,
   today,
   rooms,
   roomTypes,
@@ -222,6 +222,19 @@ export default function CalendarClient({
   const [search, setSearch] = useState("");
 
   const canManage = role === "owner" || role === "admin";
+
+  // Optimistic window state. `from` + `windowDays` mirror the server props but
+  // update INSTANTLY when the operator changes the timeframe or pages — the grid
+  // reflows immediately from already-loaded data while the URL push refetches
+  // the fuller range in the background (no waiting on the slow DB to reflow).
+  // Every reference below uses these locals; they re-sync when fresh props land.
+  const [from, setFrom] = useState(fromProp);
+  const [windowDays, setWindowDays] = useState(windowDaysProp);
+  const [, startNav] = useTransition();
+  useEffect(() => {
+    setFrom(fromProp);
+    setWindowDays(windowDaysProp);
+  }, [fromProp, windowDaysProp]);
 
   // Day-column width: starts at the window's natural base (7→64, 14→46, 30→30)
   // but stretches to fill the grid's available width on wide screens so the
@@ -514,9 +527,13 @@ export default function CalendarClient({
   }
 
   // Carry BOTH from + days through every navigation so changing one never
-  // silently resets the other.
+  // silently resets the other. Update the local window FIRST (instant reflow),
+  // then push the URL in a transition so the background refetch never blocks the
+  // UI from repainting.
   function pushWindow(nextFrom: string, nextDays: number) {
-    router.push(`/app/calendar?from=${nextFrom}&days=${nextDays}`);
+    setFrom(nextFrom);
+    setWindowDays(nextDays);
+    startNav(() => router.push(`/app/calendar?from=${nextFrom}&days=${nextDays}`));
   }
   function nav(deltaDays: number) {
     pushWindow(addDays(from, deltaDays), windowDays);
