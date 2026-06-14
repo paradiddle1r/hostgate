@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Plus, BedDouble, LogIn, LogOut, ClipboardPaste, Coins, Search, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, BedDouble, ClipboardPaste, Coins, Search, X } from "lucide-react";
 import type { Room } from "@/lib/db/rooms";
 import type { Booking, BookingStatus, BookingType } from "@/lib/db/bookings";
 import type { RateMap } from "@/lib/db/rates";
@@ -24,6 +24,10 @@ export interface RoomTypeBrief {
   name: string;
   daily_rate: number | null;
 }
+
+// A booking enriched with its lease group size, for the Today panel rows.
+type TpRow = Booking & { _groupSize: number };
+const TODAY_CAPS = { arr: 6, dep: 6, ih: 8, iss: 5 } as const;
 
 const LABEL = 60; // px room-label column
 
@@ -570,10 +574,33 @@ export default function CalendarClient({
     }
   }
 
-  // Today panel buckets
-  const arrivals = live.filter((b) => b.check_in === today);
-  const departures = live.filter((b) => b.check_out === today);
-  const inhouse = live.filter((b) => b.check_in <= today && b.check_out > today);
+  // Today panel buckets — group-deduped (one row per lease), with _groupSize.
+  // Stays (standard/monthly) drive arrivals/departures/in-house; OOS rooms
+  // overlapping today land in `issues`. Mirrors hotel-pms's computeTodayPanel.
+  const todayPanel = useMemo(() => {
+    const liveRows = rows.filter((b) => b.status !== "cancelled");
+    const seen = new Set<string>();
+    const arr: TpRow[] = [], dep: TpRow[] = [], ih: TpRow[] = [], iss: TpRow[] = [];
+    for (const b of liveRows) {
+      if (b.booking_group_id) {
+        if (seen.has(b.booking_group_id)) continue;
+        seen.add(b.booking_group_id);
+      }
+      const type = b.booking_type ?? "standard";
+      const isStay = type === "standard" || type === "monthly";
+      const groupSize = b.booking_group_id
+        ? liveRows.filter((x) => x.booking_group_id === b.booking_group_id).length
+        : 1;
+      const e: TpRow = { ...b, _groupSize: groupSize };
+      if (isStay) {
+        if (b.check_in === today) arr.push(e);
+        if (b.check_out === today) dep.push(e);
+        if (b.check_in <= today && b.check_out > today) ih.push(e);
+      }
+      if (type === "oos" && b.check_in <= today && b.check_out > today) iss.push(e);
+    }
+    return { arr, dep, ih, iss };
+  }, [rows, today]);
 
   const roomLabel = (id: string | null) => rooms.find((r) => r.id === id)?.number ?? t("cal.unassigned");
 
@@ -1007,44 +1034,17 @@ export default function CalendarClient({
         </div>
 
         {/* ── Today panel / mobile list ── */}
-        <aside className="space-y-4">
-          <Panel title={`${t("cal.arrivals")} (${arrivals.length})`}>
-            {arrivals.length === 0 && <Muted>{t("cal.none")}</Muted>}
-            {arrivals.map((b) => (
-              <PanelRow key={b.id} onClick={() => setSeed({ booking: b })} name={b.guest_name} sub={roomLabel(b.room_id)}
-                action={
-                  b.status !== "checked_in" ? (
-                    <IconBtn label={t("cal.markCheckedIn")} onClick={(e) => { e.stopPropagation(); quick(b, "checked_in"); }}>
-                      <LogIn size={15} />
-                    </IconBtn>
-                  ) : null
-                }
-              />
-            ))}
-          </Panel>
-
-          <Panel title={`${t("cal.departures")} (${departures.length})`}>
-            {departures.length === 0 && <Muted>{t("cal.none")}</Muted>}
-            {departures.map((b) => (
-              <PanelRow key={b.id} onClick={() => setSeed({ booking: b })} name={b.guest_name} sub={roomLabel(b.room_id)}
-                action={
-                  b.status !== "checked_out" ? (
-                    <IconBtn label={t("cal.markCheckedOut")} onClick={(e) => { e.stopPropagation(); quick(b, "checked_out"); }}>
-                      <LogOut size={15} />
-                    </IconBtn>
-                  ) : null
-                }
-              />
-            ))}
-          </Panel>
-
-          <Panel title={`${t("cal.inhouse")} (${inhouse.length})`}>
-            {inhouse.length === 0 && <Muted>{t("cal.none")}</Muted>}
-            {inhouse.map((b) => (
-              <PanelRow key={b.id} onClick={() => setSeed({ booking: b })} name={b.guest_name} sub={roomLabel(b.room_id)} />
-            ))}
-          </Panel>
-        </aside>
+        <TodayPanel
+          today={today}
+          arrivals={todayPanel.arr}
+          departures={todayPanel.dep}
+          inhouse={todayPanel.ih}
+          issues={todayPanel.iss}
+          roomLabel={roomLabel}
+          onOpen={(b) => setSeed({ booking: b })}
+          onCheckIn={(b) => quick(b, "checked_in")}
+          onCheckOut={(b) => quick(b, "checked_out")}
+        />
       </div>
 
       {/* rich hover tooltip */}
@@ -1344,46 +1344,205 @@ function Chart({ title, children }: { title: string; children: React.ReactNode }
   );
 }
 
-function Panel({ title, children }: { title: string; children: React.ReactNode }) {
+// ── Today panel (right-side dock / mobile list) — ported from hotel-pms ──
+function TodayPanel({
+  today,
+  arrivals,
+  departures,
+  inhouse,
+  issues,
+  roomLabel,
+  onOpen,
+  onCheckIn,
+  onCheckOut,
+}: {
+  today: string;
+  arrivals: TpRow[];
+  departures: TpRow[];
+  inhouse: TpRow[];
+  issues: TpRow[];
+  roomLabel: (id: string | null) => string;
+  onOpen: (b: Booking) => void;
+  onCheckIn: (b: Booking) => void;
+  onCheckOut: (b: Booking) => void;
+}) {
+  const t = useAppT();
+  const { locale } = useI18n();
+  // Each section collapses past its cap; "+N more" expands it.
+  const [exp, setExp] = useState({ arr: false, dep: false, ih: false, iss: false });
+  const toggle = (k: keyof typeof exp) => setExp((e) => ({ ...e, [k]: !e[k] }));
+  const slice = (arr: TpRow[], k: keyof typeof exp) => (exp[k] ? arr : arr.slice(0, TODAY_CAPS[k]));
+  const ota = (b: TpRow) => b.ota || t("cal.direct");
+  const dateLabel = new Date(today + "T00:00:00Z").toLocaleDateString(
+    locale === "en" ? "en-GB" : "th-TH",
+    { day: "2-digit", month: "short", timeZone: "UTC" },
+  );
+
+  // Plain function (not a nested component) so it never remounts on re-render.
+  const moreBtn = (k: keyof typeof exp, total: number) =>
+    total <= TODAY_CAPS[k] ? null : (
+      <button
+        onClick={() => toggle(k)}
+        className="mt-1 w-full rounded-lg px-2 py-1 text-xs font-medium text-[var(--app-accent)] hover:bg-[var(--app-surface-2)]"
+      >
+        {exp[k] ? t("cal.showLess") : `+${total - TODAY_CAPS[k]} ${t("cal.more")}`}
+      </button>
+    );
+
   return (
-    <div className="app-surface rounded-2xl border border-[var(--app-border)] p-4">
-      <h3 className="mb-2 text-sm font-semibold">{title}</h3>
-      <div className="space-y-1">{children}</div>
+    <aside className="space-y-3">
+      <div className="flex items-center justify-between px-1">
+        <h2 className="text-sm font-semibold">{t("cal.today")}</h2>
+        <span className="text-xs text-[var(--app-fg-muted)]">{dateLabel}</span>
+      </div>
+
+      <div className="grid grid-cols-4 gap-2">
+        <TpStat label={t("cal.arriving")} value={arrivals.length} color="var(--app-accent)" />
+        <TpStat label={t("cal.inhouse")} value={inhouse.length} color="var(--app-success)" />
+        <TpStat label={t("cal.departing")} value={departures.length} color="#d97706" />
+        <TpStat label={t("cal.issues")} value={issues.length} color="var(--app-danger)" />
+      </div>
+
+      <TpSection title={t("cal.arrivals")} count={arrivals.length} empty={t("cal.none")}>
+        {slice(arrivals, "arr").map((b) => (
+          <div key={b.id} className="flex items-center gap-2 rounded-xl px-1.5 py-1.5 hover:bg-[var(--app-surface-2)]">
+            <button onClick={() => onOpen(b)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+              <TpAvatar b={b} tint="var(--app-accent)" />
+              <TpRowMain
+                b={b}
+                meta={`${roomLabel(b.room_id)} · ${ota(b)}${b.is_open_ended ? "" : ` · ${nightsBetween(b.check_in, b.check_out)}${t("cal.nightsShort")}`}`}
+              />
+            </button>
+            {b.status !== "checked_in" && b.status !== "checked_out" && (
+              <button
+                onClick={() => onCheckIn(b)}
+                className="flex-none rounded-lg px-2 py-1 text-xs font-medium text-[var(--app-accent)]"
+                style={{ background: "color-mix(in srgb, var(--app-accent) 15%, transparent)" }}
+              >
+                {t("cal.checkIn")}
+              </button>
+            )}
+          </div>
+        ))}
+        {moreBtn("arr", arrivals.length)}
+      </TpSection>
+
+      <TpSection title={t("cal.departures")} count={departures.length} empty={t("cal.none")}>
+        {slice(departures, "dep").map((b) => (
+          <div key={b.id} className="flex items-center gap-2 rounded-xl px-1.5 py-1.5 hover:bg-[var(--app-surface-2)]">
+            <button onClick={() => onOpen(b)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+              <TpAvatar b={b} tint="#d97706" />
+              <TpRowMain b={b} meta={`${roomLabel(b.room_id)} · ${ota(b)}`} />
+            </button>
+            {b.status !== "checked_out" && (
+              <button
+                onClick={() => onCheckOut(b)}
+                className="flex-none rounded-lg px-2 py-1 text-xs font-medium"
+                style={{ background: "color-mix(in srgb, #d97706 16%, transparent)", color: "#d97706" }}
+              >
+                {t("cal.checkOut")}
+              </button>
+            )}
+          </div>
+        ))}
+        {moreBtn("dep", departures.length)}
+      </TpSection>
+
+      <TpSection title={t("cal.inhouse")} count={inhouse.length} empty={t("cal.none")}>
+        {slice(inhouse, "ih").map((b) => (
+          <button
+            key={b.id}
+            onClick={() => onOpen(b)}
+            className="flex w-full items-center gap-2 rounded-xl px-1.5 py-1.5 text-left hover:bg-[var(--app-surface-2)]"
+          >
+            <TpRoomPill>{roomLabel(b.room_id)}</TpRoomPill>
+            <TpRowMain
+              b={b}
+              meta={`${b.booking_type === "monthly" ? t("cal.monthly") : ota(b)}${b.is_open_ended ? "" : ` · → ${b.check_out.slice(5)}`}`}
+            />
+          </button>
+        ))}
+        {moreBtn("ih", inhouse.length)}
+      </TpSection>
+
+      {issues.length > 0 && (
+        <TpSection title={t("cal.issues")} count={issues.length} empty={t("cal.none")}>
+          {slice(issues, "iss").map((b) => (
+            <button
+              key={b.id}
+              onClick={() => onOpen(b)}
+              className="flex w-full items-center gap-2 rounded-xl px-1.5 py-1.5 text-left hover:bg-[var(--app-surface-2)]"
+            >
+              <TpRoomPill danger>{roomLabel(b.room_id)}</TpRoomPill>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-medium">{b.issue_type || "OOS"}</div>
+                <div className="truncate text-xs text-[var(--app-fg-muted)]">{b.issue_detail || "—"}</div>
+              </div>
+            </button>
+          ))}
+          {moreBtn("iss", issues.length)}
+        </TpSection>
+      )}
+    </aside>
+  );
+}
+
+function TpStat({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <div className="app-surface rounded-xl border border-[var(--app-border)] px-2 py-2 text-center">
+      <div className="text-lg font-bold leading-none" style={{ color }}>{value}</div>
+      <div className="mt-1 truncate text-[10px] text-[var(--app-fg-muted)]">{label}</div>
     </div>
   );
 }
-function PanelRow({
-  name,
-  sub,
-  action,
-  onClick,
-}: {
-  name: string;
-  sub: string;
-  action?: React.ReactNode;
-  onClick: () => void;
-}) {
+function TpSection({ title, count, empty, children }: { title: string; count: number; empty: string; children: React.ReactNode }) {
+  return (
+    <div className="app-surface rounded-2xl border border-[var(--app-border)] p-3">
+      <div className="mb-1.5 flex items-center gap-2 px-1 text-xs font-semibold uppercase tracking-wide text-[var(--app-fg-muted)]">
+        {title}
+        <span className="ml-auto rounded-full bg-[var(--app-surface-2)] px-1.5 py-0.5 text-[10px] normal-case">{count}</span>
+      </div>
+      {count === 0 ? (
+        <p className="px-1 py-1 text-sm text-[var(--app-fg-muted)]">{empty}</p>
+      ) : (
+        <div className="space-y-0.5">{children}</div>
+      )}
+    </div>
+  );
+}
+function TpAvatar({ b, tint }: { b: TpRow; tint: string }) {
+  const ch = (b.guest_first_name?.[0] || b.guest_name?.[0] || "?").toUpperCase();
   return (
     <div
-      onClick={onClick}
-      className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-[var(--app-surface-2)]"
+      className="grid h-8 w-8 flex-none place-items-center rounded-full text-xs font-semibold"
+      style={{ background: `color-mix(in srgb, ${tint} 14%, transparent)`, color: tint }}
     >
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium">{name}</div>
-        <div className="text-xs text-[var(--app-fg-muted)]">{sub}</div>
-      </div>
-      {action}
+      {ch}
     </div>
   );
 }
-function IconBtn({ children, label, onClick }: { children: React.ReactNode; label: string; onClick: (e: React.MouseEvent) => void }) {
+function TpRowMain({ b, meta }: { b: TpRow; meta: string }) {
   return (
-    <button onClick={onClick} aria-label={label} title={label}
-      className="rounded-lg border border-[var(--app-border)] p-1.5 text-[var(--app-fg-muted)] hover:text-[var(--app-accent)]">
-      {children}
-    </button>
+    <div className="min-w-0 flex-1">
+      <div className="truncate text-sm font-medium">
+        {b.guest_name || "—"}
+        {b._groupSize > 1 && <span className="ml-1 text-xs text-[var(--app-fg-muted)]">·{b._groupSize}</span>}
+      </div>
+      <div className="truncate text-xs text-[var(--app-fg-muted)]">{meta}</div>
+    </div>
   );
 }
-function Muted({ children }: { children: React.ReactNode }) {
-  return <p className="px-2 py-1 text-sm text-[var(--app-fg-muted)]">{children}</p>;
+function TpRoomPill({ children, danger }: { children: React.ReactNode; danger?: boolean }) {
+  return (
+    <div
+      className="grid h-8 min-w-[2.25rem] flex-none place-items-center rounded-lg px-1.5 text-xs font-semibold"
+      style={
+        danger
+          ? { background: "color-mix(in srgb, var(--app-danger) 16%, transparent)", color: "var(--app-danger)" }
+          : { background: "var(--app-surface-2)" }
+      }
+    >
+      {children}
+    </div>
+  );
 }
