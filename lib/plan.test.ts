@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { canAddProperty, hasGlassThemes, availableThemes, isThemeAllowed, planLimits } from "./plan";
+import { canAddProperty, hasGlassThemes, availableThemes, isThemeAllowed, planLimits, ALL_THEMES } from "./plan";
 
 describe("plan limits", () => {
   it("non-pro plans cap at 1 property", () => {
@@ -18,13 +18,15 @@ describe("plan limits", () => {
   it("glass themes currently unlocked for all plans", () => {
     expect(hasGlassThemes("trial")).toBe(true);
     expect(hasGlassThemes("pro")).toBe(true);
-    expect(availableThemes("trial")).toEqual(["light", "dark", "light-glass", "dark-glass"]);
-    expect(availableThemes("pro")).toEqual(["light", "dark", "light-glass", "dark-glass"]);
+    expect(availableThemes("trial")).toEqual([...ALL_THEMES]);
+    expect(availableThemes("pro")).toEqual([...ALL_THEMES]);
   });
-  it("isThemeAllowed permits glass on every plan (promo)", () => {
+  it("isThemeAllowed permits glass + aurora on every plan (promo)", () => {
     expect(isThemeAllowed("trial", "dark")).toBe(true);
     expect(isThemeAllowed("trial", "dark-glass")).toBe(true);
     expect(isThemeAllowed("pro", "dark-glass")).toBe(true);
+    expect(isThemeAllowed("trial", "aurora-dark")).toBe(true);
+    expect(isThemeAllowed("pro", "aurora-light")).toBe(true);
   });
   it("unknown plan falls back to trial limits", () => {
     expect(planLimits("garbage").maxProperties).toBe(1);

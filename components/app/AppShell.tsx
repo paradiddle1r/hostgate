@@ -8,6 +8,11 @@
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import dynamic from "next/dynamic";
+
+// WebGL Aurora backdrop — client-only, lazy. Never loaded unless an Aurora
+// theme is active, so three/gsap stay out of every other theme's bundle.
+const AuroraBackground = dynamic(() => import("./AuroraBackground"), { ssr: false });
 import { CalendarDays, Users, BedDouble, Settings, LayoutDashboard, Menu, X, Building2, BookOpen, Tag, Receipt, BarChart3, SprayCan, CalendarClock, Wrench, KeyRound, ShoppingCart, UserCog, Activity, Megaphone, ChevronDown } from "lucide-react";
 import type { Property } from "@/lib/db/properties";
 import { useAppT } from "@/lib/app-i18n";
@@ -158,6 +163,9 @@ export default function AppShell({
           <div className="app-mesh" aria-hidden>
             <i /><i /><i /><i />
           </div>
+          {theme.startsWith("aurora") && (
+            <AuroraBackground variant={theme === "aurora-dark" ? "dark" : "light"} />
+          )}
 
           {/* Top bar */}
           <header className="relative z-30 flex h-14 flex-none items-center gap-2 border-b border-[var(--app-border)] px-3 md:px-4">

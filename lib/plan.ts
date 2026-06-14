@@ -33,7 +33,7 @@ export function hasGlassThemes(plan: string): boolean {
   return planLimits(plan).glassThemes;
 }
 
-export const ALL_THEMES = ["light", "dark", "sand", "ink", "forest", "rose", "light-glass", "dark-glass"] as const;
+export const ALL_THEMES = ["light", "dark", "sand", "ink", "forest", "rose", "aurora-light", "aurora-dark", "light-glass", "dark-glass"] as const;
 export type ThemeName = (typeof ALL_THEMES)[number];
 
 /** Themes available to a plan (only the glass variants are pro-gated). */
