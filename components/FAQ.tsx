@@ -28,7 +28,10 @@ export default function FAQ() {
               }`}
             >
               <button
+                type="button"
                 onClick={() => setOpen(open === i ? null : i)}
+                aria-expanded={open === i}
+                aria-controls={`faq-panel-${i}`}
                 className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left"
               >
                 <span className="text-base font-semibold text-zinc-900">
@@ -47,6 +50,8 @@ export default function FAQ() {
                 </svg>
               </button>
               <div
+                id={`faq-panel-${i}`}
+                aria-hidden={open !== i}
                 className={`grid transition-all duration-300 ease-out ${
                   open === i ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
                 }`}
