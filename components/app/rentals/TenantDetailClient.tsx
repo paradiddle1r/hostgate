@@ -5,7 +5,7 @@
 // Only the editable forms (rate config, add-reading, generate-bill, move-out
 // inputs, new-contract modal) live in local state.
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -20,6 +20,7 @@ import {
   CalendarClock,
   Users,
   ClipboardList,
+  X,
 } from "lucide-react";
 import type {
   RentalTenant,
@@ -240,7 +241,14 @@ const STR: Record<"th" | "en", Record<string, string>> = {
     held: "ยอดที่ถือไว้",
     deductions: "หักลบ",
     refund: "คืนเงิน",
-    moveOutNote: "ค่าเช่าล่วงหน้าถูกใช้ไป; เงินคืนสุทธิ = เงินประกัน − ค่าน้ำค่าไฟ − อื่นๆ",
+    moveOutNote: "ค่าเช่าล่วงหน้าถูกใช้ไป; เงินคืนสุทธิ = เงินประกัน − ค่าน้ำค่าไฟ − รายการปรับ",
+    adjustments: "รายการหัก / ปรับ",
+    addAdjust: "เพิ่มรายการ",
+    adjustLabel: "รายละเอียด",
+    adjustAmount: "จำนวน",
+    advanceConsumed: "ใช้ค่าเช่าล่วงหน้า",
+    adjustHint: "ค่าบวก = หักจากเงินคืน · ค่าลบ = เพิ่มคืนให้ผู้เช่า",
+    removeItem: "ลบ",
     // misc
     cancel: "ยกเลิก",
     delete: "ลบ",
@@ -352,7 +360,14 @@ const STR: Record<"th" | "en", Record<string, string>> = {
     held: "Held",
     deductions: "Deductions",
     refund: "Refund",
-    moveOutNote: "advance rent is consumed; net refund = deposit − utilities − other",
+    moveOutNote: "advance rent is consumed; net refund = deposit − utilities − adjustments",
+    adjustments: "Deductions / adjustments",
+    addAdjust: "Add line",
+    adjustLabel: "Description",
+    adjustAmount: "Amount",
+    advanceConsumed: "Advance rent consumed",
+    adjustHint: "Positive = deducted from refund · negative = credited back to tenant",
+    removeItem: "Remove",
     cancel: "Cancel",
     delete: "Delete",
     deleteConfirm: "Delete this item?",
@@ -395,6 +410,8 @@ export default function TenantDetailClient({
   const noConfig = rentalTenant == null;
 
   const money = (v: number) => `${currency} ${(Number(v) || 0).toLocaleString()}`;
+  // A deduction reduces the refund: positive → "−฿x", negative (a credit) → "+฿x".
+  const signedDeduct = (d: number) => (d >= 0 ? `−${money(d)}` : `+${money(-d)}`);
 
   // ── section 2: rate config ──────────────────────────────────────────────────
   const [cfg, setCfg] = useState({
@@ -755,17 +772,29 @@ export default function TenantDetailClient({
   }
 
   // ── section 7: move-out ─────────────────────────────────────────────────────
-  const [mo, setMo] = useState<{ electric: Num; water: Num; other: Num }>({
+  // `items` is an open-ended list of adjustment lines. A POSITIVE amount is a
+  // deduction (reduces the refund); a NEGATIVE amount is a credit (adds back to
+  // the refund). Their signed sum feeds the settlement's `other`.
+  type AdjItem = { id: number; label: string; amount: Num };
+  const adjId = useRef(0);
+  const [mo, setMo] = useState<{ electric: Num; water: Num; items: AdjItem[] }>({
     electric: "",
     water: "",
-    other: "",
+    items: [],
   });
+  const addAdjust = () =>
+    setMo((m) => ({ ...m, items: [...m.items, { id: ++adjId.current, label: "", amount: "" }] }));
+  const setAdjust = (id: number, patch: Partial<AdjItem>) =>
+    setMo((m) => ({ ...m, items: m.items.map((it) => (it.id === id ? { ...it, ...patch } : it)) }));
+  const removeAdjust = (id: number) =>
+    setMo((m) => ({ ...m, items: m.items.filter((it) => it.id !== id) }));
+  const adjustTotal = mo.items.reduce((s, it) => s + n(it.amount), 0);
   const settlement = moveOutSettlement({
     deposit: rentalTenant?.deposit ?? 0,
     advance_rent: rentalTenant?.advance_rent ?? 0,
     electric: n(mo.electric),
     water: n(mo.water),
-    other: n(mo.other),
+    other: adjustTotal,
   });
 
   const numInput = (v: Num, set: (x: Num) => void, extra = "") => (
@@ -1318,7 +1347,7 @@ export default function TenantDetailClient({
         <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold">
           <LogOut size={15} /> {tr.moveOut}
         </h2>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className={label}>
               {tr.finalElectric} ({currency})
@@ -1331,12 +1360,54 @@ export default function TenantDetailClient({
             </label>
             {numInput(mo.water, (x) => setMo({ ...mo, water: x }))}
           </div>
-          <div>
-            <label className={label}>
-              {tr.finalOther} ({currency})
-            </label>
-            {numInput(mo.other, (x) => setMo({ ...mo, other: x }))}
+        </div>
+
+        {/* Adjustment lines — each can deduct (+) or credit (−) the refund. */}
+        <div className="mt-4">
+          <div className="mb-1.5 flex items-center justify-between">
+            <label className={label + " mb-0"}>{tr.adjustments}</label>
+            <button
+              type="button"
+              onClick={addAdjust}
+              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-[var(--app-accent)] hover:bg-[var(--app-surface-2)]"
+            >
+              <Plus size={13} /> {tr.addAdjust}
+            </button>
           </div>
+          {mo.items.length > 0 && (
+            <div className="space-y-2">
+              {mo.items.map((it) => (
+                <div key={it.id} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    className={`${field} flex-1`}
+                    placeholder={tr.adjustLabel}
+                    value={it.label}
+                    onChange={(e) => setAdjust(it.id, { label: e.target.value })}
+                  />
+                  <input
+                    type="number"
+                    className={`${field} w-28 text-right`}
+                    placeholder={tr.adjustAmount}
+                    value={it.amount}
+                    onChange={(e) =>
+                      setAdjust(it.id, { amount: e.target.value === "" ? "" : Number(e.target.value) })
+                    }
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeAdjust(it.id)}
+                    aria-label={tr.removeItem}
+                    title={tr.removeItem}
+                    className="flex-none rounded-lg p-2 text-[var(--app-fg-muted)] hover:text-[var(--app-danger)]"
+                  >
+                    <X size={15} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="mt-1.5 text-xs text-[var(--app-fg-muted)]">{tr.adjustHint}</p>
         </div>
 
         <dl className="mt-4 space-y-1.5 border-t border-[var(--app-border)] pt-4 text-sm">
@@ -1344,10 +1415,32 @@ export default function TenantDetailClient({
             <dt className="text-[var(--app-fg-muted)]">{tr.held}</dt>
             <dd>{money(settlement.held)}</dd>
           </div>
-          <div className="flex justify-between">
-            <dt className="text-[var(--app-fg-muted)]">{tr.deductions}</dt>
-            <dd>−{money(settlement.deductions)}</dd>
-          </div>
+          {(rentalTenant?.advance_rent ?? 0) > 0 && (
+            <div className="flex justify-between">
+              <dt className="text-[var(--app-fg-muted)]">{tr.advanceConsumed}</dt>
+              <dd>{signedDeduct(rentalTenant?.advance_rent ?? 0)}</dd>
+            </div>
+          )}
+          {n(mo.electric) !== 0 && (
+            <div className="flex justify-between">
+              <dt className="text-[var(--app-fg-muted)]">{tr.finalElectric}</dt>
+              <dd>{signedDeduct(n(mo.electric))}</dd>
+            </div>
+          )}
+          {n(mo.water) !== 0 && (
+            <div className="flex justify-between">
+              <dt className="text-[var(--app-fg-muted)]">{tr.finalWater}</dt>
+              <dd>{signedDeduct(n(mo.water))}</dd>
+            </div>
+          )}
+          {mo.items
+            .filter((it) => n(it.amount) !== 0 || it.label.trim() !== "")
+            .map((it) => (
+              <div key={it.id} className="flex justify-between">
+                <dt className="text-[var(--app-fg-muted)]">{it.label.trim() || tr.adjustLabel}</dt>
+                <dd>{signedDeduct(n(it.amount))}</dd>
+              </div>
+            ))}
           <div className="flex justify-between border-t border-[var(--app-border)] pt-1.5 text-base font-semibold">
             <dt>{tr.refund}</dt>
             <dd
