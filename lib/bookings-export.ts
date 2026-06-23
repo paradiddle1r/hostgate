@@ -51,7 +51,7 @@ const COLUMNS: { key: string; label: string }[] = [
 ];
 
 /** Whole-day diff using UTC anchors so +07 dates don't drift. */
-function nights(checkIn: string, checkOut: string): number {
+export function nights(checkIn: string, checkOut: string): number {
   const a = Date.parse(checkIn + "T00:00:00Z");
   const b = Date.parse(checkOut + "T00:00:00Z");
   if (Number.isNaN(a) || Number.isNaN(b)) return 0;
@@ -59,7 +59,7 @@ function nights(checkIn: string, checkOut: string): number {
 }
 
 /** One cell value (already stringified) for a given column key. */
-function cellValue(
+export function cellValue(
   b: Booking,
   key: string,
   roomNumberById: Record<string, string>
@@ -77,7 +77,7 @@ function cellValue(
 }
 
 /** The cell values for one booking row, in COLUMNS order. */
-function rowValues(
+export function rowValues(
   b: Booking,
   roomNumberById: Record<string, string>
 ): string[] {
@@ -87,18 +87,18 @@ function rowValues(
 // Neutralize spreadsheet formula injection: a cell whose first character is
 // one of = + - @ (or a leading tab/CR) can run as a formula in Excel/Sheets.
 // Prefix a single quote so it renders as literal text.
-function neutralize(v: string): string {
+export function neutralize(v: string): string {
   if (v === "") return v;
   return /^[=+\-@\t\r]/.test(v) ? `'${v}` : v;
 }
 
 /** RFC-4180 field escaping: quote everything, double internal quotes. */
-function csvField(v: string): string {
+export function csvField(v: string): string {
   return `"${neutralize(v).replace(/"/g, '""')}"`;
 }
 
 /** Minimal HTML escaping for the .xls HTML-table variant. */
-function htmlEscape(v: string): string {
+export function htmlEscape(v: string): string {
   return neutralize(v)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
