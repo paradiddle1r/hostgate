@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useI18n, pick } from "@/lib/i18n";
 import StudioDisplay from "./StudioDisplay";
@@ -9,6 +10,14 @@ import AnimatedMobile from "./AnimatedMobile";
 
 export default function Hero() {
   const { locale, t } = useI18n();
+  const [email, setEmail] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email) return;
+    setSubmitted(true);
+  }
 
   return (
     <section className="relative pt-28 pb-12 sm:pt-32 sm:pb-16 lg:pt-48 lg:pb-28">
@@ -61,7 +70,43 @@ export default function Hero() {
             </Link>
           </div>
 
-          <p className="hero-anim mt-4 text-xs text-zinc-500 sm:mt-5" style={{ animationDelay: "0.45s" }}>
+          {/* Email capture */}
+          <div
+            className="hero-anim mt-6 flex justify-center sm:mt-8"
+            style={{ animationDelay: "0.45s" }}
+          >
+            {submitted ? (
+              <p className="text-sm text-indigo-600 font-medium">
+                {locale === "th"
+                  ? "รับทราบแล้ว! เราจะติดต่อกลับเร็ว ๆ นี้"
+                  : "Got it! We'll be in touch soon."}
+              </p>
+            ) : (
+              <form
+                onSubmit={handleSubmit}
+                className="flex w-full max-w-sm items-center gap-2"
+              >
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder={
+                    locale === "th" ? "อีเมลของคุณ" : "Your email"
+                  }
+                  className="min-w-0 flex-1 rounded-full border border-zinc-200 bg-white px-4 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 shadow-sm outline-none ring-0 transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                />
+                <button
+                  type="submit"
+                  className="flex-none rounded-full bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2"
+                >
+                  {locale === "th" ? "แจ้งเตือนฉัน" : "Notify me"}
+                </button>
+              </form>
+            )}
+          </div>
+
+          <p className="hero-anim mt-4 text-xs text-zinc-500 sm:mt-5" style={{ animationDelay: "0.55s" }}>
             {pick(t.hero.note, locale)}
           </p>
         </div>
