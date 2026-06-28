@@ -80,12 +80,17 @@ export default async function DashboardPage() {
     .map(toRow);
 
   // Revenue booked for stays starting this month (realized statuses only).
+  const nextMonthStart = (() => {
+    const d = new Date(monthStart + "T00:00:00Z");
+    d.setUTCMonth(d.getUTCMonth() + 1);
+    return d.toISOString().slice(0, 10);
+  })();
   const monthBookings = live.filter(
     (b) =>
       REALIZED.has(b.status) &&
       REVENUE_TYPES.has(b.booking_type) &&
       b.check_in >= monthStart &&
-      b.check_in < addDays(monthStart, 31),
+      b.check_in < nextMonthStart,
   );
   const monthRevenue = monthBookings.reduce((s, b) => s + (b.total_amount ?? 0), 0);
 
