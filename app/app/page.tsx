@@ -70,9 +70,9 @@ export default async function DashboardPage() {
     is_open_ended: b.is_open_ended,
   });
 
-  const arrivals = live.filter((b) => b.check_in === today).map(toRow);
-  const departures = live.filter((b) => b.check_out === today).map(toRow);
-  const inHouse = live.filter((b) => b.check_in <= today && b.check_out > today);
+  const arrivals = live.filter((b) => b.check_in === today && b.booking_type !== 'blocked' && b.booking_type !== 'oos').map(toRow);
+  const departures = live.filter((b) => b.check_out === today && b.booking_type !== 'blocked' && b.booking_type !== 'oos').map(toRow);
+  const inHouse = live.filter((b) => b.check_in <= today && b.check_out > today && b.booking_type !== 'blocked' && b.booking_type !== 'oos');
   const upcoming = live
     .filter((b) => b.check_in > today && b.check_in <= addDays(today, 7))
     .sort((a, b) => a.check_in.localeCompare(b.check_in))
