@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useI18n, pick } from "@/lib/i18n";
+import { joinWaitlist } from "@/lib/supabase";
 import StudioDisplay from "./StudioDisplay";
 import IPhoneFrame from "./IPhoneFrame";
 import AnimatedDashboard from "./AnimatedDashboard";
@@ -12,10 +13,24 @@ export default function Hero() {
   const { locale, t } = useI18n();
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!email) return;
+    setSubmitting(true);
+    setSubmitError(null);
+    const { error } = await joinWaitlist(email);
+    setSubmitting(false);
+    if (error) {
+      setSubmitError(
+        locale === "th"
+          ? "เกิดข้อผิดพลาด กรุณาลองอีกครั้ง"
+          : "Something went wrong, please try again."
+      );
+      return;
+    }
     setSubmitted(true);
   }
 
@@ -82,27 +97,39 @@ export default function Hero() {
                   : "Got it! We'll be in touch soon."}
               </p>
             ) : (
-              <form
-                onSubmit={handleSubmit}
-                className="flex w-full max-w-sm items-center gap-2"
-              >
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder={
-                    locale === "th" ? "อีเมลของคุณ" : "Your email"
-                  }
-                  className="min-w-0 flex-1 rounded-full border border-zinc-200 bg-white px-4 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 shadow-sm outline-none ring-0 transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-                />
-                <button
-                  type="submit"
-                  className="flex-none rounded-full bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2"
+              <div className="flex w-full max-w-sm flex-col items-center gap-2">
+                <form
+                  onSubmit={handleSubmit}
+                  className="flex w-full items-center gap-2"
                 >
-                  {locale === "th" ? "แจ้งเตือนฉัน" : "Notify me"}
-                </button>
-              </form>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder={
+                      locale === "th" ? "อีเมลของคุณ" : "Your email"
+                    }
+                    className="min-w-0 flex-1 rounded-full border border-zinc-200 bg-white px-4 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 shadow-sm outline-none ring-0 transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                  />
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="flex-none rounded-full bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {submitting
+                      ? locale === "th"
+                        ? "กำลังส่ง…"
+                        : "Sending…"
+                      : locale === "th"
+                      ? "แจ้งเตือนฉัน"
+                      : "Notify me"}
+                  </button>
+                </form>
+                {submitError && (
+                  <p className="text-xs text-red-500">{submitError}</p>
+                )}
+              </div>
             )}
           </div>
 

@@ -30,3 +30,7 @@ export async function submitContact(input: ContactSubmission) {
     },
   ]);
 }
+
+export async function joinWaitlist(email: string) {
+  return supabase.from("waitlist").insert([{ email, source: "hero" }]);
+}
