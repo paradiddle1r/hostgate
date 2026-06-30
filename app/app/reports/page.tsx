@@ -235,7 +235,7 @@ export default async function ReportsPage({
       .from("bookings")
       .select("check_in, check_out, total_amount, ota, source, status, booking_type")
       .eq("property_id", property.id)
-      .gte("check_in", windowStart)
+      .gte("check_out", windowStart)
       .lt("check_in", windowEnd)
       .order("check_in", { ascending: true })
       .limit(5000),
