@@ -319,8 +319,14 @@ export default function BookingsClient({
         !statusFilter.has(b.status)
       )
         return false;
-      // Source.
-      if (sourceFilter.size && !sourceFilter.has(b.source)) return false;
+      // Source only applies to standard/monthly bookings (blocked/oos rows
+      // don't have meaningful source filters in the operations workflow).
+      if (
+        (b.booking_type === "standard" || b.booking_type === "monthly") &&
+        sourceFilter.size &&
+        !sourceFilter.has(b.source)
+      )
+        return false;
       // Free-text search across the operator-relevant fields.
       if (needle) {
         const hay = [
