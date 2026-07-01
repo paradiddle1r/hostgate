@@ -111,8 +111,44 @@ login. Schema leaves tenant_id/property_id room for all of these.
 - Verify each milestone: `npx tsc --noEmit` + `npm test` + `npm run build`, and
   an SQL two-user isolation/role simulation for DB changes.
 
+## Channex channel manager + platform admin console (2026-07-02)
+
+**Admin console** at **admin.hostgate.app** (middleware host-rewrite → `/admin/*`;
+domain attached to the same Vercel project). Gate: `platform_admins` table
+(seeded pornchailin@gmail.com) OR `PLATFORM_ADMIN_EMAILS` env. Pages: Overview
+(KPIs), Tenants, Channex (connect/provision/full-sync/process-feed/test API +
+channel-mapping iframe via one-time token), Events (webhook + revisions +
+sync log), Docs (go-live checklist). Dark zinc Tailwind, separate from both
+marketing chrome (hidden via MarketingChrome) and the tenant PMS shell.
+
+**Channex integration** (`lib/channex/`, migration 20, docs/channex/*):
+- `client.ts` — REST client; env `CHANNEX_BASE_URL` (staging default) +
+  `CHANNEX_API_KEY`. `provision.ts` — property→room types→BAR rate plans→
+  webhook→500-day ARI, maps saved in channex_room_type_map/_rate_plan_map.
+- `ari.ts` — certified batching: `channex_ari_queue` rows are run-length-encoded
+  spans; `flushQueue()` = ≤1 availability + ≤1 restrictions call per connection.
+  Availability = active rooms (fallback room_types.quantity) − overlapping
+  non-cancelled bookings. Rates = daily_rates, fallback room_types.daily_rate.
+- `bookings.ts` — THE certified pattern: revisions feed → store
+  (channex_booking_revisions) → apply (local bookings, source='ota',
+  room_id NULL until staff assign) → **ack every revision** → availability
+  zeroing push. channex_bookings maps channex id → local_booking_ids[].
+- Webhook `POST /api/channex/webhook` — Channex has NO HMAC; we verify our own
+  `x-hostgate-secret` header (registered on the webhook at provision time) and
+  treat payloads as pings. Cron `GET /api/channex/cron` (Bearer CRON_SECRET):
+  Vercel daily (vercel.json) + **pg_cron `channex-cron-5min` on the hostgate DB
+  every 5 min** (the real driver — Hobby cron is daily-only).
+- Service-role client: `lib/supabase/service.ts` — webhook/cron/admin only;
+  tenant code stays on RLS. Env needed: SUPABASE_SERVICE_ROLE_KEY,
+  CHANNEX_BASE_URL/API_KEY/WEBHOOK_SECRET, CRON_SECRET, PLATFORM_ADMIN_EMAILS,
+  NEXT_PUBLIC_SITE_URL (all set in Vercel except CHANNEX_API_KEY — needs the
+  staging.channex.io account, see docs/channex/ONBOARDING.md).
+- Certification runbook + partnership email draft: `docs/channex/ONBOARDING.md`;
+  API reference distilled from the full docs sweep: `docs/channex/CHANNEX.md`.
+
 ---
 *Multi-tenant PMS v1 (foundation + rooms + guests + calendar) shipped 2026-06-12.*
+*Channex integration + admin console shipped 2026-07-02.*
 
 ## graphify
 Knowledge graph at graphify-out/. For codebase questions run `graphify query
