@@ -19,7 +19,9 @@ export default function MarketingChrome({ children }: { children: ReactNode }) {
     pathname.startsWith("/app/") ||
     pathname.startsWith("/print/") ||
     pathname === "/book" ||
-    pathname.startsWith("/book/");
+    pathname.startsWith("/book/") ||
+    pathname === "/admin" ||
+    pathname.startsWith("/admin/");
 
   if (isApp) return <>{children}</>;
 

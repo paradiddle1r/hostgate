@@ -1,0 +1,5 @@
+{
+  "crons": [
+    { "path": "/api/channex/cron", "schedule": "30 19 * * *" }
+  ]
+}
