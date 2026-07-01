@@ -23,7 +23,11 @@ export default async function RentalsPage() {
   const tenantBookingIds = new Set(tenants.map((t) => t.booking.id));
   // Bookings not yet attached to a rental config — candidates to convert.
   const candidates = bookings.filter(
-    (b) => !tenantBookingIds.has(b.id) && b.status !== "cancelled"
+    (b) =>
+      !tenantBookingIds.has(b.id) &&
+      b.status !== "cancelled" &&
+      b.booking_type !== "blocked" &&
+      b.booking_type !== "oos"
   );
 
   return (
