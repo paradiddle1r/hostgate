@@ -154,7 +154,20 @@ export async function setHousekeepingStatus(
     const supabase = createClient();
     const patch: Record<string, unknown> = { status };
     const now = new Date().toISOString();
-    if (status === "in-progress") patch.started_at = now;
+    if (status === "dirty") {
+      patch.started_at = null;
+      patch.completed_at = null;
+      patch.completed_by = null;
+      patch.inspected_at = null;
+      patch.inspected_by = null;
+    }
+    if (status === "in-progress") {
+      patch.started_at = now;
+      patch.completed_at = null;
+      patch.completed_by = null;
+      patch.inspected_at = null;
+      patch.inspected_by = null;
+    }
     if (status === "clean") {
       patch.completed_at = now;
       patch.completed_by = byUserId ?? null;
