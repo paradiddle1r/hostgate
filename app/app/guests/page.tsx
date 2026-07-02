@@ -68,7 +68,9 @@ export default async function GuestsPage() {
     listAllBookings(property.id),
     listRooms(property.id),
   ]);
-  const bookings = bookingsRes.ok ? bookingsRes.data : [];
+  const bookings = (bookingsRes.ok ? bookingsRes.data : []).filter(
+    (b) => b.booking_type !== "blocked" && b.booking_type !== "oos"
+  );
   const rooms = roomsRes.ok ? roomsRes.data : [];
 
   const roomNumberById: Record<string, string> = {};

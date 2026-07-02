@@ -17,7 +17,10 @@ export default async function InvoicesPage() {
 
   const invoices = invRes.ok ? invRes.data : [];
   // Picker only needs a handful — the action caps at 500, we slice to ~50.
-  const bookings = (bookingsRes.ok ? bookingsRes.data : []).slice(0, 50);
+  // Exclude blocked/OOS placeholder rows; staff should never invoice them.
+  const bookings = (bookingsRes.ok ? bookingsRes.data : [])
+    .filter((b) => b.booking_type !== "blocked" && b.booking_type !== "oos")
+    .slice(0, 50);
 
   return (
     <InvoicesClient invoices={invoices} bookings={bookings} currency={property.currency} />
