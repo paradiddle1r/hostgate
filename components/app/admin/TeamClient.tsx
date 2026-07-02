@@ -240,6 +240,14 @@ export default function TeamClient({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="truncate font-semibold">{fallbackName(m)}</span>
+                    {/* Position/job-title badge — read-only display of
+                        tenant_members.position (set via invite or the shifts
+                        "set position" action). No edit UI here. */}
+                    {m.position && m.position.trim() ? (
+                      <span className="flex-none rounded-full bg-[var(--app-surface-2)] px-2 py-0.5 text-[11px] font-medium text-[var(--app-fg-muted)]">
+                        {m.position.trim()}
+                      </span>
+                    ) : null}
                     {isMe && (
                       <span className="flex-none rounded-full bg-[var(--app-surface-2)] px-2 py-0.5 text-[11px] font-medium text-[var(--app-fg-muted)]">
                         {s("you")}
@@ -261,7 +269,6 @@ export default function TeamClient({
                     <div className="truncate text-sm text-[var(--app-fg-muted)]">{m.email}</div>
                   )}
                   <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-[var(--app-fg-muted)]">
-                    {m.position && m.position.trim() && <span>{m.position.trim()}</span>}
                     {fmtJoined(joinedAt?.[m.user_id]) && (
                       <span>
                         {s("joined")} {fmtJoined(joinedAt?.[m.user_id])}
