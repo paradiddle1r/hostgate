@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
-import { Users, Search, Plus, Phone, Mail, Star, Ban, Crown, X } from "lucide-react";
+import { Users, Search, Plus, Phone, Mail, Star, Ban, Crown, X, Download } from "lucide-react";
 import type { Guest, GuestInput } from "@/lib/db/guests";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/components/app/ui/Toast";
@@ -11,6 +11,7 @@ import Button from "@/components/app/ui/Button";
 import Modal from "@/components/app/ui/Modal";
 import EmptyState from "@/components/app/ui/EmptyState";
 import { saveGuest } from "@/app/app/guests/actions";
+import { exportGuestsCsv } from "@/lib/guests-export";
 
 // Per-guest rolled-up history, computed server-side in page.tsx.
 export type GuestStat = {
@@ -62,6 +63,7 @@ const STR: Record<"th" | "en", Record<string, string>> = {
     cLastStay: "เข้าพักล่าสุด",
     cStatus: "สถานะ",
     never: "—",
+    exportCsv: "ส่งออก CSV",
   },
   en: {
     title: "Guests",
@@ -102,6 +104,7 @@ const STR: Record<"th" | "en", Record<string, string>> = {
     cLastStay: "Last stay",
     cStatus: "Status",
     never: "—",
+    exportCsv: "Export CSV",
   },
 };
 
@@ -246,6 +249,14 @@ export default function GuestsClient({
             </button>
           ))}
         </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => exportGuestsCsv(visible, statsByGuestId)}
+          disabled={visible.length === 0}
+        >
+          <Download size={15} /> {s("exportCsv")}
+        </Button>
       </div>
 
       {/* Stats table / empty */}
