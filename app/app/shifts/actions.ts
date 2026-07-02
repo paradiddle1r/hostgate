@@ -147,11 +147,13 @@ export async function bulkAssignShifts(
 }
 
 // ── staff management (position + active) ───────────────────────────────────────
-// position/is_active live on the shared tenant_members table, which has NO direct
-// UPDATE policy by design (role changes funnel only through app_set_member_role).
-// We write these via single-column SECURITY DEFINER RPCs (app_set_member_position
-// / app_set_member_active) that do their own owner/admin check — so even a direct
-// REST call can't touch `role`. requireManage() here is defense-in-depth.
+// position/is_active live on the shared tenant_members table. Role changes still
+// funnel only through the app_set_member_role() SECURITY DEFINER RPC, but these
+// two columns are plain owner/admin-gated UPDATEs under RLS: migration
+// 16_tenant_members_update_policy.sql adds an owner/admin UPDATE policy on
+// tenant_members (role itself is left untouched here, so the policy can't be
+// used to escalate). requireManage() is the app-layer gate before we ever hit
+// the table.
 export async function setMemberPosition(
   userId: string,
   position: string | null
@@ -160,11 +162,11 @@ export async function setMemberPosition(
   if (!gate.ok) return gate.res;
   try {
     const supabase = createClient();
-    const { error } = await supabase.rpc("app_set_member_position", {
-      p_tenant: gate.tenantId,
-      p_user: userId,
-      p_position: position && position.trim() ? position.trim() : null,
-    });
+    const { error } = await supabase
+      .from("tenant_members")
+      .update({ position: position && position.trim() ? position.trim() : null })
+      .eq("tenant_id", gate.tenantId)
+      .eq("user_id", userId);
     if (error) throw error;
     revalidatePath("/app/shifts");
     return ok({ ok: true });
@@ -181,11 +183,11 @@ export async function setMemberActiveShifts(
   if (!gate.ok) return gate.res;
   try {
     const supabase = createClient();
-    const { error } = await supabase.rpc("app_set_member_active", {
-      p_tenant: gate.tenantId,
-      p_user: userId,
-      p_active: isActive,
-    });
+    const { error } = await supabase
+      .from("tenant_members")
+      .update({ is_active: isActive })
+      .eq("tenant_id", gate.tenantId)
+      .eq("user_id", userId);
     if (error) throw error;
     revalidatePath("/app/shifts");
     return ok({ ok: true });
