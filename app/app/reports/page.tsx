@@ -138,9 +138,11 @@ function channelOf(b: BkRow): string {
 
 /**
  * Bucket bookings into the given months. Each booking spreads its revenue and
- * nights across every month its stay overlaps (per-night). Cancelled stays and
- * non-standard types are handled by the caller's pre-filter except occupancy,
- * which only counts standard nights. Returns one MonthAgg per input month.
+ * nights across every month its stay overlaps (per-night). Cancelled stays are
+ * handled by the caller's pre-filter; non-standard booking_types (blocked/oos
+ * placeholders) are excluded here so they never count toward revenue,
+ * bookings, occupancy nights, or channel totals. Returns one MonthAgg per
+ * input month.
  */
 function bucket(bookings: BkRow[], months: MonthMeta[]): MonthAgg[] {
   const by = new Map<string, MonthAgg>();
@@ -182,8 +184,9 @@ function bucket(bookings: BkRow[], months: MonthMeta[]): MonthAgg[] {
 
       const slot = by.get(m.key)!;
       const rev = perNight * nights;
+      if (!isStandard) continue;
       slot.revenue += rev;
-      if (isStandard) slot.nights += nights;
+      slot.nights += nights;
       // Count a booking in the month its check-in falls in (no double count).
       if (ci >= m.start && ci < m.nextStart) slot.bookings += 1;
       slot.channel.set(label, (slot.channel.get(label) || 0) + rev);
