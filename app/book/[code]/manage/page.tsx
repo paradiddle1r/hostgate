@@ -25,7 +25,11 @@ export default async function BookManagePage({
 
   return (
     <div className="space-y-4">
-      <ManageBookingForm propertyCode={params.code} initialCode={searchParams.ref} />
+      <ManageBookingForm
+        propertyCode={params.code}
+        propertyName={property.name}
+        initialCode={searchParams.ref}
+      />
       <div className="text-center">
         <Link
           href={`/book/${params.code}`}

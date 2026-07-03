@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Printer } from "lucide-react";
 import {
   lookupPublicBookingAction,
   cancelPublicBookingAction,
@@ -28,9 +28,11 @@ function isPast(dateISO: string): boolean {
 
 export default function ManageBookingForm({
   propertyCode,
+  propertyName,
   initialCode,
 }: {
   propertyCode: string;
+  propertyName?: string;
   initialCode?: string;
 }) {
   const [code, setCode] = useState(initialCode ?? "");
@@ -107,9 +109,31 @@ export default function ManageBookingForm({
     (booking.status === "pending" || booking.status === "confirmed") &&
     !isPast(booking.checkIn);
 
+  function printReceipt() {
+    window.print();
+  }
+
   return (
     <div className="mx-auto max-w-md space-y-5">
-      <div className="text-center">
+      <style jsx global>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          #booking-receipt,
+          #booking-receipt * {
+            visibility: visible;
+          }
+          #booking-receipt {
+            position: absolute;
+            inset: 0 auto auto 0;
+            width: 100%;
+            border: none !important;
+            box-shadow: none !important;
+          }
+        }
+      `}</style>
+      <div className="text-center print:hidden">
         <h1 className="text-xl font-semibold tracking-tight">
           จัดการการจอง / Manage my booking
         </h1>
@@ -120,7 +144,7 @@ export default function ManageBookingForm({
         </p>
       </div>
 
-      <div className="app-surface space-y-3 rounded-2xl border border-[var(--app-border)] p-5">
+      <div className="app-surface space-y-3 rounded-2xl border border-[var(--app-border)] p-5 print:hidden">
         <label className="block">
           <span className="mb-1 block text-xs font-medium text-[var(--app-fg-muted)]">
             หมายเลขการจอง / Booking code
@@ -152,7 +176,15 @@ export default function ManageBookingForm({
       </div>
 
       {booking && (
-        <div className="app-surface rounded-2xl border border-[var(--app-border)] p-5 text-left">
+        <div
+          id="booking-receipt"
+          className="app-surface rounded-2xl border border-[var(--app-border)] p-5 text-left"
+        >
+          {propertyName && (
+            <div className="mb-1 hidden text-sm font-semibold print:block">
+              {propertyName}
+            </div>
+          )}
           <div className="text-xs uppercase tracking-wide text-[var(--app-fg-muted)]">
             รายละเอียดการจอง / Booking details
           </div>
@@ -178,8 +210,21 @@ export default function ManageBookingForm({
             รวม / Total: {money(booking.totalAmount, booking.currency)}
           </div>
 
+          <div className="mt-4 print:hidden">
+            <Button
+              variant="ghost"
+              onClick={printReceipt}
+              className="w-full"
+            >
+              <span className="flex items-center justify-center gap-1.5">
+                <Printer size={15} />
+                พิมพ์/บันทึกใบยืนยัน / Print · Save receipt
+              </span>
+            </Button>
+          </div>
+
           {booking.status !== "cancelled" && (
-            <div className="mt-4">
+            <div className="mt-4 print:hidden">
               <Button
                 variant="ghost"
                 onClick={resendConfirmation}
@@ -203,62 +248,64 @@ export default function ManageBookingForm({
             </div>
           )}
 
-          {booking.status === "cancelled" ? (
-            <p className="mt-4 text-sm text-[var(--app-fg-muted)]">
-              การจองนี้ถูกยกเลิกแล้ว / This booking is already cancelled.
-            </p>
-          ) : booking.status === "checked_in" || booking.status === "checked_out" ? (
-            <p className="mt-4 text-sm text-[var(--app-fg-muted)]">
-              การจองนี้เช็คอิน/เช็คเอาท์แล้ว ไม่สามารถยกเลิกออนไลน์ได้ กรุณาติดต่อที่พักโดยตรง / This
-              booking has already been checked in or checked out and can no longer be
-              cancelled online — please contact the property directly.
-            </p>
-          ) : !canCancel ? (
-            <p className="mt-4 text-sm text-[var(--app-fg-muted)]">
-              เลยวันเช็คอินแล้ว กรุณาติดต่อที่พักโดยตรง / Check-in has passed —
-              please contact the property directly.
-            </p>
-          ) : !confirmingCancel ? (
-            <Button
-              variant="danger"
-              onClick={() => setConfirmingCancel(true)}
-              className="mt-4 w-full"
-            >
-              ยกเลิกการจอง / Cancel booking
-            </Button>
-          ) : (
-            <div className="mt-4 space-y-3 rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-2)] p-3">
-              <div className="flex items-start gap-2 text-sm text-[var(--app-fg)]">
-                <AlertTriangle size={15} className="mt-0.5 flex-none text-[var(--app-danger)]" />
-                <span>
-                  ยืนยันการยกเลิกการจองนี้ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้
-                  <br />
-                  Are you sure you want to cancel this booking? This cannot be undone.
-                </span>
+          <div className="print:hidden">
+            {booking.status === "cancelled" ? (
+              <p className="mt-4 text-sm text-[var(--app-fg-muted)]">
+                การจองนี้ถูกยกเลิกแล้ว / This booking is already cancelled.
+              </p>
+            ) : booking.status === "checked_in" || booking.status === "checked_out" ? (
+              <p className="mt-4 text-sm text-[var(--app-fg-muted)]">
+                การจองนี้เช็คอิน/เช็คเอาท์แล้ว ไม่สามารถยกเลิกออนไลน์ได้ กรุณาติดต่อที่พักโดยตรง / This
+                booking has already been checked in or checked out and can no longer be
+                cancelled online — please contact the property directly.
+              </p>
+            ) : !canCancel ? (
+              <p className="mt-4 text-sm text-[var(--app-fg-muted)]">
+                เลยวันเช็คอินแล้ว กรุณาติดต่อที่พักโดยตรง / Check-in has passed —
+                please contact the property directly.
+              </p>
+            ) : !confirmingCancel ? (
+              <Button
+                variant="danger"
+                onClick={() => setConfirmingCancel(true)}
+                className="mt-4 w-full"
+              >
+                ยกเลิกการจอง / Cancel booking
+              </Button>
+            ) : (
+              <div className="mt-4 space-y-3 rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-2)] p-3">
+                <div className="flex items-start gap-2 text-sm text-[var(--app-fg)]">
+                  <AlertTriangle size={15} className="mt-0.5 flex-none text-[var(--app-danger)]" />
+                  <span>
+                    ยืนยันการยกเลิกการจองนี้ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้
+                    <br />
+                    Are you sure you want to cancel this booking? This cannot be undone.
+                  </span>
+                </div>
+                {cancelError && (
+                  <p className="text-sm text-[var(--app-danger)]">{cancelError}</p>
+                )}
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    onClick={() => setConfirmingCancel(false)}
+                    disabled={cancelling}
+                    className="flex-1"
+                  >
+                    ย้อนกลับ / Back
+                  </Button>
+                  <Button
+                    variant="danger"
+                    onClick={cancel}
+                    loading={cancelling}
+                    className="flex-1"
+                  >
+                    ยืนยันยกเลิก / Confirm cancel
+                  </Button>
+                </div>
               </div>
-              {cancelError && (
-                <p className="text-sm text-[var(--app-danger)]">{cancelError}</p>
-              )}
-              <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  onClick={() => setConfirmingCancel(false)}
-                  disabled={cancelling}
-                  className="flex-1"
-                >
-                  ย้อนกลับ / Back
-                </Button>
-                <Button
-                  variant="danger"
-                  onClick={cancel}
-                  loading={cancelling}
-                  className="flex-1"
-                >
-                  ยืนยันยกเลิก / Confirm cancel
-                </Button>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       )}
     </div>
