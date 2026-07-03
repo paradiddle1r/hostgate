@@ -7,9 +7,29 @@ export default function BookConfirmationPage({
   searchParams,
 }: {
   params: { code: string; id: string };
-  searchParams: { ref?: string };
+  searchParams: {
+    ref?: string;
+    room?: string;
+    check_in?: string;
+    check_out?: string;
+    nights?: string;
+    adults?: string;
+    children?: string;
+    total?: string;
+    currency?: string;
+  };
 }) {
   const ref = searchParams.ref ?? "";
+  const room = searchParams.room ?? "";
+  const checkIn = searchParams.check_in ?? "";
+  const checkOut = searchParams.check_out ?? "";
+  const nights = Number(searchParams.nights) || 0;
+  const adults = Number(searchParams.adults) || 0;
+  const childrenCount = Number(searchParams.children) || 0;
+  const total = Number(searchParams.total) || 0;
+  const currency = searchParams.currency ?? "";
+  const hasDetails = !!room && !!checkIn && !!checkOut;
+  const money = (n: number) => `${currency} ${n.toLocaleString()}`.trim();
 
   return (
     <div className="mx-auto max-w-md space-y-5 text-center">
@@ -32,6 +52,29 @@ export default function BookConfirmationPage({
             หมายเลขอ้างอิง / Reference
           </div>
           <div className="mt-1 font-mono text-lg font-semibold">{ref}</div>
+        </div>
+      )}
+      {hasDetails && (
+        <div className="app-surface rounded-2xl border border-[var(--app-border)] p-4 text-left">
+          <div className="text-xs uppercase tracking-wide text-[var(--app-fg-muted)]">
+            รายละเอียดการจอง / Booking details
+          </div>
+          <div className="mt-2 font-semibold">{room}</div>
+          <div className="mt-2 space-y-1 text-sm text-[var(--app-fg-muted)]">
+            <div>
+              {checkIn} → {checkOut}{" "}
+              {nights > 0 && (
+                <span className="text-[var(--app-fg)]">({nights} คืน / nights)</span>
+              )}
+            </div>
+            <div>
+              {adults} ผู้ใหญ่ / adults
+              {childrenCount > 0 ? ` · ${childrenCount} เด็ก / children` : ""}
+            </div>
+          </div>
+          <div className="mt-3 border-t border-[var(--app-border)] pt-3 text-base font-semibold">
+            รวม / Total: {money(total)}
+          </div>
         </div>
       )}
       <Link

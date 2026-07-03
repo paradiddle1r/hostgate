@@ -66,9 +66,18 @@ export default function CheckoutForm({
       children: childrenCount,
     });
     if (res.ok) {
-      router.push(
-        `/book/${code}/confirmation/${res.id}?ref=${encodeURIComponent(res.code)}`
-      );
+      const qs = new URLSearchParams({
+        ref: res.code,
+        room: roomTypeName,
+        check_in: checkIn,
+        check_out: checkOut,
+        nights: String(nights),
+        adults: String(adults),
+        children: String(childrenCount),
+        total: String(total),
+        currency,
+      });
+      router.push(`/book/${code}/confirmation/${res.id}?${qs.toString()}`);
     } else {
       setError(res.message);
       setSubmitting(false);
