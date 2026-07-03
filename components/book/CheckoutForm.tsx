@@ -22,6 +22,8 @@ export default function CheckoutForm({
   childrenCount,
   total,
   currency,
+  ratePlanId,
+  ratePlanName,
 }: {
   code: string;
   propertyId: string;
@@ -35,6 +37,8 @@ export default function CheckoutForm({
   childrenCount: number;
   total: number;
   currency: string;
+  ratePlanId?: string | null;
+  ratePlanName?: string | null;
 }) {
   const router = useRouter();
   const money = (n: number) => `${currency} ${(Number(n) || 0).toLocaleString()}`;
@@ -70,6 +74,8 @@ export default function CheckoutForm({
       email,
       adults,
       children: childrenCount,
+      ratePlanId,
+      ratePlanName,
     });
     if (res.ok) {
       const qs = new URLSearchParams({
@@ -98,6 +104,11 @@ export default function CheckoutForm({
           สรุปการจอง / Summary
         </div>
         <div className="mt-2 font-semibold">{roomTypeName}</div>
+        {ratePlanName && (
+          <div className="mt-0.5 text-sm text-[var(--app-fg-muted)]">
+            แผนราคา / Rate plan: <span className="text-[var(--app-fg)]">{ratePlanName}</span>
+          </div>
+        )}
         <div className="mt-3 space-y-1 text-sm text-[var(--app-fg-muted)]">
           <div>
             {checkIn} → {checkOut}{" "}

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getPublicProperty, getAvailability, getQuote } from "@/lib/book";
+import { getPublicProperty, getAvailability, getQuote, getPublicRatePlans, planNightlyPrice } from "@/lib/book";
 import RoomsClient from "@/components/book/RoomsClient";
 
 export const dynamic = "force-dynamic";
@@ -31,13 +31,33 @@ export default async function BookRoomsPage({
     Math.round((Date.parse(checkOut + "T00:00:00Z") - Date.parse(checkIn + "T00:00:00Z")) / 86_400_000)
   );
 
-  // Quote each available type.
+  // Quote each available type (base/calendar price — kept as the fallback
+  // when a type has no active rate plan).
   const rows = await Promise.all(
     avail.map(async (a) => ({
       ...a,
       total: a.available > 0 ? await getQuote(property.id, a.room_type_id, checkIn, checkOut) : 0,
     }))
   );
+
+  // Active, guest-bookable rate plans for this property, with each one's
+  // nightly price per room type (override → plan flat rate → room base).
+  const { plans, overridesByPlan } = await getPublicRatePlans(property.id);
+  const roomsWithPlans = rows.map((r) => {
+    const basePrice = r.daily_rate ?? (r.available > 0 ? r.total / nights : 0);
+    const planOptions = plans.map((p) => {
+      const nightly = planNightlyPrice(p, r.room_type_id, overridesByPlan, basePrice);
+      return {
+        id: p.id,
+        name: p.name,
+        color: p.color,
+        description: p.description,
+        nightly,
+        total: nightly * nights,
+      };
+    });
+    return { ...r, planOptions };
+  });
 
   return (
     <div className="space-y-5">
@@ -59,7 +79,7 @@ export default async function BookRoomsPage({
 
       <RoomsClient
         code={params.code}
-        rooms={rows}
+        rooms={roomsWithPlans}
         nights={nights}
         checkIn={checkIn}
         checkOut={checkOut}
