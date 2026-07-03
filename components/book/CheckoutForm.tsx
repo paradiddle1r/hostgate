@@ -53,6 +53,12 @@ export default function CheckoutForm({
       setError("กรุณากรอกชื่อ / Please enter your name.");
       return;
     }
+    if (!phone.trim() && !email.trim()) {
+      setError(
+        "กรุณากรอกเบอร์โทรหรืออีเมลอย่างน้อย 1 ช่องทาง / Please enter at least a phone number or an email so the property can contact you."
+      );
+      return;
+    }
     setSubmitting(true);
     const res = await submitPublicBooking({
       propertyId,
