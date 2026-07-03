@@ -81,7 +81,9 @@ export default function ManageBookingForm({
   }
 
   const canCancel =
-    !!booking && booking.status !== "cancelled" && !isPast(booking.checkIn);
+    !!booking &&
+    (booking.status === "pending" || booking.status === "confirmed") &&
+    !isPast(booking.checkIn);
 
   return (
     <div className="mx-auto max-w-md space-y-5">
@@ -157,6 +159,12 @@ export default function ManageBookingForm({
           {booking.status === "cancelled" ? (
             <p className="mt-4 text-sm text-[var(--app-fg-muted)]">
               การจองนี้ถูกยกเลิกแล้ว / This booking is already cancelled.
+            </p>
+          ) : booking.status === "checked_in" || booking.status === "checked_out" ? (
+            <p className="mt-4 text-sm text-[var(--app-fg-muted)]">
+              การจองนี้เช็คอิน/เช็คเอาท์แล้ว ไม่สามารถยกเลิกออนไลน์ได้ กรุณาติดต่อที่พักโดยตรง / This
+              booking has already been checked in or checked out and can no longer be
+              cancelled online — please contact the property directly.
             </p>
           ) : !canCancel ? (
             <p className="mt-4 text-sm text-[var(--app-fg-muted)]">
