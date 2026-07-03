@@ -15,10 +15,12 @@ import {
   BarChart3,
   BedDouble,
   Banknote,
+  PiggyBank,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import EmptyState from "@/components/app/ui/EmptyState";
 import RangeSelector from "./RangeSelector";
+import { OTA_COMMISSION_RATE } from "@/lib/commission-savings";
 
 export interface MonthRow {
   month: string; // 'YYYY-MM'
@@ -31,6 +33,10 @@ export interface MonthRow {
   occupancy: number; // 0..1
   priorOccupancy: number;
   channel: Record<string, number>; // label → revenue
+  directRevenue: number; // direct-like (source 'direct' or 'web') revenue, this month
+  otaRevenue: number; // combined OTA + walk-in revenue, this month
+  directBookings: number;
+  otaBookings: number;
 }
 
 export interface Kpis {
@@ -41,6 +47,12 @@ export interface Kpis {
   occupancy: number; // 0..1
   priorOccupancy: number;
   outstanding: number;
+  directRevenue: number;
+  otaRevenue: number;
+  directBookings: number;
+  otaBookings: number;
+  /** direct-source revenue × OTA_COMMISSION_RATE — an ESTIMATE, see lib/commission-savings.ts */
+  commissionSavings: number;
 }
 
 export interface ChannelSlice {
@@ -63,6 +75,15 @@ const STR = {
     tabBookings: "การจอง",
     tabOccupancy: "อัตราเข้าพัก",
     tabChannel: "ช่องทางการขาย",
+    tabDirectOta: "ตรง vs OTA",
+    chartDirectOtaRevenue: "รายได้: จองตรง เทียบ OTA+วอล์กอิน",
+    chartDirectOtaRevenueSub: "แท่งคู่: รายได้จองตรง (สี) เทียบ OTA+วอล์กอินรวมกัน (เทา) รายเดือน",
+    chartDirectOtaBookings: "จำนวนจอง: จองตรง เทียบ OTA+วอล์กอิน",
+    chartDirectOtaBookingsSub: "แท่งคู่: จำนวนจองตรง (สี) เทียบ OTA+วอล์กอินรวมกัน (เทา) รายเดือน",
+    direct: "จองตรง (Direct)",
+    otaWalkin: "OTA + วอล์กอิน",
+    savingsLabel: "ประหยัดค่าคอมมิชชั่น (ประมาณการ)",
+    savingsHint: `ประมาณการเท่านั้น ไม่ใช่ตัวเลขบัญชีจริง: รายได้จองตรง × ${Math.round(OTA_COMMISSION_RATE * 100)}% (สมมติฐานอัตราค่าคอมมิชชั่น OTA ทั่วไป ไม่ใช่ตัวเลขจากสัญญาใดสัญญาหนึ่ง)`,
     chartRevenue: "รายได้รายเดือน",
     chartRevenueSub: "แท่งคู่: ปัจจุบัน (สี) เทียบช่วงก่อน (เทา)",
     chartBookings: "จำนวนการจองรายเดือน",
@@ -96,6 +117,15 @@ const STR = {
     tabBookings: "Bookings",
     tabOccupancy: "Occupancy",
     tabChannel: "Channel mix",
+    tabDirectOta: "Direct vs OTA",
+    chartDirectOtaRevenue: "Revenue: direct vs OTA + walk-in",
+    chartDirectOtaRevenueSub: "Paired bars: direct-source revenue (colour) vs combined OTA + walk-in (grey), per month.",
+    chartDirectOtaBookings: "Bookings: direct vs OTA + walk-in",
+    chartDirectOtaBookingsSub: "Paired bars: direct-source bookings (colour) vs combined OTA + walk-in (grey), per month.",
+    direct: "Direct",
+    otaWalkin: "OTA + walk-in",
+    savingsLabel: "Est. commission savings",
+    savingsHint: `Estimate only, not exact accounting: direct-source revenue × ${Math.round(OTA_COMMISSION_RATE * 100)}% (a typical OTA commission assumption, not a rate from any specific contract).`,
     chartRevenue: "Monthly revenue",
     chartRevenueSub: "Paired bars: current (colour) vs prior period (grey).",
     chartBookings: "Monthly bookings",
@@ -150,7 +180,7 @@ function pctChange(curr: number, prior: number): number {
   return (curr - prior) / prior;
 }
 
-type Tab = "revenue" | "bookings" | "occupancy" | "channel";
+type Tab = "revenue" | "bookings" | "occupancy" | "channel" | "directOta";
 
 export default function ReportsClient({
   summary,
@@ -264,6 +294,7 @@ export default function ReportsClient({
                 ["bookings", tr.tabBookings],
                 ["occupancy", tr.tabOccupancy],
                 ["channel", tr.tabChannel],
+                ["directOta", tr.tabDirectOta],
               ] as [Tab, string][]
             ).map(([id, label]) => (
               <button
@@ -339,6 +370,52 @@ export default function ReportsClient({
                 fmtPct={fmtPct}
               />
             </ChartCard>
+          )}
+
+          {tab === "directOta" && (
+            <div className="space-y-6">
+              <div className="max-w-xs">
+                <div
+                  className="app-surface rounded-2xl border border-[var(--app-border)] p-4"
+                  title={tr.savingsHint}
+                >
+                  <div className="mb-2 flex items-center gap-2 text-[var(--app-accent)]">
+                    <PiggyBank size={18} />
+                    <span className="text-xs font-medium text-[var(--app-fg-muted)]">{tr.savingsLabel}</span>
+                  </div>
+                  <p className="text-xl font-semibold tracking-tight">{money(kpis.commissionSavings)}</p>
+                  <p className="mt-1.5 text-[11px] leading-snug text-[var(--app-fg-muted)]">{tr.savingsHint}</p>
+                </div>
+              </div>
+
+              <ChartCard title={tr.chartDirectOtaRevenue} subtitle={tr.chartDirectOtaRevenueSub}>
+                <PairedBarChart
+                  rows={summary.map((r) => ({
+                    label: monthLabel(r.month),
+                    curr: r.directRevenue,
+                    prior: r.otaRevenue,
+                  }))}
+                  fmt={moneyShort}
+                  fmtFull={money}
+                  currLabel={tr.direct}
+                  priorLabel={tr.otaWalkin}
+                />
+              </ChartCard>
+
+              <ChartCard title={tr.chartDirectOtaBookings} subtitle={tr.chartDirectOtaBookingsSub}>
+                <PairedBarChart
+                  rows={summary.map((r) => ({
+                    label: monthLabel(r.month),
+                    curr: r.directBookings,
+                    prior: r.otaBookings,
+                  }))}
+                  fmt={(n) => num(Math.round(n))}
+                  fmtFull={(n) => num(Math.round(n))}
+                  currLabel={tr.direct}
+                  priorLabel={tr.otaWalkin}
+                />
+              </ChartCard>
+            </div>
           )}
 
           {/* Monthly detail table */}

@@ -1,6 +1,7 @@
 import { getActiveProperty } from "@/lib/active-property-server";
 import { listInvoices } from "@/lib/db/invoices";
 import { createClient } from "@/lib/supabase/server";
+import { estimateCommissionSavings } from "@/lib/commission-savings";
 import ReportsClient from "@/components/app/reports/ReportsClient";
 import type { MonthRow, Kpis, ChannelSlice } from "@/components/app/reports/ReportsClient";
 
@@ -117,6 +118,8 @@ interface MonthAgg {
   nights: number; // standard-only nights (occupancy numerator)
   days: number;
   channel: Map<string, number>; // label → revenue
+  directRevenue: number; // "direct-like" revenue — see isDirectSource()
+  directBookings: number;
 }
 
 /** Map a booking to its channel-mix label: `ota` when set, else `source`. */
@@ -134,6 +137,21 @@ function channelOf(b: BkRow): string {
     default:
       return "Direct";
   }
+}
+
+/**
+ * For the Reports "Direct vs OTA" section: is this booking "direct" in the
+ * business sense the Direct Booking Engine epic cares about? That's
+ * `source === 'direct'` (phone/email arranged directly with the property)
+ * PLUS `source === 'web'` (booked through HostGate's own guest-facing
+ * booking engine, migration 14) — both bypass OTA commission. `ota` and
+ * `walk_in` are the complementary "OTA + walk-in" bucket. `source` defaults
+ * to 'direct' at the DB layer, so a missing value counts as direct too.
+ * (Note: this collapses more than the full channel-mix breakdown above,
+ * which keeps 'Web' as its own legend slice — different question, same data.)
+ */
+function isDirectSource(b: BkRow): boolean {
+  return b.source === "direct" || b.source === "web" || !b.source;
 }
 
 /**
@@ -155,6 +173,8 @@ function bucket(bookings: BkRow[], months: MonthMeta[]): MonthAgg[] {
       nights: 0,
       days: m.days,
       channel: new Map(),
+      directRevenue: 0,
+      directBookings: 0,
     });
   }
 
@@ -174,6 +194,7 @@ function bucket(bookings: BkRow[], months: MonthMeta[]): MonthAgg[] {
     const perNight = amount / totalNights;
     const isStandard = b.booking_type === "standard";
     const label = channelOf(b);
+    const isDirect = isDirectSource(b);
 
     for (const m of months) {
       if (co <= m.start || ci >= m.nextStart) continue;
@@ -188,8 +209,13 @@ function bucket(bookings: BkRow[], months: MonthMeta[]): MonthAgg[] {
       slot.revenue += rev;
       slot.nights += nights;
       // Count a booking in the month its check-in falls in (no double count).
-      if (ci >= m.start && ci < m.nextStart) slot.bookings += 1;
+      const isCheckInMonth = ci >= m.start && ci < m.nextStart;
+      if (isCheckInMonth) slot.bookings += 1;
       slot.channel.set(label, (slot.channel.get(label) || 0) + rev);
+      if (isDirect) {
+        slot.directRevenue += rev;
+        if (isCheckInMonth) slot.directBookings += 1;
+      }
     }
   }
 
@@ -272,6 +298,7 @@ export default async function ReportsPage({
     const p = prior[i];
     const ch: Record<string, number> = {};
     for (const k of channelLabels) ch[k] = Math.round(c.channel.get(k) || 0);
+    const directRevenue = Math.round(c.directRevenue);
     return {
       month: m.key,
       priorMonth: priorMonths[i].key,
@@ -283,6 +310,12 @@ export default async function ReportsPage({
       occupancy: occupancy(c, activeRooms),
       priorOccupancy: occupancy(p, activeRooms),
       channel: ch,
+      // "Direct vs OTA" section — direct-like revenue/count vs the rest
+      // (OTA + walk-in). See isDirectSource() above for what counts as direct.
+      directRevenue,
+      otaRevenue: Math.round(c.revenue) - directRevenue,
+      directBookings: c.directBookings,
+      otaBookings: c.bookings - c.directBookings,
     };
   });
 
@@ -308,6 +341,12 @@ export default async function ReportsPage({
     }
   }
 
+  // Direct vs OTA totals over the whole current window, + the estimated
+  // commission savings on direct-like revenue (see lib/commission-savings.ts —
+  // an illustrative estimate, not a real contracted OTA rate).
+  const directRevenue = summary.reduce((s, r) => s + r.directRevenue, 0);
+  const directBookings = summary.reduce((s, r) => s + r.directBookings, 0);
+
   const kpis: Kpis = {
     revenue: sum(summary, "revenue"),
     priorRevenue: sum(summary, "priorRevenue"),
@@ -316,6 +355,11 @@ export default async function ReportsPage({
     occupancy: avgOcc(summary, "occupancy"),
     priorOccupancy: avgOcc(summary, "priorOccupancy"),
     outstanding: Math.round(outstanding * 100) / 100,
+    directRevenue,
+    otaRevenue: sum(summary, "revenue") - directRevenue,
+    directBookings,
+    otaBookings: sum(summary, "bookings") - directBookings,
+    commissionSavings: Math.round(estimateCommissionSavings(directRevenue) * 100) / 100,
   };
 
   // The selected range, day-precision, for the picker round-trip.
