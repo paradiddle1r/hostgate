@@ -23,11 +23,16 @@ export default function BookSearchForm({
   const [adults, setAdults] = useState(1);
   const [children, setChildren] = useState(0);
   const [error, setError] = useState("");
+  const today = new Date().toISOString().slice(0, 10);
 
   function search() {
     setError("");
     if (!checkIn || !checkOut) {
       setError("กรุณาเลือกวันที่ / Please choose dates.");
+      return;
+    }
+    if (checkIn < today) {
+      setError("วันที่เข้าพักต้องไม่ใช่วันที่ผ่านมาแล้ว / Check-in date cannot be in the past.");
       return;
     }
     if (checkOut <= checkIn) {
@@ -57,6 +62,7 @@ export default function BookSearchForm({
             <input
               type="date"
               value={checkIn}
+              min={today}
               onChange={(e) => setCheckIn(e.target.value)}
               className={`${field} w-full`}
             />

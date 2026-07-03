@@ -18,12 +18,25 @@ export default async function BookRoomsPage({
     return <p className="text-sm text-[var(--app-fg-muted)]">Property not found.</p>;
   }
 
-  const checkIn = isDate(searchParams.check_in) ? searchParams.check_in! : new Date().toISOString().slice(0, 10);
+  const today = new Date().toISOString().slice(0, 10);
+  const checkIn = isDate(searchParams.check_in) ? searchParams.check_in! : today;
   const checkOut = isDate(searchParams.check_out)
     ? searchParams.check_out!
     : new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
   const adults = Math.max(1, Number(searchParams.adults) || 1);
   const children = Math.max(0, Number(searchParams.children) || 0);
+
+  // A crafted/stale URL can carry a check_in before today even though the
+  // widget's date picker (min=today) and submitPublicBooking both block it —
+  // reject it here too instead of running an availability search on it.
+  if (checkIn < today) {
+    return (
+      <p className="text-sm text-[var(--app-danger)]">
+        วันที่เข้าพักต้องไม่ใช่วันที่ผ่านมาแล้ว กรุณาเลือกวันที่ใหม่ / Check-in date cannot be in the
+        past — please choose a new date.
+      </p>
+    );
+  }
 
   const avail = await getAvailability(property.id, checkIn, checkOut);
   const nights = Math.max(

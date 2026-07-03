@@ -22,6 +22,15 @@ export async function submitPublicBooking(
   if (!input.guestName || !input.guestName.trim()) {
     return { ok: false, message: "Please enter your name." };
   }
+  // Guard against a crafted request bypassing the date-picker's min= — never
+  // trust the client to have enforced check_in >= today (see BookSearchForm).
+  const today = new Date().toISOString().slice(0, 10);
+  if (input.checkIn < today) {
+    return {
+      ok: false,
+      message: "วันที่เข้าพักต้องไม่ใช่วันที่ผ่านมาแล้ว / Check-in date cannot be in the past.",
+    };
+  }
   return createPublicBooking(input);
 }
 
