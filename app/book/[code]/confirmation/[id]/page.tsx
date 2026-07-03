@@ -77,12 +77,20 @@ export default function BookConfirmationPage({
           </div>
         </div>
       )}
-      <Link
-        href={`/book/${params.code}`}
-        className="inline-block rounded-xl border border-[var(--app-border)] px-4 py-2 text-sm hover:bg-[var(--app-surface-2)]"
-      >
-        จองอีกครั้ง / Make another booking
-      </Link>
+      <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+        <Link
+          href={`/book/${params.code}`}
+          className="inline-block rounded-xl border border-[var(--app-border)] px-4 py-2 text-sm hover:bg-[var(--app-surface-2)]"
+        >
+          จองอีกครั้ง / Make another booking
+        </Link>
+        <Link
+          href={ref ? `/book/${params.code}/manage?ref=${encodeURIComponent(ref)}` : `/book/${params.code}/manage`}
+          className="inline-block rounded-xl border border-[var(--app-border)] px-4 py-2 text-sm hover:bg-[var(--app-surface-2)]"
+        >
+          จัดการ/ยกเลิกการจอง / Manage or cancel booking
+        </Link>
+      </div>
     </div>
   );
 }
