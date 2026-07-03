@@ -12,6 +12,7 @@ import {
   PublicBookingDetails,
 } from "@/lib/book";
 import { ActionResult, ok, fail } from "@/lib/errors";
+import { sendBookingConfirmationEmail } from "@/lib/mailer";
 
 export async function submitPublicBooking(
   input: CreateBookingInput
@@ -97,4 +98,62 @@ export async function cancelPublicBookingAction(
     return fail("HG-BOOK-422", res.message);
   }
   return ok({ status: "cancelled" as const });
+}
+
+/**
+ * Resend the booking-confirmation receipt to the guest's own email. Re-runs
+ * the exact same property + code + email validation as lookupPublicBookingAction
+ * (never trusts a client-held id / email — the email typed here must match
+ * the one captured at checkout) before sending anything, then reuses the
+ * same sendBookingConfirmationEmail() sender the booking-confirmation flow
+ * uses so the resend can never drift from the original receipt.
+ */
+export async function resendPublicBookingConfirmationAction(
+  propertyCode: string,
+  bookingCode: string,
+  email: string
+): Promise<ActionResult<{ sent: true }>> {
+  const code = (bookingCode || "").trim();
+  const mail = (email || "").trim();
+  if (!code) {
+    return fail("HG-VALIDATION-422", "กรุณากรอกหมายเลขการจอง / Please enter your booking code.");
+  }
+  if (!mail) {
+    return fail("HG-VALIDATION-422", "กรุณากรอกอีเมล / Please enter your email.");
+  }
+
+  const property = await getPublicProperty(propertyCode);
+  if (!property) {
+    return fail("HG-PROP-404", "ไม่พบที่พักนี้ / Property not found.");
+  }
+
+  const booking = await lookupPublicBooking(property.id, code, mail);
+  if (!booking) {
+    return fail(
+      "HG-BOOK-404",
+      "ไม่พบการจอง กรุณาตรวจสอบหมายเลขการจองและอีเมลอีกครั้ง / Booking not found — check the code and email and try again."
+    );
+  }
+  if (booking.status === "cancelled") {
+    return fail(
+      "HG-BOOK-422",
+      "การจองนี้ถูกยกเลิกแล้ว ไม่สามารถส่งอีเมลยืนยันซ้ำได้ / This booking is cancelled — a confirmation can't be resent."
+    );
+  }
+
+  const sendRes = await sendBookingConfirmationEmail({
+    to: mail,
+    propertyName: property.name,
+    bookingCode: booking.code,
+    roomTypeName: booking.roomTypeName,
+    checkIn: booking.checkIn,
+    checkOut: booking.checkOut,
+    nights: booking.nights,
+    totalAmount: booking.totalAmount,
+    currency: booking.currency,
+  });
+  if (!sendRes.ok) {
+    return fail("HG-MAIL-500", sendRes.message || "ส่งอีเมลไม่สำเร็จ / Failed to send email.");
+  }
+  return ok({ sent: true as const });
 }

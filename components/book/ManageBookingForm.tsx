@@ -5,6 +5,7 @@ import { AlertTriangle } from "lucide-react";
 import {
   lookupPublicBookingAction,
   cancelPublicBookingAction,
+  resendPublicBookingConfirmationAction,
 } from "@/app/book/actions";
 import type { PublicBookingDetails } from "@/lib/book";
 import Button from "@/components/app/ui/Button";
@@ -42,6 +43,11 @@ export default function ManageBookingForm({
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState("");
 
+  const [resending, setResending] = useState(false);
+  const [resendMsg, setResendMsg] = useState<{ type: "success" | "error"; text: string } | null>(
+    null
+  );
+
   const money = (n: number, currency: string) => `${currency} ${(Number(n) || 0).toLocaleString()}`;
 
   async function lookup() {
@@ -58,6 +64,7 @@ export default function ManageBookingForm({
     setBooking(null);
     setConfirmingCancel(false);
     setCancelError("");
+    setResendMsg(null);
     const res = await lookupPublicBookingAction(propertyCode, code, email);
     setLoading(false);
     if (res.ok) {
@@ -77,6 +84,21 @@ export default function ManageBookingForm({
       setBooking((prev) => (prev ? { ...prev, status: "cancelled" } : prev));
     } else {
       setCancelError(res.message);
+    }
+  }
+
+  async function resendConfirmation() {
+    setResending(true);
+    setResendMsg(null);
+    const res = await resendPublicBookingConfirmationAction(propertyCode, code, email);
+    setResending(false);
+    if (res.ok) {
+      setResendMsg({
+        type: "success",
+        text: "ส่งอีเมลยืนยันอีกครั้งแล้ว / Confirmation email resent.",
+      });
+    } else {
+      setResendMsg({ type: "error", text: res.message });
     }
   }
 
@@ -155,6 +177,31 @@ export default function ManageBookingForm({
           <div className="mt-3 border-t border-[var(--app-border)] pt-3 text-base font-semibold">
             รวม / Total: {money(booking.totalAmount, booking.currency)}
           </div>
+
+          {booking.status !== "cancelled" && (
+            <div className="mt-4">
+              <Button
+                variant="ghost"
+                onClick={resendConfirmation}
+                loading={resending}
+                disabled={resending}
+                className="w-full"
+              >
+                ส่งอีเมลยืนยันอีกครั้ง / Resend confirmation email
+              </Button>
+              {resendMsg && (
+                <p
+                  className={`mt-2 text-sm ${
+                    resendMsg.type === "success"
+                      ? "text-[var(--app-success)]"
+                      : "text-[var(--app-danger)]"
+                  }`}
+                >
+                  {resendMsg.text}
+                </p>
+              )}
+            </div>
+          )}
 
           {booking.status === "cancelled" ? (
             <p className="mt-4 text-sm text-[var(--app-fg-muted)]">

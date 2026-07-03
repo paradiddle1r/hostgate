@@ -19,6 +19,7 @@ export type HGErrorCode =
   | "HG-GUEST-422" // invalid guest input
   | "HG-PLAN-403" // feature not on this plan
   | "HG-VALIDATION-422" // generic input validation
+  | "HG-MAIL-500" // email send failed / not configured
   | "HG-UNKNOWN-500"; // anything unmapped
 
 export type ActionOk<T> = { ok: true; data: T };
@@ -51,7 +52,7 @@ const ALL_CODES: HGErrorCode[] = [
   "HG-AUTH-401", "HG-AUTH-403", "HG-PROP-403", "HG-PROP-404",
   "HG-ROOM-409", "HG-ROOM-404", "HG-BOOK-409", "HG-BOOK-422",
   "HG-BOOK-404", "HG-GUEST-422", "HG-PLAN-403", "HG-VALIDATION-422",
-  "HG-UNKNOWN-500",
+  "HG-MAIL-500", "HG-UNKNOWN-500",
 ];
 
 /**
