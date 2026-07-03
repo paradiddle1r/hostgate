@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Building2,
@@ -16,6 +16,11 @@ import {
   Landmark,
   Type,
   Clock,
+  Link2,
+  Copy,
+  Check,
+  Code2,
+  ChevronDown,
 } from "lucide-react";
 import type { Property } from "@/lib/db/properties";
 import { useAppT } from "@/lib/app-i18n";
@@ -179,6 +184,31 @@ const CO = {
   },
 } as const;
 
+const WIDGET = {
+  th: {
+    hint: "แชร์ลิงก์นี้ให้แขกจองห้องพักโดยตรงกับคุณ ไม่ผ่านคอมมิชชั่น OTA",
+    previewCaption: "โลโก้ด้านบน (ในหัวข้อ “ข้อมูลบริษัท”) จะแสดงบนหัวหน้าเว็บจองตรงของคุณด้วย",
+    linkLabel: "ลิงก์จองของคุณ",
+    copy: "คัดลอกลิงก์",
+    copied: "คัดลอกแล้ว",
+    embedToggle: "ฝังลงเว็บไซต์ของคุณ",
+    embedLinkLabel: "โค้ดปุ่มลิงก์ (a href)",
+    embedIframeLabel: "โค้ดฝังแบบเต็มหน้า (iframe)",
+    copySnippet: "คัดลอกโค้ด",
+  },
+  en: {
+    hint: "Share this link so guests can book directly with you — no OTA commission.",
+    previewCaption: "The logo above (in “Company profile”) also appears in the header of your public booking page.",
+    linkLabel: "Your booking link",
+    copy: "Copy link",
+    copied: "Copied",
+    embedToggle: "Embed on your website",
+    embedLinkLabel: "Link button snippet (<a href>)",
+    embedIframeLabel: "Full-page embed snippet (<iframe>)",
+    copySnippet: "Copy code",
+  },
+} as const;
+
 const PAPER_SIZES = ["A4", "A5", "Letter", "Slip"];
 const PRINT_MODES = ["invoice", "inkjet", "dotmatrix"];
 
@@ -200,6 +230,7 @@ export default function SettingsClient({
   const en = locale === "en";
   const bt = BILL[en ? "en" : "th"];
   const c = CO[en ? "en" : "th"];
+  const w = WIDGET[en ? "en" : "th"];
   const toast = useToast();
   const router = useRouter();
   const limits = planLimits(plan);
@@ -270,6 +301,46 @@ export default function SettingsClient({
   const [newProp, setNewProp] = useState({ name: "", property_type: "daily" as const, city: "" });
   const fileRef = useRef<HTMLInputElement>(null);
   const supabase = useMemo(() => createClient(), []);
+
+  // Direct-booking widget (Settings only — derived from property.code/logo_url,
+  // no new DB column). Falls back to the production origin during SSR/first
+  // paint, then corrects to the real origin on mount (avoids a hydration
+  // mismatch while still working on preview/localhost deployments).
+  const [origin, setOrigin] = useState("https://hostgate.app");
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
+  const bookingUrl = `${origin}/book/${property.code}`;
+  const embedLinkSnippet = `<a href="${bookingUrl}" target="_blank" rel="noopener">${form.name || property.name}</a>`;
+  const embedIframeSnippet = `<iframe src="${bookingUrl}" title="${form.name || property.name}" style="width:100%;height:800px;border:0" loading="lazy"></iframe>`;
+
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedSnippet, setCopiedSnippet] = useState<"link" | "iframe" | null>(null);
+  const [embedOpen, setEmbedOpen] = useState(false);
+
+  async function copyToClipboard(text: string, onDone: () => void) {
+    try {
+      await navigator.clipboard.writeText(text);
+      onDone();
+      toast.success(w.copied);
+    } catch {
+      toast.error(en ? "Copy failed" : "คัดลอกไม่สำเร็จ");
+    }
+  }
+
+  function copyBookingLink() {
+    copyToClipboard(bookingUrl, () => {
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    });
+  }
+
+  function copyEmbedSnippet(kind: "link" | "iframe") {
+    copyToClipboard(kind === "link" ? embedLinkSnippet : embedIframeSnippet, () => {
+      setCopiedSnippet(kind);
+      setTimeout(() => setCopiedSnippet((s) => (s === kind ? null : s)), 2000);
+    });
+  }
 
   async function save() {
     setSaving(true);
@@ -672,6 +743,91 @@ export default function SettingsClient({
           <Button onClick={saveCompany} loading={savingCo}>
             {c.saveCompany}
           </Button>
+        </div>
+      </section>
+
+      {/* Direct booking widget — read-only, derived from property.code/logo_url */}
+      <section className="app-surface rounded-2xl border border-[var(--app-border)] p-5">
+        <div className="mb-1 flex items-center gap-2">
+          <Link2 size={18} className="text-[var(--app-accent)]" />
+          <h2 className="font-semibold">
+            {en ? "Direct booking link" : "ลิงก์จองตรง"}
+            {!en && <span className="text-[var(--app-fg-muted)]"> / Direct booking link</span>}
+          </h2>
+        </div>
+        <p className="mb-4 text-xs text-[var(--app-fg-muted)]">{w.hint}</p>
+
+        <div className="mb-5 flex items-center gap-4">
+          <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-2)]">
+            {co.logo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={co.logo_url} alt="Logo" className="h-full w-full object-contain" />
+            ) : (
+              <Building2 size={22} className="opacity-40" />
+            )}
+          </div>
+          <p className="flex-1 text-xs text-[var(--app-fg-muted)]">{w.previewCaption}</p>
+        </div>
+
+        <div>
+          <label className={label}>{w.linkLabel}</label>
+          <div className="flex items-center gap-2">
+            <input className={`${field} font-mono text-xs`} value={bookingUrl} readOnly onFocus={(e) => e.target.select()} />
+            <Button variant="ghost" size="sm" onClick={copyBookingLink} className="shrink-0">
+              {copiedLink ? <Check size={14} /> : <Copy size={14} />}
+              {copiedLink ? w.copied : w.copy}
+            </Button>
+          </div>
+        </div>
+
+        <div className="mt-4 border-t border-[var(--app-border)] pt-4">
+          <button
+            type="button"
+            onClick={() => setEmbedOpen((v) => !v)}
+            className="flex w-full items-center gap-2 text-left text-sm font-medium"
+          >
+            <Code2 size={15} className="text-[var(--app-accent)]" />
+            {w.embedToggle}
+            <ChevronDown
+              size={15}
+              className={`ml-auto text-[var(--app-fg-muted)] transition-transform ${embedOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+
+          {embedOpen && (
+            <div className="mt-3 space-y-3">
+              <div>
+                <label className={label}>{w.embedLinkLabel}</label>
+                <div className="flex items-center gap-2">
+                  <textarea
+                    readOnly
+                    className={`${field} min-h-[52px] resize-none font-mono text-xs`}
+                    value={embedLinkSnippet}
+                    onFocus={(e) => e.target.select()}
+                  />
+                  <Button variant="ghost" size="sm" onClick={() => copyEmbedSnippet("link")} className="shrink-0">
+                    {copiedSnippet === "link" ? <Check size={14} /> : <Copy size={14} />}
+                    {w.copySnippet}
+                  </Button>
+                </div>
+              </div>
+              <div>
+                <label className={label}>{w.embedIframeLabel}</label>
+                <div className="flex items-center gap-2">
+                  <textarea
+                    readOnly
+                    className={`${field} min-h-[52px] resize-none font-mono text-xs`}
+                    value={embedIframeSnippet}
+                    onFocus={(e) => e.target.select()}
+                  />
+                  <Button variant="ghost" size="sm" onClick={() => copyEmbedSnippet("iframe")} className="shrink-0">
+                    {copiedSnippet === "iframe" ? <Check size={14} /> : <Copy size={14} />}
+                    {w.copySnippet}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
