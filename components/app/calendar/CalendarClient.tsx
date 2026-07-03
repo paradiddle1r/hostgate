@@ -574,6 +574,32 @@ export default function CalendarClient({
     }
   }
 
+  // Today panel "Confirm" quick-action for pending bookings (mostly from the
+  // public booking widget, source='web'). Reuses the same setStatusAction
+  // server action as quick()/BookingModal's quickStatus() — no new server
+  // logic — and tracks per-booking loading state so the button disables
+  // itself while the request is in flight.
+  const [confirmingIds, setConfirmingIds] = useState<Set<string>>(new Set());
+  async function confirmPending(b: Booking) {
+    if (confirmingIds.has(b.id)) return;
+    setConfirmingIds((s) => new Set(s).add(b.id));
+    try {
+      const res = await setStatusAction(b.id, "confirmed");
+      if (res.ok) {
+        toast.success(t("cal.confirmed"));
+        router.refresh();
+      } else {
+        toast.error(`${res.code} · ${res.message}`);
+      }
+    } finally {
+      setConfirmingIds((s) => {
+        const n = new Set(s);
+        n.delete(b.id);
+        return n;
+      });
+    }
+  }
+
   // Today panel buckets — group-deduped (one row per lease), with _groupSize.
   // Stays (standard/monthly) drive arrivals/departures/in-house; OOS rooms
   // overlapping today land in `issues`. Mirrors hotel-pms's computeTodayPanel.
@@ -1044,6 +1070,8 @@ export default function CalendarClient({
           onOpen={(b) => setSeed({ booking: b })}
           onCheckIn={(b) => quick(b, "checked_in")}
           onCheckOut={(b) => quick(b, "checked_out")}
+          onConfirm={confirmPending}
+          confirmingIds={confirmingIds}
         />
       </div>
 
@@ -1355,6 +1383,8 @@ function TodayPanel({
   onOpen,
   onCheckIn,
   onCheckOut,
+  onConfirm,
+  confirmingIds,
 }: {
   today: string;
   arrivals: TpRow[];
@@ -1365,6 +1395,8 @@ function TodayPanel({
   onOpen: (b: Booking) => void;
   onCheckIn: (b: Booking) => void;
   onCheckOut: (b: Booking) => void;
+  onConfirm: (b: Booking) => void;
+  confirmingIds: Set<string>;
 }) {
   const t = useAppT();
   const { locale } = useI18n();
@@ -1419,6 +1451,9 @@ function TodayPanel({
                 meta={`${roomLabel(b.room_id)} · ${ota(b)}${b.is_open_ended ? "" : ` · ${nightsBetween(b.check_in, b.check_out)}${t("cal.nightsShort")}`}`}
               />
             </button>
+            {b.status === "pending" && (
+              <TpConfirmButton b={b} busy={confirmingIds.has(b.id)} onConfirm={onConfirm} t={t} />
+            )}
             {b.status !== "checked_in" && b.status !== "checked_out" && (
               <button
                 onClick={() => onCheckIn(b)}
@@ -1440,6 +1475,9 @@ function TodayPanel({
               <TpAvatar b={b} tint="#d97706" />
               <TpRowMain b={b} meta={`${roomLabel(b.room_id)} · ${ota(b)}`} />
             </button>
+            {b.status === "pending" && (
+              <TpConfirmButton b={b} busy={confirmingIds.has(b.id)} onConfirm={onConfirm} t={t} />
+            )}
             {b.status !== "checked_out" && (
               <button
                 onClick={() => onCheckOut(b)}
@@ -1456,17 +1494,21 @@ function TodayPanel({
 
       <TpSection title={t("cal.inhouse")} count={inhouse.length} empty={t("cal.none")}>
         {slice(inhouse, "ih").map((b) => (
-          <button
-            key={b.id}
-            onClick={() => onOpen(b)}
-            className="flex w-full items-center gap-2 rounded-xl px-1.5 py-1.5 text-left hover:bg-[var(--app-surface-2)]"
-          >
-            <TpRoomPill>{roomLabel(b.room_id)}</TpRoomPill>
-            <TpRowMain
-              b={b}
-              meta={`${b.booking_type === "monthly" ? t("cal.monthly") : ota(b)}${b.is_open_ended ? "" : ` · → ${b.check_out.slice(5)}`}`}
-            />
-          </button>
+          <div key={b.id} className="flex items-center gap-2 rounded-xl px-1.5 py-1.5 hover:bg-[var(--app-surface-2)]">
+            <button
+              onClick={() => onOpen(b)}
+              className="flex min-w-0 flex-1 items-center gap-2 text-left"
+            >
+              <TpRoomPill>{roomLabel(b.room_id)}</TpRoomPill>
+              <TpRowMain
+                b={b}
+                meta={`${b.booking_type === "monthly" ? t("cal.monthly") : ota(b)}${b.is_open_ended ? "" : ` · → ${b.check_out.slice(5)}`}`}
+              />
+            </button>
+            {b.status === "pending" && (
+              <TpConfirmButton b={b} busy={confirmingIds.has(b.id)} onConfirm={onConfirm} t={t} />
+            )}
+          </div>
         ))}
         {moreBtn("ih", inhouse.length)}
       </TpSection>
@@ -1536,6 +1578,33 @@ function TpRowMain({ b, meta }: { b: TpRow; meta: string }) {
       </div>
       <div className="truncate text-xs text-[var(--app-fg-muted)]">{meta}</div>
     </div>
+  );
+}
+// Inline "Confirm" quick action for pending bookings (mainly web-widget
+// bookings awaiting staff confirmation) — flips status: pending → confirmed
+// via the same setStatusAction used by BookingModal's quickStatus(), so
+// staff don't have to open the full modal just to accept a booking.
+function TpConfirmButton({
+  b,
+  busy,
+  onConfirm,
+  t,
+}: {
+  b: Booking;
+  busy: boolean;
+  onConfirm: (b: Booking) => void;
+  t: (key: string) => string;
+}) {
+  return (
+    <button
+      onClick={() => onConfirm(b)}
+      disabled={busy}
+      aria-busy={busy}
+      className="flex-none rounded-lg px-2 py-1 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-60"
+      style={{ background: "color-mix(in srgb, #d97706 16%, transparent)", color: "#d97706" }}
+    >
+      {busy ? t("cal.confirming") : t("cal.confirm")}
+    </button>
   );
 }
 function TpRoomPill({ children, danger }: { children: React.ReactNode; danger?: boolean }) {
