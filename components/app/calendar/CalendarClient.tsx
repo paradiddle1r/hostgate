@@ -1372,7 +1372,13 @@ function TodayPanel({
   const [exp, setExp] = useState({ arr: false, dep: false, ih: false, iss: false });
   const toggle = (k: keyof typeof exp) => setExp((e) => ({ ...e, [k]: !e[k] }));
   const slice = (arr: TpRow[], k: keyof typeof exp) => (exp[k] ? arr : arr.slice(0, TODAY_CAPS[k]));
-  const ota = (b: TpRow) => b.ota || t("cal.direct");
+  const ota = (b: TpRow) =>
+    b.ota ||
+    (b.source === "web"
+      ? t("cal.web")
+      : b.source === "walk_in"
+        ? t("cal.walkIn")
+        : t("cal.direct"));
   const dateLabel = new Date(today + "T00:00:00Z").toLocaleDateString(
     locale === "en" ? "en-GB" : "th-TH",
     { day: "2-digit", month: "short", timeZone: "UTC" },
