@@ -149,6 +149,79 @@ export interface CreateBookingInput {
   ratePlanName?: string | null;
 }
 
+// ── guest self-service: manage my booking (migration 20) ───────────────────
+// Anon has no table RLS access, so lookup/cancel go through the same
+// SECURITY DEFINER RPC pattern as the rest of this file. Both require
+// booking_code AND guest email to match — never look a booking up by code
+// alone (that would let anyone enumerate other guests' stays).
+
+export interface PublicBookingDetails {
+  id: string;
+  code: string;
+  status: string;
+  checkIn: string;
+  checkOut: string;
+  roomTypeName: string;
+  totalAmount: number;
+  currency: string;
+  nights: number;
+}
+
+function nightsBetween(checkIn: string, checkOut: string): number {
+  const ms = Date.parse(checkOut + "T00:00:00Z") - Date.parse(checkIn + "T00:00:00Z");
+  return Math.max(1, Math.round(ms / 86_400_000));
+}
+
+/** Look up a guest's own booking. Returns null unless code+email BOTH match. */
+export async function lookupPublicBooking(
+  propertyId: string,
+  code: string,
+  email: string
+): Promise<PublicBookingDetails | null> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("public_lookup_booking", {
+    p_property: propertyId,
+    p_code: code,
+    p_email: email,
+  });
+  if (error) return null;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return null;
+  const checkIn = row.check_in as string;
+  const checkOut = row.check_out as string;
+  return {
+    id: row.id,
+    code: row.code,
+    status: row.status,
+    checkIn,
+    checkOut,
+    roomTypeName: row.room_type_name ?? "Room",
+    totalAmount: Number(row.total_amount) || 0,
+    currency: row.currency,
+    nights: nightsBetween(checkIn, checkOut),
+  };
+}
+
+/** Cancel a guest's own booking. Server re-verifies code+email before cancelling. */
+export async function cancelPublicBookingRpc(
+  propertyId: string,
+  code: string,
+  email: string
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const supabase = createClient();
+  const { error } = await supabase.rpc("public_cancel_booking", {
+    p_property: propertyId,
+    p_code: code,
+    p_email: email,
+  });
+  if (error) {
+    const m = error.message || "Cancel failed";
+    const clean = m.replace(/^.*?(HG-[A-Z]+-\d{3}:\s*)/, "$1");
+    return { ok: false, message: clean };
+  }
+  return { ok: true };
+}
+
 export async function createPublicBooking(
   input: CreateBookingInput
 ): Promise<{ ok: true; id: string; code: string; total: number } | { ok: false; message: string }> {
