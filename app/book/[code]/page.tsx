@@ -23,25 +23,20 @@ export default async function BookLandingPage({ params }: { params: { code: stri
 
   return (
     <div className="mx-auto max-w-md">
-      {/* Owner-branded hero — property photo + description (Settings → Company
-          profile logo_url; commit 1625611's booking widget already claimed
-          this photo "appears in the header of your public booking page", so
-          actually render it here instead of the generic building icon). */}
-      {property.logo_url && (
-        <div className="mb-4 overflow-hidden rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)]">
-          <img
-            src={property.logo_url}
-            alt={property.name}
-            className="h-40 w-full object-cover sm:h-52"
-          />
-        </div>
-      )}
+      {/* Branded header so a guest landing on /book/[code] knows which
+          property they're looking at — uses only the fields
+          getPublicProperty returns (name/city/country), no photo/logo. */}
       <div className="mb-4 text-center">
         <h1 className="text-xl font-semibold tracking-tight">{property.name}</h1>
         {location && <p className="mt-1 text-sm text-[var(--app-fg-muted)]">{location}</p>}
       </div>
 
-      <BookSearchForm code={params.code} defaultCheckIn={today} defaultCheckOut={tomorrow} />
+      <BookSearchForm
+        code={params.code}
+        propertyName={property.name}
+        defaultCheckIn={today}
+        defaultCheckOut={tomorrow}
+      />
     </div>
   );
 }

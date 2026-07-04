@@ -10,10 +10,12 @@ const field =
 
 export default function BookSearchForm({
   code,
+  propertyName,
   defaultCheckIn,
   defaultCheckOut,
 }: {
   code: string;
+  propertyName?: string;
   defaultCheckIn: string;
   defaultCheckOut: string;
 }) {
@@ -48,12 +50,16 @@ export default function BookSearchForm({
 
   return (
     <div className="app-surface rounded-2xl border border-[var(--app-border)] p-5">
-      <h1 className="text-lg font-semibold tracking-tight">จองห้องพัก / Book your stay</h1>
+      <h2 className="text-lg font-semibold tracking-tight">
+        {propertyName
+          ? `จองห้องพัก / Book your stay at ${propertyName}`
+          : "จองห้องพัก / Book your stay"}
+      </h2>
       <p className="mt-1 text-sm text-[var(--app-fg-muted)]">
         เลือกวันที่และจำนวนผู้เข้าพัก / Pick your dates and guests.
       </p>
-      {/* NOTE: property photo/name/location now render in the parent page
-          (app/book/[code]/page.tsx) above this card — see PublicProperty.logo_url. */}
+      {/* NOTE: property name/location render in the parent page
+          (app/book/[code]/page.tsx) above this card. */}
 
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="block">

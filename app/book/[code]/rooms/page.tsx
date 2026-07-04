@@ -76,11 +76,14 @@ export default async function BookRoomsPage({
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <div className="text-sm text-[var(--app-fg-muted)]">
+          <p className="text-xs font-medium uppercase tracking-wide text-[var(--app-fg-muted)]">
+            {property.name}
+          </p>
+          <h1 className="text-xl font-semibold tracking-tight">เลือกห้องพัก / Choose a room</h1>
+          <div className="mt-0.5 text-sm text-[var(--app-fg-muted)]">
             {checkIn} → {checkOut} · {nights} {nights === 1 ? "night" : "nights"} · {adults} adults
             {children ? ` · ${children} children` : ""}
           </div>
-          <h1 className="text-xl font-semibold tracking-tight">เลือกห้องพัก / Choose a room</h1>
         </div>
         <Link
           href={`/book/${params.code}`}
