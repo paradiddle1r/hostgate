@@ -1,4 +1,5 @@
 import Hero from "@/components/Hero";
+import ScrollFX from "@/components/ScrollFX";
 import Trusted from "@/components/Trusted";
 import Features from "@/components/Features";
 import HowItWorks from "@/components/HowItWorks";
@@ -15,6 +16,7 @@ import CTA from "@/components/CTA";
 export default function HomePage() {
   return (
     <>
+      <ScrollFX />
       <Hero />
       <Trusted />
       <Features />

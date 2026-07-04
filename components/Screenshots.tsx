@@ -52,23 +52,24 @@ export default function Screenshots() {
               </div>
             </div>
 
-            {/* Desktop — row */}
+            {/* Desktop — row. Each device drifts at its own parallax speed
+                (ScrollFX) so the trio reads as layers with real depth. */}
             <div className="hidden items-end gap-8 lg:flex">
-              <div className="flex-1">
+              <div className="flex-1" data-fx="parallax" data-fx-speed="0.05">
                 <div className="tilt">
                   <StudioDisplay>
                     <AnimatedDashboard />
                   </StudioDisplay>
                 </div>
               </div>
-              <div className="w-[280px] flex-none">
+              <div className="w-[280px] flex-none" data-fx="parallax" data-fx-speed="0.14">
                 <div className="tilt float">
                   <IpadFrame orientation="landscape">
                     <MonthlyRentalScene />
                   </IpadFrame>
                 </div>
               </div>
-              <div className="w-[200px] flex-none">
+              <div className="w-[200px] flex-none" data-fx="parallax" data-fx-speed="0.22">
                 <div className="tilt">
                   <IPhoneFrame>
                     <AnimatedMobile />

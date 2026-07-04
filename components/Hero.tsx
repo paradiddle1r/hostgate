@@ -1,18 +1,24 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useI18n, pick } from "@/lib/i18n";
 import StudioDisplay from "./StudioDisplay";
 import IPhoneFrame from "./IPhoneFrame";
 import AnimatedDashboard from "./AnimatedDashboard";
 import AnimatedMobile from "./AnimatedMobile";
 
+// Photoreal floating 3D keycards behind the headline — client-only,
+// self-defers past idle, desktop-only inside the component.
+const HeroKeycard = dynamic(() => import("./HeroKeycard"), { ssr: false });
+
 export default function Hero() {
   const { locale, t } = useI18n();
 
   return (
-    <section className="relative pt-28 pb-12 sm:pt-32 sm:pb-16 lg:pt-48 lg:pb-28">
-      <div className="mx-auto max-w-7xl px-5 lg:px-8">
+    <section className="relative overflow-x-clip pt-28 pb-12 sm:pt-32 sm:pb-16 lg:pt-48 lg:pb-28">
+      <HeroKeycard />
+      <div className="relative z-10 mx-auto max-w-7xl px-5 lg:px-8">
         <div className="mx-auto max-w-4xl text-center">
           <p
             className="hero-anim text-[11px] font-semibold uppercase tracking-[0.2em] text-indigo-600 sm:text-xs sm:tracking-[0.25em]"
@@ -43,7 +49,8 @@ export default function Hero() {
           >
             <Link
               href="#pricing"
-              className="group inline-flex w-full max-w-xs items-center justify-center gap-1.5 rounded-full bg-zinc-900 px-6 py-3 text-sm font-medium text-white shadow-[0_8px_30px_-10px_rgba(0,0,0,0.3)] transition hover:bg-zinc-800 hover:shadow-[0_12px_36px_-10px_rgba(0,0,0,0.4)] sm:w-auto"
+              data-magnetic
+              className="sweep group inline-flex w-full max-w-xs items-center justify-center gap-1.5 rounded-full bg-zinc-900 px-6 py-3 text-sm font-medium text-white shadow-[0_8px_30px_-10px_rgba(0,0,0,0.3)] transition hover:bg-zinc-800 hover:shadow-[0_12px_36px_-10px_rgba(0,0,0,0.4)] sm:w-auto"
             >
               {pick(t.hero.ctaPrimary, locale)}
               <svg viewBox="0 0 16 16" className="h-3 w-3 transition group-hover:translate-x-0.5" fill="none" stroke="currentColor" strokeWidth="2">
@@ -89,15 +96,20 @@ export default function Hero() {
             </div>
           </div>
 
-          {/* Desktop: Studio Display with floating iPhone */}
+          {/* Desktop: Studio Display with floating iPhone.
+              data-tilt = cursor-follow 3D tilt (ScrollFX), replacing the CSS
+              hover tilt so the two transforms never fight; the parallax
+              wrappers are separate elements for the same reason. */}
           <div className="hidden lg:block">
-            <div className="tilt mx-auto">
-              <StudioDisplay>
-                <AnimatedDashboard />
-              </StudioDisplay>
+            <div data-fx="parallax" data-fx-speed="0.07">
+              <div data-tilt className="mx-auto">
+                <StudioDisplay>
+                  <AnimatedDashboard />
+                </StudioDisplay>
+              </div>
             </div>
-            <div className="absolute right-16 bottom-16 w-[240px] float">
-              <div className="tilt">
+            <div className="absolute right-16 bottom-16 w-[240px]" data-fx="parallax" data-fx-speed="0.2">
+              <div data-tilt className="float">
                 <IPhoneFrame>
                   <AnimatedMobile />
                 </IPhoneFrame>

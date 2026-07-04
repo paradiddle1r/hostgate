@@ -191,6 +191,22 @@ h1, h2 { letter-spacing: -0.028em; }
   transform: perspective(1500px) rotateX(2deg) rotateY(-2deg);
 }
 
+/* Light sweep — a soft highlight band sweeps across on hover. Works on any
+   overflow-clipped rounded element (CTA pills, pricing cards). */
+.sweep { position: relative; overflow: hidden; }
+.sweep::after {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0; left: -80%;
+  width: 55%;
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+  transform: skewX(-18deg);
+  transition: left 0.7s var(--ease-apple);
+  pointer-events: none;
+}
+.sweep:hover::after { left: 130%; }
+@media (prefers-reduced-motion: reduce) { .sweep::after { display: none; } }
+
 /* Premium device shadow */
 .device-shadow {
   filter:
