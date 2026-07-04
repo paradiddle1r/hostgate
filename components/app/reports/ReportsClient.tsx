@@ -16,11 +16,14 @@ import {
   BedDouble,
   Banknote,
   PiggyBank,
+  Download,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import EmptyState from "@/components/app/ui/EmptyState";
+import Button from "@/components/app/ui/Button";
 import RangeSelector from "./RangeSelector";
 import { OTA_COMMISSION_RATE } from "@/lib/commission-savings";
+import { exportDirectOtaCsv } from "@/lib/reports-export";
 
 export interface MonthRow {
   month: string; // 'YYYY-MM'
@@ -84,6 +87,7 @@ const STR = {
     otaWalkin: "OTA + วอล์กอิน",
     savingsLabel: "ประหยัดค่าคอมมิชชั่น (ประมาณการ)",
     savingsHint: `ประมาณการเท่านั้น ไม่ใช่ตัวเลขบัญชีจริง: รายได้จองตรง × ${Math.round(OTA_COMMISSION_RATE * 100)}% (สมมติฐานอัตราค่าคอมมิชชั่น OTA ทั่วไป ไม่ใช่ตัวเลขจากสัญญาใดสัญญาหนึ่ง)`,
+    exportCsv: "ส่งออก CSV",
     chartRevenue: "รายได้รายเดือน",
     chartRevenueSub: "แท่งคู่: ปัจจุบัน (สี) เทียบช่วงก่อน (เทา)",
     chartBookings: "จำนวนการจองรายเดือน",
@@ -126,6 +130,7 @@ const STR = {
     otaWalkin: "OTA + walk-in",
     savingsLabel: "Est. commission savings",
     savingsHint: `Estimate only, not exact accounting: direct-source revenue × ${Math.round(OTA_COMMISSION_RATE * 100)}% (a typical OTA commission assumption, not a rate from any specific contract).`,
+    exportCsv: "Export CSV",
     chartRevenue: "Monthly revenue",
     chartRevenueSub: "Paired bars: current (colour) vs prior period (grey).",
     chartBookings: "Monthly bookings",
@@ -374,18 +379,28 @@ export default function ReportsClient({
 
           {tab === "directOta" && (
             <div className="space-y-6">
-              <div className="max-w-xs">
-                <div
-                  className="app-surface rounded-2xl border border-[var(--app-border)] p-4"
-                  title={tr.savingsHint}
-                >
-                  <div className="mb-2 flex items-center gap-2 text-[var(--app-accent)]">
-                    <PiggyBank size={18} />
-                    <span className="text-xs font-medium text-[var(--app-fg-muted)]">{tr.savingsLabel}</span>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="max-w-xs">
+                  <div
+                    className="app-surface rounded-2xl border border-[var(--app-border)] p-4"
+                    title={tr.savingsHint}
+                  >
+                    <div className="mb-2 flex items-center gap-2 text-[var(--app-accent)]">
+                      <PiggyBank size={18} />
+                      <span className="text-xs font-medium text-[var(--app-fg-muted)]">{tr.savingsLabel}</span>
+                    </div>
+                    <p className="text-xl font-semibold tracking-tight">{money(kpis.commissionSavings)}</p>
+                    <p className="mt-1.5 text-[11px] leading-snug text-[var(--app-fg-muted)]">{tr.savingsHint}</p>
                   </div>
-                  <p className="text-xl font-semibold tracking-tight">{money(kpis.commissionSavings)}</p>
-                  <p className="mt-1.5 text-[11px] leading-snug text-[var(--app-fg-muted)]">{tr.savingsHint}</p>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => exportDirectOtaCsv(summary, kpis, currency)}
+                  disabled={summary.length === 0}
+                >
+                  <Download size={15} /> {tr.exportCsv}
+                </Button>
               </div>
 
               <ChartCard title={tr.chartDirectOtaRevenue} subtitle={tr.chartDirectOtaRevenueSub}>
