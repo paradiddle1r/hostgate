@@ -14,6 +14,11 @@ export interface PublicProperty {
   currency: string;
   city: string | null;
   country: string | null;
+  // Company logo/photo (properties.logo_url, migration 15), surfaced to the
+  // anon booking RPC by migration 21 so the guest-facing /book/[code] pages
+  // can render the same branding photo the owner uploads in Settings →
+  // Company profile / the "Direct booking widget" panel (commit 1625611).
+  logo_url: string | null;
 }
 
 export interface AvailabilityRow {
