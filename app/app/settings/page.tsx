@@ -24,6 +24,15 @@ export default async function SettingsPage() {
         .maybeSingle()
     : { data: null };
 
+  // Room types — used to render each one's copyable iCal (OTA sync) URL.
+  // Same direct inline query pattern as app/app/rooms/page.tsx.
+  const { data: roomTypesData } = await supabase
+    .from("room_types")
+    .select("id, name")
+    .eq("property_id", active.data.property.id)
+    .order("sort_order", { ascending: true });
+  const roomTypes = (roomTypesData ?? []) as { id: string; name: string }[];
+
   return (
     <SettingsClient
       property={active.data.property}
@@ -31,6 +40,7 @@ export default async function SettingsPage() {
       propertyCount={count}
       fontSize={(profile?.font_size as string) ?? "normal"}
       timeFormat={(profile?.time_format as string) ?? "24h"}
+      roomTypes={roomTypes}
     />
   );
 }

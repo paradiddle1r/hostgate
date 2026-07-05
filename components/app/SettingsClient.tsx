@@ -21,6 +21,7 @@ import {
   Check,
   Code2,
   ChevronDown,
+  RefreshCw,
 } from "lucide-react";
 import type { Property } from "@/lib/db/properties";
 import { useAppT } from "@/lib/app-i18n";
@@ -209,6 +210,23 @@ const WIDGET = {
   },
 } as const;
 
+const ICAL = {
+  th: {
+    heading: "ซิงก์ปฏิทิน OTA (iCal)",
+    hint: "คัดลอกลิงก์ของแต่ละประเภทห้องพัก ไปวางในช่องซิงก์ปฏิทิน (Sync Calendar / iCal URL) ของ Booking.com, Agoda หรือ Airbnb เพื่อให้ระบบเหล่านั้นเห็นการจองที่มีอยู่แล้วใน HostGate และไม่ขายห้องซ้ำ",
+    copy: "คัดลอกลิงก์",
+    copied: "คัดลอกแล้ว",
+    empty: "ยังไม่มีประเภทห้องพัก — เพิ่มที่หน้าห้องพักก่อน",
+  },
+  en: {
+    heading: "OTA calendar sync (iCal)",
+    hint: "Copy each room type's link into Booking.com / Agoda / Airbnb's calendar-sync (iCal URL) settings so it sees bookings already in HostGate and stops double-selling the room.",
+    copy: "Copy link",
+    copied: "Copied",
+    empty: "No room types yet — add one on the Rooms page first.",
+  },
+} as const;
+
 const PAPER_SIZES = ["A4", "A5", "Letter", "Slip"];
 const PRINT_MODES = ["invoice", "inkjet", "dotmatrix"];
 
@@ -218,12 +236,14 @@ export default function SettingsClient({
   propertyCount,
   fontSize = "normal",
   timeFormat = "24h",
+  roomTypes = [],
 }: {
   property: Property;
   plan: string;
   propertyCount: number;
   fontSize?: string;
   timeFormat?: string;
+  roomTypes?: { id: string; name: string }[];
 }) {
   const t = useAppT();
   const { locale } = useI18n();
@@ -317,6 +337,7 @@ export default function SettingsClient({
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedSnippet, setCopiedSnippet] = useState<"link" | "iframe" | null>(null);
   const [embedOpen, setEmbedOpen] = useState(false);
+  const [copiedIcalId, setCopiedIcalId] = useState<string | null>(null);
 
   async function copyToClipboard(text: string, onDone: () => void) {
     try {
@@ -339,6 +360,17 @@ export default function SettingsClient({
     copyToClipboard(kind === "link" ? embedLinkSnippet : embedIframeSnippet, () => {
       setCopiedSnippet(kind);
       setTimeout(() => setCopiedSnippet((s) => (s === kind ? null : s)), 2000);
+    });
+  }
+
+  function icalUrl(roomTypeId: string): string {
+    return `${origin}/ical/${property.code}/${roomTypeId}`;
+  }
+
+  function copyIcalLink(roomTypeId: string) {
+    copyToClipboard(icalUrl(roomTypeId), () => {
+      setCopiedIcalId(roomTypeId);
+      setTimeout(() => setCopiedIcalId((s) => (s === roomTypeId ? null : s)), 2000);
     });
   }
 
@@ -829,6 +861,44 @@ export default function SettingsClient({
             </div>
           )}
         </div>
+      </section>
+
+      {/* OTA calendar sync — read-only per-room-type iCal export URLs */}
+      <section className="app-surface rounded-2xl border border-[var(--app-border)] p-5">
+        <div className="mb-1 flex items-center gap-2">
+          <RefreshCw size={18} className="text-[var(--app-accent)]" />
+          <h2 className="font-semibold">{ICAL[en ? "en" : "th"].heading}</h2>
+        </div>
+        <p className="mb-4 text-xs text-[var(--app-fg-muted)]">{ICAL[en ? "en" : "th"].hint}</p>
+
+        {roomTypes.length === 0 ? (
+          <p className="text-sm text-[var(--app-fg-muted)]">{ICAL[en ? "en" : "th"].empty}</p>
+        ) : (
+          <div className="space-y-3">
+            {roomTypes.map((rt) => (
+              <div key={rt.id}>
+                <label className={label}>{rt.name}</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    className={`${field} font-mono text-xs`}
+                    value={icalUrl(rt.id)}
+                    readOnly
+                    onFocus={(e) => e.target.select()}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => copyIcalLink(rt.id)}
+                    className="shrink-0"
+                  >
+                    {copiedIcalId === rt.id ? <Check size={14} /> : <Copy size={14} />}
+                    {copiedIcalId === rt.id ? ICAL[en ? "en" : "th"].copied : ICAL[en ? "en" : "th"].copy}
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Billing / tax-invoice settings */}
