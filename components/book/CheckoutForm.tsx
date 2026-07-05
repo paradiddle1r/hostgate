@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Tag } from "lucide-react";
 import { submitPublicBooking } from "@/app/book/actions";
 import Button from "@/components/app/ui/Button";
+import { applyPromoDiscount, type PromoCode } from "@/lib/promo-codes";
 
 const field =
   "rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] px-2.5 py-1.5 text-sm outline-none focus:border-[var(--app-accent)]";
@@ -49,7 +50,34 @@ export default function CheckoutForm({
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  const [promoInput, setPromoInput] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState<PromoCode | null>(null);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [promoError, setPromoError] = useState("");
+
+  const discountedTotal = Math.max(0, total - discountAmount);
+
   const soldOut = available <= 0;
+
+  function applyPromo() {
+    setPromoError("");
+    const result = applyPromoDiscount(total, promoInput);
+    if (!result.ok) {
+      setAppliedPromo(null);
+      setDiscountAmount(0);
+      setPromoError(result.message || "รหัสส่วนลดไม่ถูกต้อง / Invalid promo code.");
+      return;
+    }
+    setAppliedPromo(result.promo ?? null);
+    setDiscountAmount(result.discountAmount);
+  }
+
+  function removePromo() {
+    setPromoInput("");
+    setAppliedPromo(null);
+    setDiscountAmount(0);
+    setPromoError("");
+  }
 
   async function confirm() {
     setError("");
@@ -76,6 +104,8 @@ export default function CheckoutForm({
       children: childrenCount,
       ratePlanId,
       ratePlanName,
+      promoCode: appliedPromo?.code ?? null,
+      currency,
     });
     if (res.ok) {
       const qs = new URLSearchParams({
@@ -86,7 +116,10 @@ export default function CheckoutForm({
         nights: String(nights),
         adults: String(adults),
         children: String(childrenCount),
-        total: String(total),
+        // res.total is the authoritative, server-recomputed amount (already
+        // reflects the promo discount when one was applied — see
+        // createPublicBooking in lib/book.ts) — never the client's own total.
+        total: String(res.total),
         currency,
       });
       router.push(`/book/${code}/confirmation/${res.id}?${qs.toString()}`);
@@ -121,8 +154,59 @@ export default function CheckoutForm({
             {childrenCount > 0 ? ` · ${childrenCount} เด็ก / children` : ""}
           </div>
         </div>
-        <div className="mt-4 border-t border-[var(--app-border)] pt-3 text-base font-semibold">
-          รวม / Total: {money(total)}
+        <div className="mt-4 border-t border-[var(--app-border)] pt-3">
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-[var(--app-fg-muted)]">
+              รหัสส่วนลด / Promo code
+            </span>
+            {appliedPromo ? (
+              <div className="flex items-center justify-between gap-2 rounded-lg border border-[var(--app-accent)] bg-[var(--app-surface-2)] px-2.5 py-1.5 text-sm">
+                <span className="flex items-center gap-1.5 text-[var(--app-fg)]">
+                  <Tag size={14} className="flex-none text-[var(--app-accent)]" />
+                  {appliedPromo.code}
+                </span>
+                <button
+                  type="button"
+                  onClick={removePromo}
+                  className="text-xs text-[var(--app-fg-muted)] underline underline-offset-2"
+                >
+                  ลบ / Remove
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  value={promoInput}
+                  onChange={(e) => setPromoInput(e.target.value)}
+                  placeholder="เช่น WELCOME10 / e.g. WELCOME10"
+                  className={`${field} flex-1`}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={applyPromo}
+                  disabled={!promoInput.trim()}
+                >
+                  ใช้โค้ด / Apply
+                </Button>
+              </div>
+            )}
+            {promoError && (
+              <p className="mt-1.5 text-xs text-[var(--app-danger)]">{promoError}</p>
+            )}
+          </label>
+        </div>
+        <div className="mt-3 border-t border-[var(--app-border)] pt-3 text-sm">
+          {appliedPromo && (
+            <div className="mb-1 flex items-center justify-between text-[var(--app-fg-muted)]">
+              <span>ส่วนลด / Discount ({appliedPromo.code})</span>
+              <span>-{money(discountAmount)}</span>
+            </div>
+          )}
+          <div className="flex items-center justify-between text-base font-semibold">
+            <span>รวม / Total</span>
+            <span>{money(discountedTotal)}</span>
+          </div>
         </div>
       </div>
 

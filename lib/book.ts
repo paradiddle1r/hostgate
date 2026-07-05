@@ -6,7 +6,9 @@ import "server-only";
 // acts as the `anon` role.
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { listRatePlans, listRatePlanRates } from "@/lib/db/rate-plans";
+import { applyPromoDiscount } from "@/lib/promo-codes";
 
 export interface PublicProperty {
   id: string;
@@ -147,6 +149,13 @@ export interface CreateBookingInput {
   // a `p_rate_plan_id` param (a small migration, out of scope here).
   ratePlanId?: string | null;
   ratePlanName?: string | null;
+  // Promo/discount code applied at checkout (lib/promo-codes.ts). Re-validated
+  // and re-priced server-side in createPublicBooking — never trust a
+  // client-computed discount for money that gets written to the booking row.
+  promoCode?: string | null;
+  // Display currency for the promo redemption note only (e.g. "THB"). Purely
+  // cosmetic — the authoritative discount math never depends on it.
+  currency?: string;
 }
 
 // ── guest self-service: manage my booking (migration 20) ───────────────────
@@ -251,5 +260,49 @@ export async function createPublicBooking(
     return { ok: false, message: clean };
   }
   const r = data as { id: string; code: string; total: number };
-  return { ok: true, id: r.id, code: r.code, total: Number(r.total) || 0 };
+  const rpcTotal = Number(r.total) || 0;
+
+  // ── promo code (no migration path) ──────────────────────────────────────
+  // public_create_booking(...) has a fixed 9-arg signature (see NOTE above) —
+  // it doesn't accept a promo code or a client-supplied total, and always
+  // writes the full, undiscounted total + its own generic notes ("Web
+  // booking..."). Extending the RPC itself would mean a new migration, out of
+  // scope for this milestone. Instead — following the exact precedent
+  // lib/supabase/admin.ts documents for the public checkout's invoice writes
+  // (and app/ical/.../route.ts's read side) — we do a scoped follow-up write
+  // through the service-role client: re-validate the promo code server-side
+  // (never trust the client's discount math), recompute the discount off the
+  // RPC's own authoritative total, and patch ONLY the row we just created
+  // (scoped by its own id — never a client-supplied id) so the discounted
+  // total and a redemption note land on the real booking row without any new
+  // column. Best-effort: if this patch fails for any reason the booking
+  // itself has already succeeded, so we swallow the error rather than fail
+  // the whole checkout over a promo code.
+  let total = rpcTotal;
+  if (input.promoCode && input.promoCode.trim()) {
+    const discount = applyPromoDiscount(rpcTotal, input.promoCode);
+    if (discount.ok && discount.discountAmount > 0) {
+      total = discount.discountedTotal;
+      try {
+        const admin = createAdminClient();
+        const { data: existing } = await admin
+          .from("bookings")
+          .select("notes")
+          .eq("id", r.id)
+          .single();
+        const baseNotes = (existing?.notes as string | null) ?? "";
+        const currencyPrefix = input.currency ? `${input.currency} ` : "";
+        const promoNote = `Promo: ${discount.promo!.code.toUpperCase()} (-${currencyPrefix}${discount.discountAmount.toLocaleString()})`;
+        const notes = baseNotes ? `${baseNotes} · ${promoNote}` : promoNote;
+        await admin
+          .from("bookings")
+          .update({ total_amount: discount.discountedTotal, notes })
+          .eq("id", r.id);
+      } catch {
+        /* best-effort — the booking itself already succeeded */
+      }
+    }
+  }
+
+  return { ok: true, id: r.id, code: r.code, total };
 }
