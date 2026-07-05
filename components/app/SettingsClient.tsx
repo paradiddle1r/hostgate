@@ -37,6 +37,7 @@ import {
   savePropertyProfile,
   saveAppearancePrefs,
 } from "@/app/app/actions";
+import { importOtaIcal } from "@/app/app/settings/actions";
 
 const field =
   "w-full rounded-xl border border-[var(--app-border)] bg-[var(--app-surface)] px-3 py-2 text-sm outline-none focus:border-[var(--app-accent)]";
@@ -217,6 +218,12 @@ const ICAL = {
     copy: "คัดลอกลิงก์",
     copied: "คัดลอกแล้ว",
     empty: "ยังไม่มีประเภทห้องพัก — เพิ่มที่หน้าห้องพักก่อน",
+    importHeading: "นำเข้าจาก OTA",
+    importHint: "วางลิงก์ปฏิทิน iCal (.ics) จาก Booking.com, Agoda หรือ Airbnb เพื่อดึงวันที่ถูกจองไว้แล้วในระบบเหล่านั้น มาบล็อกในปฏิทินของ HostGate โดยอัตโนมัติ ป้องกันไม่ให้หน้าจองตรงขายห้องซ้ำ ซิงก์ซ้ำได้ปลอดภัย ระบบจะข้ามรายการที่นำเข้าไปแล้ว",
+    urlPlaceholder: "วางลิงก์ iCal (.ics) จาก OTA ที่นี่",
+    sync: "ซิงก์เดี๋ยวนี้",
+    syncResult: (imported: number, skipped: number) =>
+      `นำเข้า ${imported} รายการ, ข้าม ${skipped} รายการ (ซิงก์ซ้ำ)`,
   },
   en: {
     heading: "OTA calendar sync (iCal)",
@@ -224,6 +231,12 @@ const ICAL = {
     copy: "Copy link",
     copied: "Copied",
     empty: "No room types yet — add one on the Rooms page first.",
+    importHeading: "Import from OTA",
+    importHint: "Paste an OTA's iCal (.ics) calendar-sync link (Booking.com / Agoda / Airbnb) to pull in dates already booked there and auto-block them on HostGate's calendar — stops the direct-booking widget from double-selling the room. Safe to re-sync — already-imported dates are skipped.",
+    urlPlaceholder: "Paste the OTA's iCal (.ics) link here",
+    sync: "Sync now",
+    syncResult: (imported: number, skipped: number) =>
+      `Imported ${imported}, skipped ${skipped} (already synced)`,
   },
 } as const;
 
@@ -338,6 +351,8 @@ export default function SettingsClient({
   const [copiedSnippet, setCopiedSnippet] = useState<"link" | "iframe" | null>(null);
   const [embedOpen, setEmbedOpen] = useState(false);
   const [copiedIcalId, setCopiedIcalId] = useState<string | null>(null);
+  const [importUrls, setImportUrls] = useState<Record<string, string>>({});
+  const [syncingId, setSyncingId] = useState<string | null>(null);
 
   async function copyToClipboard(text: string, onDone: () => void) {
     try {
@@ -372,6 +387,23 @@ export default function SettingsClient({
       setCopiedIcalId(roomTypeId);
       setTimeout(() => setCopiedIcalId((s) => (s === roomTypeId ? null : s)), 2000);
     });
+  }
+
+  // Pull an OTA's .ics feed for one room type and auto-block those dates.
+  // Safe to click repeatedly — importOtaIcal() skips UIDs already imported.
+  async function syncOtaImport(roomTypeId: string) {
+    const ical = ICAL[en ? "en" : "th"];
+    const url = (importUrls[roomTypeId] ?? "").trim();
+    if (!url) return;
+    setSyncingId(roomTypeId);
+    const res = await importOtaIcal(roomTypeId, url);
+    setSyncingId(null);
+    if (res.ok) {
+      toast.success(ical.syncResult(res.data.imported, res.data.skipped));
+      router.refresh();
+    } else {
+      toast.error(`${res.code} · ${res.message}`);
+    }
   }
 
   async function save() {
@@ -870,6 +902,7 @@ export default function SettingsClient({
           <h2 className="font-semibold">{ICAL[en ? "en" : "th"].heading}</h2>
         </div>
         <p className="mb-4 text-xs text-[var(--app-fg-muted)]">{ICAL[en ? "en" : "th"].hint}</p>
+        <p className="mb-4 text-xs text-[var(--app-fg-muted)]">{ICAL[en ? "en" : "th"].importHint}</p>
 
         {roomTypes.length === 0 ? (
           <p className="text-sm text-[var(--app-fg-muted)]">{ICAL[en ? "en" : "th"].empty}</p>
@@ -894,6 +927,31 @@ export default function SettingsClient({
                     {copiedIcalId === rt.id ? <Check size={14} /> : <Copy size={14} />}
                     {copiedIcalId === rt.id ? ICAL[en ? "en" : "th"].copied : ICAL[en ? "en" : "th"].copy}
                   </Button>
+                </div>
+
+                {/* Import from OTA — reverse of the copy-link export above:
+                    paste an external OTA .ics feed and auto-block its dates. */}
+                <div className="mt-2 rounded-lg border border-dashed border-[var(--app-border)] p-2">
+                  <label className={label}>{ICAL[en ? "en" : "th"].importHeading}</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      className={`${field} font-mono text-xs`}
+                      value={importUrls[rt.id] ?? ""}
+                      placeholder={ICAL[en ? "en" : "th"].urlPlaceholder}
+                      onChange={(e) => setImportUrls({ ...importUrls, [rt.id]: e.target.value })}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => syncOtaImport(rt.id)}
+                      loading={syncingId === rt.id}
+                      disabled={!(importUrls[rt.id] ?? "").trim()}
+                      className="shrink-0"
+                    >
+                      <RefreshCw size={14} />
+                      {ICAL[en ? "en" : "th"].sync}
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
