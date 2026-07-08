@@ -2,6 +2,14 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
+interface ConfirmationLine {
+  roomTypeName: string;
+  ratePlanName?: string | null;
+  qty: number;
+  codes: string[];
+  total: number;
+}
+
 export default function BookConfirmationPage({
   params,
   searchParams,
@@ -17,10 +25,9 @@ export default function BookConfirmationPage({
     children?: string;
     total?: string;
     currency?: string;
+    items?: string;
   };
 }) {
-  const ref = searchParams.ref ?? "";
-  const room = searchParams.room ?? "";
   const checkIn = searchParams.check_in ?? "";
   const checkOut = searchParams.check_out ?? "";
   const nights = Number(searchParams.nights) || 0;
@@ -28,8 +35,25 @@ export default function BookConfirmationPage({
   const childrenCount = Number(searchParams.children) || 0;
   const total = Number(searchParams.total) || 0;
   const currency = searchParams.currency ?? "";
-  const hasDetails = !!room && !!checkIn && !!checkOut;
   const money = (n: number) => `${currency} ${n.toLocaleString()}`.trim();
+
+  // New cart-checkout flow: an itemized JSON blob with every line's booking
+  // codes. Falls back to the legacy single `ref`/`room` query params so an
+  // old bookmarked/shared confirmation link still renders.
+  let items: ConfirmationLine[] = [];
+  if (searchParams.items) {
+    try {
+      const parsed = JSON.parse(searchParams.items);
+      if (Array.isArray(parsed)) items = parsed as ConfirmationLine[];
+    } catch {
+      items = [];
+    }
+  }
+  if (items.length === 0 && searchParams.ref && searchParams.room) {
+    items = [{ roomTypeName: searchParams.room, qty: 1, codes: [searchParams.ref], total }];
+  }
+  const allCodes = items.flatMap((i) => i.codes);
+  const hasDetails = items.length > 0 && !!checkIn && !!checkOut;
 
   return (
     <div className="mx-auto max-w-md space-y-5 text-center">
@@ -46,12 +70,16 @@ export default function BookConfirmationPage({
           Thank you — the property will contact you to confirm.
         </p>
       </div>
-      {ref && (
+      {allCodes.length > 0 && (
         <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)] p-4">
           <div className="text-xs uppercase tracking-wide text-[var(--app-fg-muted)]">
-            หมายเลขอ้างอิง / Reference
+            {allCodes.length > 1 ? "หมายเลขอ้างอิง / Reference codes" : "หมายเลขอ้างอิง / Reference"}
           </div>
-          <div className="mt-1 font-mono text-lg font-semibold">{ref}</div>
+          <div className="mt-1 flex flex-wrap justify-center gap-x-2 gap-y-1 font-mono text-lg font-semibold">
+            {allCodes.map((c) => (
+              <span key={c}>{c}</span>
+            ))}
+          </div>
         </div>
       )}
       {hasDetails && (
@@ -59,7 +87,19 @@ export default function BookConfirmationPage({
           <div className="text-xs uppercase tracking-wide text-[var(--app-fg-muted)]">
             รายละเอียดการจอง / Booking details
           </div>
-          <div className="mt-2 font-semibold">{room}</div>
+          <div className="mt-2 space-y-2">
+            {items.map((item, idx) => (
+              <div key={idx} className="text-sm">
+                <div className="font-semibold text-[var(--app-fg)]">
+                  {item.roomTypeName} × {item.qty}
+                  {item.ratePlanName ? ` · ${item.ratePlanName}` : ""}
+                </div>
+                <div className="text-xs text-[var(--app-fg-muted)]">
+                  {item.codes.join(", ")} · {money(item.total)}
+                </div>
+              </div>
+            ))}
+          </div>
           <div className="mt-2 space-y-1 text-sm text-[var(--app-fg-muted)]">
             <div>
               {checkIn} → {checkOut}{" "}
@@ -73,7 +113,7 @@ export default function BookConfirmationPage({
             </div>
           </div>
           <div className="mt-3 border-t border-[var(--app-border)] pt-3 text-base font-semibold">
-            รวม / Total: {money(total)}
+            รวมทั้งหมด / Grand total: {money(total)}
           </div>
         </div>
       )}
@@ -85,7 +125,11 @@ export default function BookConfirmationPage({
           จองอีกครั้ง / Make another booking
         </Link>
         <Link
-          href={ref ? `/book/${params.code}/manage?ref=${encodeURIComponent(ref)}` : `/book/${params.code}/manage`}
+          href={
+            allCodes[0]
+              ? `/book/${params.code}/manage?ref=${encodeURIComponent(allCodes[0])}`
+              : `/book/${params.code}/manage`
+          }
           className="inline-block rounded-xl border border-[var(--app-border)] px-4 py-2 text-sm hover:bg-[var(--app-surface-2)]"
         >
           จัดการ/ยกเลิกการจอง / Manage or cancel booking

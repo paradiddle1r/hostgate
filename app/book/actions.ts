@@ -4,8 +4,9 @@
 // data layer and returns a plain result the client redirects on.
 
 import {
-  createPublicBooking,
-  CreateBookingInput,
+  createPublicBookingCart,
+  CreateCartBookingInput,
+  CreateCartBookingResult,
   getPublicProperty,
   lookupPublicBooking,
   cancelPublicBookingRpc,
@@ -14,11 +15,22 @@ import {
 import { ActionResult, ok, fail } from "@/lib/errors";
 import { sendBookingConfirmationEmail } from "@/lib/mailer";
 
+/**
+ * Submit a guest's whole cart (one or more room-type line items, same
+ * check_in/check_out) as ONE coherent operation — see createPublicBookingCart
+ * in lib/book.ts for the sequential-create + rollback-on-partial-failure
+ * behavior. Money is never trusted from the client: every item's price is
+ * recomputed server-side in app/book/[code]/checkout/page.tsx before this is
+ * called, and the RPC itself always recomputes the authoritative total again.
+ */
 export async function submitPublicBooking(
-  input: CreateBookingInput
-): Promise<{ ok: true; id: string; code: string; total: number } | { ok: false; message: string }> {
-  if (!input.propertyId || !input.roomTypeId || !input.checkIn || !input.checkOut) {
+  input: CreateCartBookingInput
+): Promise<CreateCartBookingResult> {
+  if (!input.propertyId || !input.checkIn || !input.checkOut) {
     return { ok: false, message: "Missing booking details." };
+  }
+  if (!input.items || input.items.length === 0) {
+    return { ok: false, message: "ตะกร้าว่างเปล่า / Your cart is empty." };
   }
   if (!input.guestName || !input.guestName.trim()) {
     return { ok: false, message: "Please enter your name." };
@@ -32,7 +44,7 @@ export async function submitPublicBooking(
       message: "วันที่เข้าพักต้องไม่ใช่วันที่ผ่านมาแล้ว / Check-in date cannot be in the past.",
     };
   }
-  return createPublicBooking(input);
+  return createPublicBookingCart(input);
 }
 
 /**

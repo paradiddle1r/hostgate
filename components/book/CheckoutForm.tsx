@@ -5,7 +5,24 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, Tag } from "lucide-react";
 import { submitPublicBooking } from "@/app/book/actions";
 import Button from "@/components/app/ui/Button";
+import { clearCart } from "@/lib/book-cart";
 import { applyPromoDiscount, type PromoCode } from "@/lib/promo-codes";
+
+export interface CheckoutLineItem {
+  roomTypeId: string;
+  roomTypeName: string;
+  qty: number;
+  available: number;
+  ratePlanId: string | null;
+  ratePlanName: string | null;
+  /** Server-recomputed price for ONE room of this type/plan for the whole stay. */
+  unitTotal: number;
+  /** unitTotal * qty. */
+  lineTotal: number;
+  /** True if this line (or its room type combined across other cart lines)
+   * exceeds availability for the shared date range. */
+  insufficientAvailability: boolean;
+}
 
 const field =
   "rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] px-2.5 py-1.5 text-sm outline-none focus:border-[var(--app-accent)]";
@@ -13,33 +30,25 @@ const field =
 export default function CheckoutForm({
   code,
   propertyId,
-  roomTypeId,
-  roomTypeName,
-  available,
   checkIn,
   checkOut,
   nights,
   adults,
   childrenCount,
+  items,
   total,
   currency,
-  ratePlanId,
-  ratePlanName,
 }: {
   code: string;
   propertyId: string;
-  roomTypeId: string;
-  roomTypeName: string;
-  available: number;
   checkIn: string;
   checkOut: string;
   nights: number;
   adults: number;
   childrenCount: number;
+  items: CheckoutLineItem[];
   total: number;
   currency: string;
-  ratePlanId?: string | null;
-  ratePlanName?: string | null;
 }) {
   const router = useRouter();
   const money = (n: number) => `${currency} ${(Number(n) || 0).toLocaleString()}`;
@@ -56,8 +65,7 @@ export default function CheckoutForm({
   const [promoError, setPromoError] = useState("");
 
   const discountedTotal = Math.max(0, total - discountAmount);
-
-  const soldOut = available <= 0;
+  const hasUnavailable = items.some((i) => i.insufficientAvailability);
 
   function applyPromo() {
     setPromoError("");
@@ -94,7 +102,6 @@ export default function CheckoutForm({
     setSubmitting(true);
     const res = await submitPublicBooking({
       propertyId,
-      roomTypeId,
       checkIn,
       checkOut,
       guestName: name,
@@ -102,27 +109,46 @@ export default function CheckoutForm({
       email,
       adults,
       children: childrenCount,
-      ratePlanId,
-      ratePlanName,
+      items: items.map((i) => ({
+        roomTypeId: i.roomTypeId,
+        roomTypeName: i.roomTypeName,
+        qty: i.qty,
+        ratePlanId: i.ratePlanId,
+        ratePlanName: i.ratePlanName,
+      })),
       promoCode: appliedPromo?.code ?? null,
       currency,
     });
     if (res.ok) {
+      // The whole cart succeeded (or was rolled back — never a partial
+      // "confirmed" here). Clear the sessionStorage cart for this property
+      // so the next visit starts fresh.
+      clearCart(code);
       const qs = new URLSearchParams({
-        ref: res.code,
-        room: roomTypeName,
         check_in: checkIn,
         check_out: checkOut,
         nights: String(nights),
         adults: String(adults),
         children: String(childrenCount),
-        // res.total is the authoritative, server-recomputed amount (already
-        // reflects the promo discount when one was applied — see
-        // createPublicBooking in lib/book.ts) — never the client's own total.
+        // res.total is the authoritative, server-recomputed grand total
+        // (already reflects the promo discount) — never the client's own.
         total: String(res.total),
         currency,
+        // Itemized lines for the confirmation page — room/plan names are
+        // display-only, codes + qty come straight from what was actually
+        // created.
+        items: JSON.stringify(
+          res.items.map((i) => ({
+            roomTypeName: i.roomTypeName,
+            ratePlanName: i.ratePlanName ?? null,
+            qty: i.qty,
+            codes: i.bookingCodes,
+            total: i.total,
+          }))
+        ),
       });
-      router.push(`/book/${code}/confirmation/${res.id}?${qs.toString()}`);
+      const firstId = res.bookingCodes[0] ?? "cart";
+      router.push(`/book/${code}/confirmation/${firstId}?${qs.toString()}`);
     } else {
       setError(res.message);
       setSubmitting(false);
@@ -136,12 +162,6 @@ export default function CheckoutForm({
         <div className="text-xs uppercase tracking-wide text-[var(--app-fg-muted)]">
           สรุปการจอง / Summary
         </div>
-        <div className="mt-2 font-semibold">{roomTypeName}</div>
-        {ratePlanName && (
-          <div className="mt-0.5 text-sm text-[var(--app-fg-muted)]">
-            แผนราคา / Rate plan: <span className="text-[var(--app-fg)]">{ratePlanName}</span>
-          </div>
-        )}
         <div className="mt-3 space-y-1 text-sm text-[var(--app-fg-muted)]">
           <div>
             {checkIn} → {checkOut}{" "}
@@ -154,6 +174,38 @@ export default function CheckoutForm({
             {childrenCount > 0 ? ` · ${childrenCount} เด็ก / children` : ""}
           </div>
         </div>
+
+        {/* Itemized cart lines */}
+        <div className="mt-3 space-y-2 border-t border-[var(--app-border)] pt-3">
+          {items.map((item, idx) => (
+            <div
+              key={`${item.roomTypeId}:${item.ratePlanId ?? ""}:${idx}`}
+              className="flex items-start justify-between gap-3 text-sm"
+            >
+              <div className="min-w-0">
+                <div className="font-medium">
+                  {item.roomTypeName} × {item.qty}
+                </div>
+                {item.ratePlanName && (
+                  <div className="text-xs text-[var(--app-fg-muted)]">
+                    แผนราคา / Rate plan: {item.ratePlanName}
+                  </div>
+                )}
+                <div className="text-xs text-[var(--app-fg-muted)]">
+                  {nights} คืน / nights × {item.qty} ห้อง / rooms
+                </div>
+                {item.insufficientAvailability && (
+                  <div className="mt-0.5 flex items-center gap-1 text-xs font-medium text-[var(--app-danger)]">
+                    <AlertTriangle size={12} className="flex-none" />
+                    ไม่เพียงพอ / not enough availability
+                  </div>
+                )}
+              </div>
+              <div className="flex-none font-medium">{money(item.lineTotal)}</div>
+            </div>
+          ))}
+        </div>
+
         <div className="mt-4 border-t border-[var(--app-border)] pt-3">
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-[var(--app-fg-muted)]">
@@ -204,7 +256,7 @@ export default function CheckoutForm({
             </div>
           )}
           <div className="flex items-center justify-between text-base font-semibold">
-            <span>รวม / Total</span>
+            <span>รวมทั้งหมด / Grand total</span>
             <span>{money(discountedTotal)}</span>
           </div>
         </div>
@@ -212,10 +264,11 @@ export default function CheckoutForm({
 
       {/* Guest form */}
       <div className="app-surface rounded-2xl border border-[var(--app-border)] p-5">
-        {soldOut && (
+        {hasUnavailable && (
           <div className="mb-4 flex items-center gap-2 rounded-lg border border-[var(--app-border)] bg-[var(--app-surface-2)] px-3 py-2 text-sm text-[var(--app-danger)]">
             <AlertTriangle size={15} className="flex-none" />
-            เต็มแล้ว / No longer available
+            บางรายการในตะกร้าไม่ว่างแล้ว กรุณากลับไปแก้ไข / Some cart items are no longer available —
+            please go back and adjust.
           </div>
         )}
 
@@ -256,8 +309,8 @@ export default function CheckoutForm({
         </div>
 
         <p className="mt-3 text-xs text-[var(--app-fg-muted)]">
-          ยังไม่ต้องชำระเงินตอนนี้ — ทางที่พักจะติดต่อกลับเพื่อยืนยัน / No payment
-          now — the property will contact you to confirm.
+          ยืนยันการจอง = ชำระเงินเต็มจำนวนของตะกร้า (จำลองการชำระเงิน) / Confirm booking settles the
+          full cart total now (simulated payment).
         </p>
 
         {error && <p className="mt-3 text-sm text-[var(--app-danger)]">{error}</p>}
@@ -265,7 +318,7 @@ export default function CheckoutForm({
         <Button
           onClick={confirm}
           loading={submitting}
-          disabled={soldOut}
+          disabled={hasUnavailable || items.length === 0}
           className="mt-4 w-full"
         >
           ยืนยันการจอง / Confirm booking

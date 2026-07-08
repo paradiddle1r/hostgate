@@ -130,16 +130,18 @@ export function planNightlyPrice(
   return baseNightly;
 }
 
-export interface CreateBookingInput {
-  propertyId: string;
+// ── multi-item cart checkout (milestone m1) ─────────────────────────────────
+// A cart line is IDENTIFIERS ONLY (room_type_id, rate-plan id, quantity) —
+// see lib/book-cart.ts. Every price below is derived server-side from
+// getAvailability/getQuote/getPublicRatePlans, never trusted from the client.
+
+export interface CartLineItemInput {
   roomTypeId: string;
-  checkIn: string;
-  checkOut: string;
-  guestName: string;
-  phone?: string;
-  email?: string;
-  adults?: number;
-  children?: number;
+  // Display-only — used for the itemized summary + confirmation page, never
+  // for money. The authoritative name comes from getAvailability() at
+  // checkout-recompute time; this is just what the guest actually saw there.
+  roomTypeName?: string;
+  qty: number;
   // Guest-selected rate plan (guest-facing booking widget). The public
   // create-booking RPC (migration 14) doesn't accept a plan id or a
   // client-supplied total — it always recomputes the total from
@@ -149,14 +151,41 @@ export interface CreateBookingInput {
   // a `p_rate_plan_id` param (a small migration, out of scope here).
   ratePlanId?: string | null;
   ratePlanName?: string | null;
+}
+
+export interface CreateCartBookingInput {
+  propertyId: string;
+  checkIn: string;
+  checkOut: string;
+  guestName: string;
+  phone?: string;
+  email?: string;
+  adults?: number;
+  children?: number;
+  items: CartLineItemInput[];
   // Promo/discount code applied at checkout (lib/promo-codes.ts). Re-validated
-  // and re-priced server-side in createPublicBooking — never trust a
-  // client-computed discount for money that gets written to the booking row.
+  // and re-priced server-side against the cart's grand total — never trust a
+  // client-computed discount for money that gets written to the booking rows.
   promoCode?: string | null;
   // Display currency for the promo redemption note only (e.g. "THB"). Purely
   // cosmetic — the authoritative discount math never depends on it.
   currency?: string;
 }
+
+export interface CartBookingResultItem {
+  roomTypeId: string;
+  roomTypeName: string;
+  ratePlanName?: string | null;
+  qty: number;
+  /** One booking code per room unit created for this line. */
+  bookingCodes: string[];
+  /** This line's total across its qty, after any promo discount share. */
+  total: number;
+}
+
+export type CreateCartBookingResult =
+  | { ok: true; items: CartBookingResultItem[]; total: number; bookingCodes: string[] }
+  | { ok: false; message: string };
 
 // ── guest self-service: manage my booking (migration 20) ───────────────────
 // Anon has no table RLS access, so lookup/cancel go through the same
@@ -231,18 +260,24 @@ export async function cancelPublicBookingRpc(
   return { ok: true };
 }
 
-export async function createPublicBooking(
-  input: CreateBookingInput
+/** Create exactly ONE booking row via public_create_booking (the RPC always
+ * creates one row per call — a cart line with qty N calls this N times). No
+ * promo math here — that's applied once, on the cart's grand total, by
+ * createPublicBookingCart below. */
+async function createOneBookingUnit(
+  supabase: ReturnType<typeof createClient>,
+  input: {
+    propertyId: string;
+    roomTypeId: string;
+    checkIn: string;
+    checkOut: string;
+    guestName: string;
+    phone?: string;
+    email?: string;
+    adults?: number;
+    children?: number;
+  }
 ): Promise<{ ok: true; id: string; code: string; total: number } | { ok: false; message: string }> {
-  const supabase = createClient();
-  // NOTE: input.ratePlanId / ratePlanName are intentionally NOT sent below —
-  // the deployed public_create_booking(uuid,uuid,date,date,text,text,text,int,int)
-  // signature doesn't have a rate-plan param, and PostgREST rejects RPC calls
-  // whose arg names don't match a function overload. Sending them would break
-  // every guest booking. They're kept on the input for the caller (the plan
-  // choice + plan-priced total already flow through the guest UI end to end;
-  // only the DB row's rate_plan_id/total_amount still come from this RPC's
-  // own base-price calc until it's extended — see CreateBookingInput above).
   const { data, error } = await supabase.rpc("public_create_booking", {
     p_property: input.propertyId,
     p_room_type: input.roomTypeId,
@@ -260,49 +295,158 @@ export async function createPublicBooking(
     return { ok: false, message: clean };
   }
   const r = data as { id: string; code: string; total: number };
-  const rpcTotal = Number(r.total) || 0;
+  return { ok: true, id: r.id, code: r.code, total: Number(r.total) || 0 };
+}
 
-  // ── promo code (no migration path) ──────────────────────────────────────
-  // public_create_booking(...) has a fixed 9-arg signature (see NOTE above) —
-  // it doesn't accept a promo code or a client-supplied total, and always
-  // writes the full, undiscounted total + its own generic notes ("Web
-  // booking..."). Extending the RPC itself would mean a new migration, out of
-  // scope for this milestone. Instead — following the exact precedent
-  // lib/supabase/admin.ts documents for the public checkout's invoice writes
-  // (and app/ical/.../route.ts's read side) — we do a scoped follow-up write
-  // through the service-role client: re-validate the promo code server-side
-  // (never trust the client's discount math), recompute the discount off the
-  // RPC's own authoritative total, and patch ONLY the row we just created
-  // (scoped by its own id — never a client-supplied id) so the discounted
-  // total and a redemption note land on the real booking row without any new
-  // column. Best-effort: if this patch fails for any reason the booking
-  // itself has already succeeded, so we swallow the error rather than fail
-  // the whole checkout over a promo code.
-  let total = rpcTotal;
-  if (input.promoCode && input.promoCode.trim()) {
-    const discount = applyPromoDiscount(rpcTotal, input.promoCode);
+/** Best-effort rollback: cancel the bookings created earlier in THIS SAME
+ * cart submission, scoped strictly by their own ids (never a client-supplied
+ * id — same scoping discipline as the promo patch below). Used when a later
+ * item in the cart fails (e.g. HG-BOOK-409 because someone else booked that
+ * room type in the meantime) so the guest never ends up with a silent
+ * partial booking — either the whole cart is booked, or none of it is. */
+async function rollbackBookingUnits(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  try {
+    const admin = createAdminClient();
+    await admin.from("bookings").update({ status: "cancelled" }).in("id", ids);
+  } catch {
+    /* best-effort — the failure is already surfaced to the guest via the
+       ok:false result; a booking row stuck as 'pending' is still visible
+       and cancellable by staff even if this cleanup write fails. */
+  }
+}
+
+/**
+ * Create every line item of a guest's cart as one coherent operation, for a
+ * shared check_in/check_out date range. Creates bookings sequentially (one
+ * row per unit of quantity); if any unit fails partway through, everything
+ * already created in this submission is rolled back (cancelled) so the
+ * confirmation page can never show a partial cart as a full success.
+ */
+export async function createPublicBookingCart(
+  input: CreateCartBookingInput
+): Promise<CreateCartBookingResult> {
+  const supabase = createClient();
+  const createdIds: string[] = [];
+  const createdRows: {
+    id: string;
+    code: string;
+    rpcTotal: number;
+    roomTypeId: string;
+    roomTypeName: string;
+    ratePlanName?: string | null;
+  }[] = [];
+
+  for (const item of input.items) {
+    const qty = Math.max(1, Math.min(50, Math.round(item.qty) || 0));
+    for (let i = 0; i < qty; i++) {
+      const res = await createOneBookingUnit(supabase, {
+        propertyId: input.propertyId,
+        roomTypeId: item.roomTypeId,
+        checkIn: input.checkIn,
+        checkOut: input.checkOut,
+        guestName: input.guestName,
+        phone: input.phone,
+        email: input.email,
+        adults: input.adults,
+        children: input.children,
+      });
+      if (!res.ok) {
+        await rollbackBookingUnits(createdIds);
+        return {
+          ok: false,
+          message:
+            createdIds.length > 0
+              ? `${res.message} — รายการอื่นในตะกร้าถูกยกเลิกแล้ว ยังไม่มีการจองใดสำเร็จ / the rest of the cart was rolled back, nothing was booked.`
+              : res.message,
+        };
+      }
+      createdIds.push(res.id);
+      createdRows.push({
+        id: res.id,
+        code: res.code,
+        rpcTotal: res.total,
+        roomTypeId: item.roomTypeId,
+        roomTypeName: item.roomTypeName || "Room",
+        ratePlanName: item.ratePlanName ?? null,
+      });
+    }
+  }
+
+  const grandRpcTotal = createdRows.reduce((sum, row) => sum + row.rpcTotal, 0);
+
+  // ── promo code (no migration path) — see the original single-item note
+  // this replaces: public_create_booking(...) has a fixed 9-arg signature,
+  // doesn't accept a promo code, and always writes the full undiscounted
+  // total. Applied ONCE here on the cart's grand total (never per-row — a
+  // fixed-amount code must not be multiplied by cart size), then the
+  // discount is distributed across the created rows proportionally to each
+  // row's own share of the grand total, through the same scoped
+  // service-role follow-up write pattern (each update scoped by its own
+  // freshly-created id). Best-effort: if this patch fails the bookings
+  // themselves have already succeeded, so we swallow the error rather than
+  // fail the whole checkout over a promo code.
+  let grandTotal = grandRpcTotal;
+  if (input.promoCode && input.promoCode.trim() && createdRows.length > 0) {
+    const discount = applyPromoDiscount(grandRpcTotal, input.promoCode);
     if (discount.ok && discount.discountAmount > 0) {
-      total = discount.discountedTotal;
+      grandTotal = discount.discountedTotal;
       try {
         const admin = createAdminClient();
-        const { data: existing } = await admin
-          .from("bookings")
-          .select("notes")
-          .eq("id", r.id)
-          .single();
-        const baseNotes = (existing?.notes as string | null) ?? "";
         const currencyPrefix = input.currency ? `${input.currency} ` : "";
         const promoNote = `Promo: ${discount.promo!.code.toUpperCase()} (-${currencyPrefix}${discount.discountAmount.toLocaleString()})`;
-        const notes = baseNotes ? `${baseNotes} · ${promoNote}` : promoNote;
-        await admin
-          .from("bookings")
-          .update({ total_amount: discount.discountedTotal, notes })
-          .eq("id", r.id);
+        let allocated = 0;
+        for (let i = 0; i < createdRows.length; i++) {
+          const row = createdRows[i];
+          const isLast = i === createdRows.length - 1;
+          const share = grandRpcTotal > 0 ? row.rpcTotal / grandRpcTotal : 0;
+          const rowDiscount = isLast
+            ? Math.round((discount.discountAmount - allocated) * 100) / 100
+            : Math.round(discount.discountAmount * share * 100) / 100;
+          allocated += rowDiscount;
+          const rowTotal = Math.max(0, row.rpcTotal - rowDiscount);
+          const { data: existing } = await admin
+            .from("bookings")
+            .select("notes")
+            .eq("id", row.id)
+            .single();
+          const baseNotes = (existing?.notes as string | null) ?? "";
+          const notes = baseNotes ? `${baseNotes} · ${promoNote}` : promoNote;
+          await admin.from("bookings").update({ total_amount: rowTotal, notes }).eq("id", row.id);
+          row.rpcTotal = rowTotal; // reflect the discounted amount in the returned summary
+        }
       } catch {
-        /* best-effort — the booking itself already succeeded */
+        /* best-effort — the bookings themselves already succeeded */
       }
     }
   }
 
-  return { ok: true, id: r.id, code: r.code, total };
+  // Group the created rows back into itemized cart lines (by room type +
+  // rate plan) for the checkout/confirmation UI.
+  const byKey = new Map<string, CartBookingResultItem>();
+  for (const row of createdRows) {
+    const key = `${row.roomTypeId}::${row.ratePlanName ?? ""}`;
+    const existing = byKey.get(key);
+    if (existing) {
+      existing.qty += 1;
+      existing.bookingCodes.push(row.code);
+      existing.total += row.rpcTotal;
+    } else {
+      byKey.set(key, {
+        roomTypeId: row.roomTypeId,
+        roomTypeName: row.roomTypeName,
+        ratePlanName: row.ratePlanName,
+        qty: 1,
+        bookingCodes: [row.code],
+        total: row.rpcTotal,
+      });
+    }
+  }
+
+  return {
+    ok: true,
+    items: Array.from(byKey.values()),
+    total: grandTotal,
+    bookingCodes: createdRows.map((row) => row.code),
+  };
 }
