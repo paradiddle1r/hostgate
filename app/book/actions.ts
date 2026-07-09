@@ -9,6 +9,8 @@ import {
   CreateCartBookingResult,
   getPublicProperty,
   lookupPublicBooking,
+  lookupReturningGuest,
+  ReturningGuestInfo,
   cancelPublicBookingRpc,
   PublicBookingDetails,
 } from "@/lib/book";
@@ -45,6 +47,26 @@ export async function submitPublicBooking(
     };
   }
   return createPublicBookingCart(input);
+}
+
+/**
+ * Returning-guest recognition for the checkout form. Requires BOTH an email
+ * AND a phone number (see lookupReturningGuest in lib/book.ts for why) —
+ * called debounced, from the client, as the guest types. Silent by design:
+ * any failure (bad property id, RPC error) just resolves to null, never an
+ * error the guest would see.
+ */
+export async function lookupReturningGuestAction(
+  propertyId: string,
+  email: string,
+  phone: string
+): Promise<ReturningGuestInfo | null> {
+  if (!propertyId || !email.trim() || !phone.trim()) return null;
+  try {
+    return await lookupReturningGuest(propertyId, email, phone);
+  } catch {
+    return null;
+  }
 }
 
 /**

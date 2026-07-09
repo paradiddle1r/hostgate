@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Tag } from "lucide-react";
-import { submitPublicBooking } from "@/app/book/actions";
+import { submitPublicBooking, lookupReturningGuestAction } from "@/app/book/actions";
 import Button from "@/components/app/ui/Button";
 import { clearCart } from "@/lib/book-cart";
 import { applyPromoDiscount, type PromoCode } from "@/lib/promo-codes";
@@ -58,6 +58,38 @@ export default function CheckoutForm({
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [returningGuestName, setReturningGuestName] = useState<string | null>(null);
+
+  // Returning-guest recognition: only once BOTH email and phone are typed
+  // (never just one — that would let a stranger who merely guesses an email
+  // see someone else's name), debounced ~500ms so we're not querying on
+  // every keystroke. `name` is intentionally NOT a dependency here — this
+  // effect only decides whether to *look up*, never re-runs just because the
+  // guest kept typing their own name.
+  useEffect(() => {
+    const trimmedEmail = email.trim();
+    const trimmedPhone = phone.trim();
+    if (!trimmedEmail || !trimmedPhone) {
+      setReturningGuestName(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      const result = await lookupReturningGuestAction(propertyId, trimmedEmail, trimmedPhone);
+      if (cancelled) return;
+      if (result?.name) {
+        setReturningGuestName(result.name);
+        setName((current) => (current.trim() ? current : result.name));
+      } else {
+        setReturningGuestName(null);
+      }
+    }, 500);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [email, phone, propertyId]);
 
   const [promoInput, setPromoInput] = useState("");
   const [appliedPromo, setAppliedPromo] = useState<PromoCode | null>(null);
@@ -269,6 +301,12 @@ export default function CheckoutForm({
             <AlertTriangle size={15} className="flex-none" />
             บางรายการในตะกร้าไม่ว่างแล้ว กรุณากลับไปแก้ไข / Some cart items are no longer available —
             please go back and adjust.
+          </div>
+        )}
+
+        {returningGuestName && (
+          <div className="mb-3 rounded-lg border border-[var(--app-accent)] bg-[var(--app-surface-2)] px-3 py-2 text-sm text-[var(--app-fg)]">
+            ยินดีต้อนรับกลับมา, {returningGuestName} 👋 / Welcome back, {returningGuestName} 👋
           </div>
         )}
 

@@ -240,6 +240,37 @@ export async function lookupPublicBooking(
   };
 }
 
+export interface ReturningGuestInfo {
+  name: string;
+}
+
+/**
+ * Returning-guest recognition for the checkout form (migration 22). Requires
+ * BOTH an exact email AND phone match against an existing `guests` row
+ * scoped to this property — matching on either field alone would let a
+ * stranger who merely guesses/knows someone's email leak their name. Returns
+ * ONLY the guest's name (nothing else — no id, no booking history) so the
+ * client can auto-fill an empty name field and show a "welcome back" note.
+ * No match (or either field blank) → null, silently — never an error.
+ */
+export async function lookupReturningGuest(
+  propertyId: string,
+  email: string,
+  phone: string
+): Promise<ReturningGuestInfo | null> {
+  if (!email.trim() || !phone.trim()) return null;
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("public_lookup_guest", {
+    p_property: propertyId,
+    p_email: email,
+    p_phone: phone,
+  });
+  if (error) return null;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row || !row.full_name) return null;
+  return { name: row.full_name as string };
+}
+
 /** Cancel a guest's own booking. Server re-verifies code+email before cancelling. */
 export async function cancelPublicBookingRpc(
   propertyId: string,
