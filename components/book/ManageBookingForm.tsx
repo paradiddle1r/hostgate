@@ -6,8 +6,9 @@ import {
   lookupPublicBookingAction,
   cancelPublicBookingAction,
   resendPublicBookingConfirmationAction,
+  getGuestBookingHistoryAction,
 } from "@/app/book/actions";
-import type { PublicBookingDetails } from "@/lib/book";
+import type { PublicBookingDetails, GuestBookingHistoryItem } from "@/lib/book";
 import Button from "@/components/app/ui/Button";
 
 const field =
@@ -40,6 +41,7 @@ export default function ManageBookingForm({
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [booking, setBooking] = useState<PublicBookingDetails | null>(null);
+  const [history, setHistory] = useState<GuestBookingHistoryItem[]>([]);
 
   const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -64,6 +66,7 @@ export default function ManageBookingForm({
     }
     setLoading(true);
     setBooking(null);
+    setHistory([]);
     setConfirmingCancel(false);
     setCancelError("");
     setResendMsg(null);
@@ -71,6 +74,13 @@ export default function ManageBookingForm({
     setLoading(false);
     if (res.ok) {
       setBooking(res.data);
+      // Best-effort, non-blocking — the history list is a nice-to-have, the
+      // lookup flow above must not wait on it or fail because of it. Passes
+      // the same code+email the guest just used to prove ownership — the
+      // action re-verifies that pair server-side before returning anything.
+      getGuestBookingHistoryAction(propertyCode, code, email)
+        .then(setHistory)
+        .catch(() => setHistory([]));
     } else {
       setError(res.message);
     }
@@ -306,6 +316,32 @@ export default function ManageBookingForm({
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {booking && history.length > 0 && (
+        <div className="app-surface rounded-2xl border border-[var(--app-border)] p-5 text-left print:hidden">
+          <div className="text-xs uppercase tracking-wide text-[var(--app-fg-muted)]">
+            การเข้าพักอื่นๆ ของคุณ / Your other stays
+          </div>
+          <ul className="mt-2 space-y-2">
+            {history.map((h) => (
+              <li
+                key={h.id}
+                className="flex items-center justify-between gap-2 border-t border-[var(--app-border)] pt-2 text-sm first:border-t-0 first:pt-0"
+              >
+                <div>
+                  <div className="text-[var(--app-fg)]">
+                    {h.checkIn} → {h.checkOut}
+                  </div>
+                  <div className="text-xs text-[var(--app-fg-muted)]">{h.roomTypeName}</div>
+                </div>
+                <span className="flex-none text-xs text-[var(--app-fg-muted)]">
+                  {STATUS_LABEL[h.status] ?? h.status}
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>

@@ -240,6 +240,51 @@ export async function lookupPublicBooking(
   };
 }
 
+export interface GuestBookingHistoryItem {
+  id: string;
+  status: string;
+  checkIn: string;
+  checkOut: string;
+  roomTypeName: string;
+}
+
+/**
+ * A guest's OTHER bookings (past + upcoming) at this same property, shown on
+ * the manage-booking page below the booking they just looked up.
+ *
+ * IMPORTANT — email alone is NOT proof of ownership: this function (and the
+ * public_guest_booking_history RPC it calls, migration 23) accepts only an
+ * email, not a booking code, so it must NEVER be called directly off a bare
+ * client-supplied email. The caller (getGuestBookingHistoryAction in
+ * app/book/actions.ts) is responsible for re-running lookupPublicBooking()
+ * with a matching code+email FIRST — the same proof gate every other guest
+ * self-service action in this file requires — and only calling this once
+ * that succeeds. The RPC also never returns a booking `code`, so this list
+ * itself can't be used to harvest a code that would unlock full detail /
+ * cancel via lookupPublicBooking / cancelPublicBookingRpc.
+ * excludeBookingId omits the booking just looked up so it isn't duplicated.
+ */
+export async function getGuestBookingHistory(
+  propertyId: string,
+  email: string,
+  excludeBookingId?: string
+): Promise<GuestBookingHistoryItem[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("public_guest_booking_history", {
+    p_property: propertyId,
+    p_email: email,
+    p_exclude_id: excludeBookingId ?? null,
+  });
+  if (error || !data) return [];
+  return (data as Record<string, unknown>[]).map((row) => ({
+    id: row.id as string,
+    status: row.status as string,
+    checkIn: row.check_in as string,
+    checkOut: row.check_out as string,
+    roomTypeName: (row.room_type_name as string) ?? "Room",
+  }));
+}
+
 export interface ReturningGuestInfo {
   name: string;
 }

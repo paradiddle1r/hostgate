@@ -13,6 +13,8 @@ import {
   ReturningGuestInfo,
   cancelPublicBookingRpc,
   PublicBookingDetails,
+  getGuestBookingHistory,
+  GuestBookingHistoryItem,
 } from "@/lib/book";
 import { ActionResult, ok, fail } from "@/lib/errors";
 import { sendBookingConfirmationEmail } from "@/lib/mailer";
@@ -102,6 +104,43 @@ export async function lookupPublicBookingAction(
     );
   }
   return ok(booking);
+}
+
+/**
+ * A guest's other stays at this property, shown below their looked-up
+ * booking on the manage-booking page.
+ *
+ * SECURITY: this is a server action, i.e. a plain POST endpoint reachable
+ * directly — a client calling it is NOT guaranteed to have gone through
+ * lookupPublicBookingAction first. So this action re-derives the ownership
+ * proof itself: it requires the SAME booking_code + email pair as lookup and
+ * re-runs lookupPublicBooking() server-side before touching history at all.
+ * An email alone is never sufficient — that would let anyone who merely
+ * knows/guesses a guest's email enumerate their stay history without ever
+ * proving a booking code. Only once that verification succeeds does it call
+ * getGuestBookingHistory, excluding the just-verified booking by id (not a
+ * client-supplied id). Silent by design otherwise: any failure just resolves
+ * to an empty list, never an error the guest would see (matches
+ * lookupReturningGuestAction's silent-fail pattern) — the history list is a
+ * nice-to-have, not a blocker.
+ */
+export async function getGuestBookingHistoryAction(
+  propertyCode: string,
+  bookingCode: string,
+  email: string
+): Promise<GuestBookingHistoryItem[]> {
+  const code = (bookingCode || "").trim();
+  const mail = (email || "").trim();
+  if (!code || !mail) return [];
+  try {
+    const property = await getPublicProperty(propertyCode);
+    if (!property) return [];
+    const verified = await lookupPublicBooking(property.id, code, mail);
+    if (!verified) return [];
+    return await getGuestBookingHistory(property.id, mail, verified.id);
+  } catch {
+    return [];
+  }
 }
 
 /**
