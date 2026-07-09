@@ -32,6 +32,15 @@ export default async function BookManagePage({
       />
       <div className="text-center">
         <Link
+          href={`/book/${params.code}/my-bookings`}
+          className="text-sm text-[var(--app-accent)] underline"
+        >
+          ไม่มีหมายเลขการจอง? ดูการจองทั้งหมดด้วยอีเมล / No booking code? View all your bookings by
+          email
+        </Link>
+      </div>
+      <div className="text-center">
+        <Link
           href={`/book/${params.code}`}
           className="text-sm text-[var(--app-accent)] underline"
         >
