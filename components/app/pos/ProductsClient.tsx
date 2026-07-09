@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Package, Plus, Trash2, Pencil, Check, X, Rows3, AlertTriangle } from "lucide-react";
+import { Package, Plus, Trash2, Pencil, Check, X, Rows3, AlertTriangle, Sparkles } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import type { PosProduct, PosCategory, ProductInput } from "@/lib/db/pos";
 import { useToast } from "@/components/app/ui/Toast";
@@ -18,6 +18,12 @@ import {
   removeProduct,
   bulkAddProducts,
 } from "@/app/app/pos/actions";
+import {
+  BOOKABLE_ADDONS,
+  findAddonForProductName,
+  toggleBookableAddon,
+  type BookableAddon,
+} from "@/lib/bookable-addons";
 
 const STR: Record<"th" | "en", Record<string, string>> = {
   th: {
@@ -60,6 +66,13 @@ const STR: Record<"th" | "en", Record<string, string>> = {
     bulkSaved: "เพิ่มสินค้าแล้ว",
     bulkNeedRow: "กรอกอย่างน้อยหนึ่งรายการ",
     low: "สต๊อกต่ำ",
+    addon: "บริการเสริมสำหรับจองตรง",
+    addonShort: "บริการเสริม",
+    addonOn: "เปิดขายเป็นบริการเสริม",
+    addonOff: "ปิดการขายเป็นบริการเสริม",
+    addonHint:
+      "เปิด/ปิดเพื่อเลือกสินค้านี้เป็นบริการเสริมที่แขกจะเห็นตอนจองผ่านหน้าเว็บ (จะใช้งานจริงในเฟสถัดไป — ยังไม่บันทึกลงฐานข้อมูล รีเฟรชหน้าแล้วจะรีเซ็ต)",
+    addonNone: "—",
   },
   en: {
     catTitle: "Categories",
@@ -101,6 +114,13 @@ const STR: Record<"th" | "en", Record<string, string>> = {
     bulkSaved: "Products added",
     bulkNeedRow: "Fill in at least one row",
     low: "Low stock",
+    addon: "Direct-booking add-on",
+    addonShort: "Add-on",
+    addonOn: "Offered as a bookable add-on",
+    addonOff: "Not offered as a bookable add-on",
+    addonHint:
+      "Toggle to mark this product as an add-on guests will see in the direct-booking widget (wired up in a later milestone — local only for now, resets on refresh).",
+    addonNone: "—",
   },
 };
 
@@ -197,6 +217,21 @@ export default function ProductsClient({
   const [editing, setEditing] = useState<ProductDraft | null>(null);
   const [saving, setSaving] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
+
+  // ── bookable add-ons (Direct-Booking Upsells epic, m1) ──
+  // Purely local/in-memory — lib/bookable-addons.ts is a DB-free config
+  // module (same precedent as lib/promo-codes.ts), so there's no per-tenant
+  // persistence yet. Seeded from BOOKABLE_ADDONS on mount; toggling here only
+  // updates this component's state and resets on refresh. m2 (public
+  // booking widget) will read from the module's exported list directly.
+  const [addons, setAddons] = useState<BookableAddon[]>(BOOKABLE_ADDONS);
+
+  function toggleAddon(addonId: string) {
+    const next = toggleBookableAddon(addonId, addons);
+    setAddons(next);
+    const updated = next.find((a) => a.id === addonId);
+    toast.success(updated?.active ? s("addonOn") : s("addonOff"));
+  }
 
   async function toggleActive(p: PosProduct) {
     const res = await editProduct(p.id, { active: !p.active });
@@ -394,6 +429,9 @@ export default function ProductsClient({
                   <th className="py-2 pr-3 text-right font-medium">{s("cost")}</th>
                   <th className="py-2 pr-3 text-right font-medium">{s("stock")}</th>
                   <th className="py-2 pr-3 text-center font-medium">{s("active")}</th>
+                  <th className="py-2 pr-3 text-center font-medium" title={s("addonHint")}>
+                    {s("addonShort")}
+                  </th>
                   <th className="py-2 pl-3" />
                 </tr>
               </thead>
@@ -401,6 +439,7 @@ export default function ProductsClient({
                 {products.map((p) => {
                   const low = isLow(p);
                   const out = p.stock <= 0;
+                  const matchedAddon = findAddonForProductName(p.name, addons);
                   return (
                     <tr
                       key={p.id}
@@ -444,6 +483,28 @@ export default function ProductsClient({
                           aria-label={s("active")}
                           className="h-4 w-4 cursor-pointer accent-[var(--app-accent)]"
                         />
+                      </td>
+                      <td className="py-2.5 pr-3 text-center" onClick={(e) => e.stopPropagation()}>
+                        {matchedAddon ? (
+                          <label
+                            className="inline-flex cursor-pointer items-center gap-1"
+                            title={s("addonHint")}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={matchedAddon.active}
+                              onChange={() => toggleAddon(matchedAddon.id)}
+                              aria-label={s("addon")}
+                              className="h-4 w-4 cursor-pointer accent-[var(--app-accent)]"
+                            />
+                            <Sparkles
+                              size={12}
+                              className={matchedAddon.active ? "text-[var(--app-accent)]" : "opacity-40"}
+                            />
+                          </label>
+                        ) : (
+                          <span className="text-[var(--app-fg-muted)]">{s("addonNone")}</span>
+                        )}
                       </td>
                       <td className="py-2.5 pl-3 text-right" onClick={(e) => e.stopPropagation()}>
                         <button
