@@ -1,23 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import { useI18n, pick } from "@/lib/i18n";
 import StudioDisplay from "./StudioDisplay";
 import IPhoneFrame from "./IPhoneFrame";
 import AnimatedDashboard from "./AnimatedDashboard";
 import AnimatedMobile from "./AnimatedMobile";
-
-// Photoreal floating 3D keycards behind the headline — client-only,
-// self-defers past idle, desktop-only inside the component.
-const HeroKeycard = dynamic(() => import("./HeroKeycard"), { ssr: false });
+import HeroBackdrop from "./HeroBackdrop";
 
 export default function Hero() {
   const { locale, t } = useI18n();
 
   return (
     <section className="relative overflow-x-clip pt-28 pb-12 sm:pt-32 sm:pb-16 lg:pt-48 lg:pb-28">
-      <HeroKeycard />
+      <HeroBackdrop />
       <div className="relative z-10 mx-auto max-w-7xl px-5 lg:px-8">
         <div className="mx-auto max-w-4xl text-center">
           <p

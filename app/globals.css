@@ -222,6 +222,22 @@ h1, h2 { letter-spacing: -0.028em; }
 }
 .float { animation: float-y 6s var(--ease-apple) infinite; }
 
+/* Hero keycards — gentle drift (pure CSS, replaces the old Three.js scene) */
+@keyframes hg-drift-a {
+  0%, 100% { transform: rotate(-13deg) translateY(0); }
+  50% { transform: rotate(-11deg) translateY(-14px); }
+}
+@keyframes hg-drift-b {
+  0%, 100% { transform: rotate(11deg) translateY(0); }
+  50% { transform: rotate(13deg) translateY(-10px); }
+}
+.hg-drift-a { animation: hg-drift-a 9s ease-in-out infinite; }
+.hg-drift-b { animation: hg-drift-b 11s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .hg-drift-a { animation: none; transform: rotate(-13deg); }
+  .hg-drift-b { animation: none; transform: rotate(11deg); }
+}
+
 /* Animated underline on links */
 .link-underline {
   position: relative;

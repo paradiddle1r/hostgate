@@ -48,7 +48,10 @@ export default function HousekeepingScene() {
   const labelColor = (s: string) => (s === "clean" ? "#0f766e" : s === "dirty" ? "#b45309" : "var(--ll-muted)");
 
   return (
-    <div className="pms-ll relative h-full w-full overflow-hidden p-4">
+    <div
+      className="pms-ll relative h-full w-full overflow-hidden p-4"
+      style={{ paddingTop: "calc(var(--hg-safe-top, 10px) + 6px)" }}
+    >
       <div className="pms-ll-mesh" aria-hidden />
       <div className="relative z-10">
         <div className="mb-3 flex items-center justify-between">
