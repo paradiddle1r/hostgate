@@ -249,3 +249,81 @@ export async function sendPreArrivalReminderEmail(
     return { ok: false, message: e instanceof Error ? e.message : "Failed to send email." };
   }
 }
+
+// Post-stay review request email (roadmap m1 — the scheduled post-stay review
+// request pipeline; app/api/cron/post-stay-review-requests/route.ts). Sent
+// after checkout to bookings selected by lib/post-stay-review-requests.ts's
+// selectBookingsDueForReviewRequest. Same sender, same env vars, same
+// graceful-degrade behavior as the other guest-facing senders above.
+
+export interface PostStayReviewRequestEmailInput {
+  to: string;
+  propertyName: string;
+  guestName: string;
+  bookingCode: string;
+  roomTypeName: string;
+  checkIn: string;
+  checkOut: string;
+  reviewLink: string;
+}
+
+export async function sendPostStayReviewRequestEmail(
+  input: PostStayReviewRequestEmailInput
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const to = (input.to || "").trim();
+  if (!to) {
+    return { ok: false, message: "Missing recipient email." };
+  }
+
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.RESEND_FROM_EMAIL || "HostGate <bookings@hostgate.app>";
+  if (!apiKey) {
+    console.warn(
+      `[mailer] RESEND_API_KEY not set — skipping post-stay review request email to ${to} (booking ${input.bookingCode})`
+    );
+    return { ok: false, message: "Email sending is not configured." };
+  }
+
+  const subject = `รีวิวการเข้าพัก / Review your stay — ${input.bookingCode}`;
+  const html = `
+    <div style="font-family:-apple-system,Helvetica,Arial,sans-serif;max-width:480px;margin:0 auto;color:#111">
+      <h2 style="margin-bottom:4px">รีวิวการเข้าพัก / Review your stay</h2>
+      <p style="color:#555;margin-top:0">${input.propertyName}</p>
+      <p>สวัสดีคุณ ${input.guestName} / Hi ${input.guestName},</p>
+      <p>
+        ขอบคุณที่เข้าพักกับเรา หากมีเวลาสั้น ๆ ฝากรีวิวประสบการณ์ของคุณให้ที่พักทราบด้วย
+        <br />
+        Thank you for staying with us. If you have a moment, please share your feedback.
+      </p>
+      <p><strong>${input.roomTypeName}</strong></p>
+      <p>${input.checkIn} → ${input.checkOut}</p>
+      <p>หมายเลขการจอง / Booking code: <strong>${input.bookingCode}</strong></p>
+      <p>
+        <a
+          href="${input.reviewLink}"
+          style="display:inline-block;margin-top:8px;padding:10px 18px;border-radius:8px;background:#111;color:#fff;text-decoration:none"
+        >
+          เขียนรีวิว / Write a review
+        </a>
+      </p>
+    </div>
+  `;
+
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ from, to, subject, html }),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      return { ok: false, message: `Email provider error (${res.status}): ${text.slice(0, 200)}` };
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "Failed to send email." };
+  }
+}

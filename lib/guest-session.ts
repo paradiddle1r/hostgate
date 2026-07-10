@@ -32,6 +32,11 @@ export interface GuestSessionPayload {
   exp: number; // unix seconds
 }
 
+export interface PostStayReviewRequestPayload {
+  bookingId: string;
+  code: string;
+}
+
 function normalizeCode(code: string): string {
   return (code || "").trim().toLowerCase();
 }
@@ -70,6 +75,13 @@ function encodeToken(payload: GuestSessionPayload): string | null {
   return `${body}.${sig}`;
 }
 
+function encodeStringPayloadToken(payload: Record<string, string>): string | null {
+  const body = b64urlEncode(JSON.stringify(payload));
+  const sig = sign(body);
+  if (!sig) return null;
+  return `${body}.${sig}`;
+}
+
 /** Mint a short-lived token for the emailed magic link. */
 export function createGuestLoginLinkToken(email: string, propertyCode: string): string | null {
   return encodeToken({
@@ -86,6 +98,26 @@ export function createGuestSessionCookieToken(email: string, propertyCode: strin
     email: normalizeEmail(email),
     propertyCode: normalizeCode(propertyCode),
     exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS,
+  });
+}
+
+/**
+ * Mint a signed, DB-free post-stay review request token for the public review
+ * URL. The token intentionally contains only {bookingId, code}; the follow-up
+ * /review page can call verifyPostStayReviewRequestToken() with the URL params
+ * to reject tampered links without needing a lookup table or raw guessable ID
+ * alone.
+ */
+export function createPostStayReviewRequestToken(
+  bookingId: string,
+  code: string
+): string | null {
+  const normalizedBookingId = (bookingId || "").trim();
+  const normalizedCode = normalizeCode(code);
+  if (!normalizedBookingId || !normalizedCode) return null;
+  return encodeStringPayloadToken({
+    bookingId: normalizedBookingId,
+    code: normalizedCode,
   });
 }
 
@@ -128,6 +160,48 @@ export function verifyGuestToken(
     return null;
   }
   if (payload.propertyCode !== normalizeCode(propertyCode)) {
+    return null;
+  }
+  return payload;
+}
+
+/**
+ * Verify a post-stay review request token against the booking id and property
+ * code carried in the public review URL. Returns the signed payload on
+ * success, or null on any failure (never throws).
+ */
+export function verifyPostStayReviewRequestToken(
+  token: string | undefined | null,
+  bookingId: string,
+  code: string
+): PostStayReviewRequestPayload | null {
+  if (!token) return null;
+  const parts = token.split(".");
+  if (parts.length !== 2) return null;
+  const [body, sig] = parts;
+
+  const expectedSig = sign(body);
+  if (!expectedSig) return null;
+
+  const sigBuf = Buffer.from(sig);
+  const expectedBuf = Buffer.from(expectedSig);
+  if (sigBuf.length !== expectedBuf.length || !timingSafeEqual(sigBuf, expectedBuf)) {
+    return null;
+  }
+
+  let payload: PostStayReviewRequestPayload;
+  try {
+    payload = JSON.parse(b64urlDecode(body));
+  } catch {
+    return null;
+  }
+
+  const expectedBookingId = (bookingId || "").trim();
+  const expectedCode = normalizeCode(code);
+  if (!payload || typeof payload.bookingId !== "string" || typeof payload.code !== "string") {
+    return null;
+  }
+  if (payload.bookingId !== expectedBookingId || payload.code !== expectedCode) {
     return null;
   }
   return payload;
