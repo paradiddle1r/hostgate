@@ -250,6 +250,94 @@ export async function sendPreArrivalReminderEmail(
   }
 }
 
+// Guest-submitted review notification (roadmap m1, public review-submission
+// page — app/book/[code]/review/[bookingId]/{page,actions}.tsx). There is no
+// `reviews` table yet (no migration in this milestone), so a guest's rating +
+// comment is never persisted — it's emailed straight to the property owner
+// (lib/book.ts's getTenantOwnerEmail) instead. Same sender, same env vars,
+// same graceful-degrade behavior as the other guest-facing senders above.
+
+export interface GuestReviewNotificationEmailInput {
+  to: string;
+  propertyName: string;
+  bookingCode: string;
+  guestName: string;
+  rating: number;
+  comment: string;
+}
+
+/** Escape a guest-supplied string before interpolating it into an HTML email
+ * body — propertyName/guestName/comment all ultimately trace back to
+ * guest-entered or host-entered form input, so none of them can be trusted
+ * to be free of `<script>`/markup when rendered in the owner's mail client. */
+function escapeHtml(value: string): string {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+export async function sendGuestReviewNotificationEmail(
+  input: GuestReviewNotificationEmailInput
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const to = (input.to || "").trim();
+  if (!to) {
+    return { ok: false, message: "Missing recipient email." };
+  }
+
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.RESEND_FROM_EMAIL || "HostGate <bookings@hostgate.app>";
+  if (!apiKey) {
+    console.warn(
+      `[mailer] RESEND_API_KEY not set — skipping guest review notification email to ${to} (booking ${input.bookingCode})`
+    );
+    return { ok: false, message: "Email sending is not configured." };
+  }
+
+  const rating = Math.max(1, Math.min(5, Math.round(Number(input.rating)) || 0));
+  const stars = "★".repeat(rating) + "☆".repeat(5 - rating);
+  const comment = (input.comment || "").trim();
+  const commentHtml = comment
+    ? `<p style="white-space:pre-wrap">${escapeHtml(comment)}</p>`
+    : `<p style="color:#888">ไม่มีความคิดเห็นเพิ่มเติม / No comment left.</p>`;
+
+  const propertyName = escapeHtml(input.propertyName);
+  const bookingCode = escapeHtml(input.bookingCode);
+  const guestName = escapeHtml(input.guestName);
+
+  const subject = `รีวิวใหม่จากผู้เข้าพัก / New guest review — ${input.bookingCode}`;
+  const html = `
+    <div style="font-family:-apple-system,Helvetica,Arial,sans-serif;max-width:480px;margin:0 auto;color:#111">
+      <h2 style="margin-bottom:4px">รีวิวใหม่จากผู้เข้าพัก / New guest review</h2>
+      <p style="color:#555;margin-top:0">${propertyName}</p>
+      <p>หมายเลขการจอง / Booking code: <strong>${bookingCode}</strong></p>
+      <p>ผู้เข้าพัก / Guest: <strong>${guestName}</strong></p>
+      <p style="font-size:20px;letter-spacing:2px;color:#f5a623">${stars} <span style="font-size:14px;color:#555">(${rating}/5)</span></p>
+      ${commentHtml}
+    </div>
+  `;
+
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ from, to, subject, html }),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      return { ok: false, message: `Email provider error (${res.status}): ${text.slice(0, 200)}` };
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "Failed to send email." };
+  }
+}
+
 // Post-stay review request email (roadmap m1 — the scheduled post-stay review
 // request pipeline; app/api/cron/post-stay-review-requests/route.ts). Sent
 // after checkout to bookings selected by lib/post-stay-review-requests.ts's

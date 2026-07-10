@@ -543,6 +543,38 @@ export const translations = {
       },
     },
   },
+  review: {
+    pageTitle: { th: "รีวิวการเข้าพักของคุณ", en: "Review your stay" },
+    ratingLabel: { th: "ให้คะแนนการเข้าพักของคุณ", en: "Rate your stay" },
+    commentLabel: { th: "ความคิดเห็น (ถ้ามี)", en: "Comments (optional)" },
+    commentPh: {
+      th: "บอกเราเกี่ยวกับประสบการณ์การเข้าพักของคุณ",
+      en: "Tell us about your stay",
+    },
+    submit: { th: "ส่งรีวิว", en: "Submit review" },
+    submitting: { th: "กำลังส่ง…", en: "Submitting…" },
+    ratingRequired: {
+      th: "กรุณาให้คะแนน 1-5 ดาว",
+      en: "Please choose a rating from 1 to 5 stars.",
+    },
+    thankYouTitle: { th: "ขอบคุณสำหรับรีวิว!", en: "Thank you for your review!" },
+    thankYouBody: {
+      th: "เราได้ส่งความคิดเห็นของคุณให้ที่พักเรียบร้อยแล้ว",
+      en: "We've sent your feedback to the property.",
+    },
+    linkInvalidTitle: {
+      th: "ลิงก์หมดอายุหรือไม่ถูกต้อง",
+      en: "Link expired or invalid",
+    },
+    linkInvalidBody: {
+      th: "ลิงก์รีวิวนี้ใช้งานไม่ได้แล้ว กรุณาติดต่อที่พักโดยตรงหากต้องการฝากรีวิว",
+      en: "This review link is no longer valid. Please contact the property directly if you'd like to share feedback.",
+    },
+    bookingNotFound: {
+      th: "ไม่พบการจองนี้",
+      en: "Booking not found.",
+    },
+  },
 } as const;
 
 type TranslationKey = keyof typeof translations;

@@ -316,6 +316,111 @@ export async function lookupReturningGuest(
   return { name: row.full_name as string };
 }
 
+// ── guest self-service: post-stay review (roadmap m1, DB-free) ─────────────
+// No `reviews` table exists yet (no migration in this milestone), so a
+// submitted review is emailed straight to the property owner rather than
+// persisted — see app/book/[code]/review/[bookingId]/actions.ts. Both
+// lookups below go through the service-role client: the review link's
+// signed token (verifyPostStayReviewRequestToken, lib/guest-session.ts) is
+// the proof of ownership here, not a client-supplied email, so there is no
+// anon-safe RPC to reuse the way the rest of this file does.
+
+export interface PublicBookingForReview {
+  id: string;
+  code: string;
+  guestName: string;
+  status: string;
+  checkIn: string;
+  checkOut: string;
+  roomTypeName: string;
+  propertyName: string;
+  tenantId: string;
+}
+
+/**
+ * Look up a booking for the post-stay review page/action. Scoped by BOTH id
+ * and code (matching the pair the signed token already committed to) so
+ * this can never be used to fetch an arbitrary booking off a bare id.
+ * Callers MUST verify the token before calling this.
+ */
+export async function getBookingForReview(
+  bookingId: string,
+  code: string
+): Promise<PublicBookingForReview | null> {
+  const id = (bookingId || "").trim();
+  const trimmedCode = (code || "").trim();
+  if (!id || !trimmedCode) return null;
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("bookings")
+    .select("id, code, guest_name, status, check_in, check_out, tenant_id, room_types(name), properties(name)")
+    .eq("id", id)
+    .eq("code", trimmedCode)
+    .maybeSingle();
+  if (error || !data) return null;
+
+  const row = data as unknown as {
+    id: string;
+    code: string;
+    guest_name: string;
+    status: string;
+    check_in: string;
+    check_out: string;
+    tenant_id: string;
+    room_types: { name: string } | null;
+    properties: { name: string } | null;
+  };
+  return {
+    id: row.id,
+    code: row.code,
+    guestName: row.guest_name,
+    status: row.status,
+    checkIn: row.check_in,
+    checkOut: row.check_out,
+    roomTypeName: row.room_types?.name ?? "Room",
+    propertyName: row.properties?.name ?? "",
+    tenantId: row.tenant_id,
+  };
+}
+
+/**
+ * The email address to notify with a guest-submitted review: the tenant's
+ * `owner` member if one exists, else any member. Reads auth.users via the
+ * admin auth API (tenant_members carries no email column itself). Returns
+ * null (never throws) if the tenant has no members or the lookup fails —
+ * callers must treat that as "review can't be delivered right now".
+ */
+export async function getTenantOwnerEmail(tenantId: string): Promise<string | null> {
+  const id = (tenantId || "").trim();
+  if (!id) return null;
+  const admin = createAdminClient();
+
+  const { data: owner } = await admin
+    .from("tenant_members")
+    .select("user_id")
+    .eq("tenant_id", id)
+    .eq("role", "owner")
+    .limit(1)
+    .maybeSingle();
+
+  let userId = (owner as { user_id: string } | null)?.user_id ?? null;
+  if (!userId) {
+    const { data: anyMember } = await admin
+      .from("tenant_members")
+      .select("user_id")
+      .eq("tenant_id", id)
+      .limit(1)
+      .maybeSingle();
+    userId = (anyMember as { user_id: string } | null)?.user_id ?? null;
+  }
+  if (!userId) return null;
+
+  const { data: userRes, error } = await admin.auth.admin.getUserById(userId);
+  if (error || !userRes?.user?.email) return null;
+  return userRes.user.email;
+}
+
 /** Cancel a guest's own booking. Server re-verifies code+email before cancelling. */
 export async function cancelPublicBookingRpc(
   propertyId: string,
