@@ -7,9 +7,13 @@ import {
   createPublicBookingCart,
   CreateCartBookingInput,
   CreateCartBookingResult,
+  getAvailability,
   getPublicProperty,
+  getPublicRatePlans,
+  getQuote,
   lookupPublicBooking,
   lookupReturningGuest,
+  planNightlyPrice,
   ReturningGuestInfo,
   cancelPublicBookingRpc,
   PublicBookingDetails,
@@ -18,6 +22,9 @@ import {
 } from "@/lib/book";
 import { ActionResult, ok, fail } from "@/lib/errors";
 import { sendBookingConfirmationEmail } from "@/lib/mailer";
+import { createOmiseCharge } from "@/lib/omise";
+import { applyPromoDiscount } from "@/lib/promo-codes";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
  * Submit a guest's whole cart (one or more room-type line items, same
@@ -30,6 +37,14 @@ import { sendBookingConfirmationEmail } from "@/lib/mailer";
 export async function submitPublicBooking(
   input: CreateCartBookingInput
 ): Promise<CreateCartBookingResult> {
+  const validation = await validatePublicBookingInput(input);
+  if (!validation.ok) return validation;
+  return createPublicBookingCart(input);
+}
+
+async function validatePublicBookingInput(
+  input: CreateCartBookingInput
+): Promise<{ ok: true } | { ok: false; message: string }> {
   if (!input.propertyId || !input.checkIn || !input.checkOut) {
     return { ok: false, message: "Missing booking details." };
   }
@@ -48,7 +63,144 @@ export async function submitPublicBooking(
       message: "วันที่เข้าพักต้องไม่ใช่วันที่ผ่านมาแล้ว / Check-in date cannot be in the past.",
     };
   }
-  return createPublicBookingCart(input);
+  return { ok: true };
+}
+
+export type PayAndSubmitBookingInput = CreateCartBookingInput & {
+  propertyCode: string;
+  omiseToken: string;
+};
+
+async function computeAuthoritativeCheckoutTotal(
+  input: CreateCartBookingInput
+): Promise<{ ok: true; total: number } | { ok: false; message: string }> {
+  const avail = await getAvailability(input.propertyId, input.checkIn, input.checkOut);
+  const { plans, overridesByPlan } = await getPublicRatePlans(input.propertyId);
+  const nights = Math.max(
+    1,
+    Math.round(
+      (Date.parse(input.checkOut + "T00:00:00Z") - Date.parse(input.checkIn + "T00:00:00Z")) /
+        86_400_000
+    )
+  );
+
+  const requestedByType = new Map<string, number>();
+  for (const item of input.items) {
+    const qty = Math.max(1, Math.min(50, Math.round(item.qty) || 0));
+    requestedByType.set(item.roomTypeId, (requestedByType.get(item.roomTypeId) ?? 0) + qty);
+  }
+
+  let total = 0;
+  for (const item of input.items) {
+    const type = avail.find((a) => a.room_type_id === item.roomTypeId);
+    const qty = Math.max(1, Math.min(50, Math.round(item.qty) || 0));
+    if (!type || type.available <= 0 || qty > type.available) {
+      return {
+        ok: false,
+        message:
+          "บางรายการในตะกร้าไม่ว่างแล้ว กรุณากลับไปแก้ไข / Some cart items are no longer available.",
+      };
+    }
+    if ((requestedByType.get(item.roomTypeId) ?? 0) > type.available) {
+      return {
+        ok: false,
+        message:
+          "จำนวนห้องที่เลือกมากกว่าห้องว่าง กรุณากลับไปแก้ไข / Selected rooms exceed availability.",
+      };
+    }
+
+    const baseTotal = await getQuote(input.propertyId, type.room_type_id, input.checkIn, input.checkOut);
+    let unitTotal = baseTotal;
+    if (item.ratePlanId) {
+      const plan = plans.find((p) => p.id === item.ratePlanId);
+      if (plan) {
+        const basePrice = type.daily_rate ?? baseTotal / nights;
+        unitTotal = planNightlyPrice(plan, type.room_type_id, overridesByPlan, basePrice) * nights;
+      }
+    }
+    total += unitTotal * qty;
+  }
+
+  if (input.promoCode?.trim()) {
+    const discount = applyPromoDiscount(total, input.promoCode);
+    if (discount.ok) total = discount.discountedTotal;
+  }
+
+  return { ok: true, total: Math.max(0, total) };
+}
+
+async function appendOmiseChargeNote(
+  propertyId: string,
+  bookingCodes: string[],
+  chargeId: string
+): Promise<void> {
+  if (bookingCodes.length === 0) return;
+  const admin = createAdminClient();
+  const { data: rows } = await admin
+    .from("bookings")
+    .select("id, notes")
+    .eq("property_id", propertyId)
+    .in("code", bookingCodes);
+  const paymentNote = `Paid via Omise charge ${chargeId}`;
+  for (const row of (rows ?? []) as { id: string; notes: string | null }[]) {
+    const baseNotes = row.notes ?? "";
+    const notes = baseNotes ? `${baseNotes} · ${paymentNote}` : paymentNote;
+    await admin.from("bookings").update({ notes }).eq("id", row.id);
+  }
+}
+
+export async function payAndSubmitBooking(
+  input: PayAndSubmitBookingInput
+): Promise<CreateCartBookingResult> {
+  const validation = await validatePublicBookingInput(input);
+  if (!validation.ok) return validation;
+
+  const property = await getPublicProperty(input.propertyCode);
+  if (!property || property.id !== input.propertyId) {
+    return { ok: false, message: "ไม่พบที่พักนี้ / Property not found." };
+  }
+  if (property.currency.toUpperCase() !== "THB") {
+    return {
+      ok: false,
+      message: "ตอนนี้รับชำระผ่าน Omise เฉพาะ THB / Omise checkout currently supports THB only.",
+    };
+  }
+
+  const totalRes = await computeAuthoritativeCheckoutTotal(input);
+  if (!totalRes.ok) return totalRes;
+  const amountSatang = Math.round(totalRes.total * 100);
+  if (amountSatang <= 0) {
+    return { ok: false, message: "ยอดชำระไม่ถูกต้อง / Invalid payment amount." };
+  }
+
+  const charge = await createOmiseCharge({
+    token: input.omiseToken,
+    amount: amountSatang,
+    currency: property.currency,
+    description: `HostGate booking ${property.name} ${input.checkIn} to ${input.checkOut}`,
+  });
+  if (!charge.ok) return { ok: false, message: charge.message };
+  if (charge.status !== "successful") {
+    return {
+      ok: false,
+      message:
+        "ชำระเงินยังไม่สำเร็จ จึงยังไม่สร้างการจอง / Payment was not successful, so no booking was created.",
+    };
+  }
+
+  const booking = await createPublicBookingCart({
+    ...input,
+    currency: property.currency,
+  });
+  if (!booking.ok) return booking;
+
+  try {
+    await appendOmiseChargeNote(input.propertyId, booking.bookingCodes, charge.chargeId);
+  } catch {
+    /* The paid booking already exists; staff can still reconcile via Omise logs. */
+  }
+
+  return booking;
 }
 
 /**

@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Tag } from "lucide-react";
-import { submitPublicBooking, lookupReturningGuestAction } from "@/app/book/actions";
+import { AlertTriangle, CreditCard, Tag } from "lucide-react";
+import { lookupReturningGuestAction, payAndSubmitBooking } from "@/app/book/actions";
 import Button from "@/components/app/ui/Button";
 import { clearCart } from "@/lib/book-cart";
 import { applyPromoDiscount, type PromoCode } from "@/lib/promo-codes";
@@ -26,6 +26,55 @@ export interface CheckoutLineItem {
 
 const field =
   "rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] px-2.5 py-1.5 text-sm outline-none focus:border-[var(--app-accent)]";
+
+type OmiseCard = {
+  name: string;
+  number: string;
+  expiration_month: number;
+  expiration_year: number;
+  security_code: string;
+};
+
+type OmiseTokenResponse = {
+  id?: string;
+  message?: string;
+};
+
+declare global {
+  interface Window {
+    Omise?: {
+      setPublicKey: (key: string) => void;
+      createToken: (
+        object: "card",
+        card: OmiseCard,
+        callback: (statusCode: number, response: OmiseTokenResponse) => void
+      ) => void;
+    };
+  }
+}
+
+function loadOmiseScript(): Promise<void> {
+  if (typeof window === "undefined") return Promise.reject(new Error("Browser only"));
+  if (window.Omise) return Promise.resolve();
+  const existing = document.getElementById("omise-js");
+  if (existing) {
+    return new Promise((resolve, reject) => {
+      existing.addEventListener("load", () => resolve(), { once: true });
+      existing.addEventListener("error", () => reject(new Error("Omise.js failed to load")), {
+        once: true,
+      });
+    });
+  }
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.id = "omise-js";
+    script.src = "https://cdn.omise.co/omise.js";
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Omise.js failed to load"));
+    document.head.appendChild(script);
+  });
+}
 
 export default function CheckoutForm({
   code,
@@ -59,6 +108,11 @@ export default function CheckoutForm({
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [returningGuestName, setReturningGuestName] = useState<string | null>(null);
+  const [cardName, setCardName] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardExpiryMonth, setCardExpiryMonth] = useState("");
+  const [cardExpiryYear, setCardExpiryYear] = useState("");
+  const [cardCvc, setCardCvc] = useState("");
 
   // Returning-guest recognition: only once BOTH email and phone are typed
   // (never just one — that would let a stranger who merely guesses an email
@@ -119,6 +173,51 @@ export default function CheckoutForm({
     setPromoError("");
   }
 
+  async function createCardToken(): Promise<string> {
+    const publicKey = process.env.NEXT_PUBLIC_OMISE_PUBLIC_KEY;
+    if (!publicKey || !/^pk_test_/.test(publicKey)) {
+      throw new Error("ระบบชำระเงินยังไม่พร้อมใช้งาน / Payment is not configured.");
+    }
+    if (
+      !cardName.trim() ||
+      !cardNumber.trim() ||
+      !cardExpiryMonth.trim() ||
+      !cardExpiryYear.trim() ||
+      !cardCvc.trim()
+    ) {
+      throw new Error("กรุณากรอกข้อมูลบัตรให้ครบ / Please enter all card details.");
+    }
+    await loadOmiseScript();
+    if (!window.Omise) {
+      throw new Error("โหลดระบบชำระเงินไม่สำเร็จ / Payment form failed to load.");
+    }
+    window.Omise.setPublicKey(publicKey);
+    return new Promise((resolve, reject) => {
+      window.Omise!.createToken(
+        "card",
+        {
+          name: cardName.trim(),
+          number: cardNumber.replace(/\s+/g, ""),
+          expiration_month: Number(cardExpiryMonth),
+          expiration_year: Number(cardExpiryYear),
+          security_code: cardCvc.trim(),
+        },
+        (statusCode, response) => {
+          if (statusCode === 200 && response.id) {
+            resolve(response.id);
+          } else {
+            reject(
+              new Error(
+                response.message ||
+                  "สร้าง token บัตรไม่สำเร็จ กรุณาตรวจสอบข้อมูลบัตร / Could not tokenize this card."
+              )
+            );
+          }
+        }
+      );
+    });
+  }
+
   async function confirm() {
     setError("");
     if (!name.trim()) {
@@ -132,7 +231,17 @@ export default function CheckoutForm({
       return;
     }
     setSubmitting(true);
-    const res = await submitPublicBooking({
+    let omiseToken = "";
+    try {
+      omiseToken = await createCardToken();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "ชำระเงินไม่สำเร็จ / Payment failed.");
+      setSubmitting(false);
+      return;
+    }
+    const res = await payAndSubmitBooking({
+      propertyCode: code,
+      omiseToken,
       propertyId,
       checkIn,
       checkOut,
@@ -347,9 +456,79 @@ export default function CheckoutForm({
         </div>
 
         <p className="mt-3 text-xs text-[var(--app-fg-muted)]">
-          ยืนยันการจอง = ชำระเงินเต็มจำนวนของตะกร้า (จำลองการชำระเงิน) / Confirm booking settles the
-          full cart total now (simulated payment).
+          ยืนยันการจอง = ชำระเงินเต็มจำนวนของตะกร้าด้วยบัตร / Confirm booking settles the full
+          cart total by card now.
         </p>
+
+        <div className="mt-4 border-t border-[var(--app-border)] pt-4">
+          <div className="mb-3 flex items-center gap-2 text-sm font-medium">
+            <CreditCard size={16} className="text-[var(--app-accent)]" />
+            ชำระเงินด้วยบัตร / Card payment
+          </div>
+          <div className="space-y-3">
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-[var(--app-fg-muted)]">
+                ชื่อบนบัตร / Name on card
+              </span>
+              <input
+                value={cardName}
+                onChange={(e) => setCardName(e.target.value)}
+                autoComplete="cc-name"
+                className={`${field} w-full`}
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-[var(--app-fg-muted)]">
+                หมายเลขบัตร / Card number
+              </span>
+              <input
+                value={cardNumber}
+                onChange={(e) => setCardNumber(e.target.value)}
+                inputMode="numeric"
+                autoComplete="cc-number"
+                className={`${field} w-full`}
+              />
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-[var(--app-fg-muted)]">
+                  เดือน / MM
+                </span>
+                <input
+                  value={cardExpiryMonth}
+                  onChange={(e) => setCardExpiryMonth(e.target.value)}
+                  inputMode="numeric"
+                  autoComplete="cc-exp-month"
+                  className={`${field} w-full`}
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-[var(--app-fg-muted)]">
+                  ปี / YYYY
+                </span>
+                <input
+                  value={cardExpiryYear}
+                  onChange={(e) => setCardExpiryYear(e.target.value)}
+                  inputMode="numeric"
+                  autoComplete="cc-exp-year"
+                  className={`${field} w-full`}
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-[var(--app-fg-muted)]">
+                  CVC
+                </span>
+                <input
+                  value={cardCvc}
+                  onChange={(e) => setCardCvc(e.target.value)}
+                  inputMode="numeric"
+                  autoComplete="cc-csc"
+                  className={`${field} w-full`}
+                />
+              </label>
+            </div>
+          </div>
+        </div>
 
         {error && <p className="mt-3 text-sm text-[var(--app-danger)]">{error}</p>}
 
@@ -359,7 +538,7 @@ export default function CheckoutForm({
           disabled={hasUnavailable || items.length === 0}
           className="mt-4 w-full"
         >
-          ยืนยันการจอง / Confirm booking
+          ชำระเงินและยืนยันการจอง / Pay and confirm booking
         </Button>
       </div>
     </div>
