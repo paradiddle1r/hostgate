@@ -117,6 +117,24 @@ export default function AnimatedMobile() {
         </div>
       </div>
 
+      {/* 7-day revenue mini chart — fills the space above the tab bar */}
+      <div className="pms-ll-surface relative z-10 mt-[3.6cqw] rounded-[4.5cqw] p-[3cqw]">
+        <div className="flex items-baseline justify-between">
+          <p className="text-[3.2cqw] font-semibold">รายได้ 7 วัน</p>
+          <p className="text-[2.7cqw] font-semibold" style={{ color: "#16a34a" }}>+18%</p>
+        </div>
+        <div className="mt-[2.2cqw] flex items-end justify-between gap-[1.6cqw]" style={{ height: "13cqw" }}>
+          {[42, 55, 38, 62, 50, 74, 88].map((h, i) => (
+            <div key={i} className="flex-1 rounded-t-[1.2cqw]" style={{ height: `${h}%`, background: i === 6 ? "var(--ll-accent)" : "var(--ll-accent-soft)" }} />
+          ))}
+        </div>
+        <div className="mt-[1.2cqw] flex justify-between text-[2.2cqw]" style={{ color: "var(--ll-faint)" }}>
+          {["จ", "อ", "พ", "พฤ", "ศ", "ส", "อา"].map((d) => (
+            <span key={d} className="flex-1 text-center">{d}</span>
+          ))}
+        </div>
+      </div>
+
       {/* Bottom tab bar — sits above the home indicator */}
       <div
         className="pms-ll-surface relative z-10 mt-auto -mx-[5.5cqw] flex items-start justify-around px-[6cqw] pt-[2cqw]"

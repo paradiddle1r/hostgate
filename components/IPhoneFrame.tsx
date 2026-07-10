@@ -3,21 +3,23 @@
 import { ReactNode } from "react";
 
 /**
- * iPhone 17 Pro Max frame — pure CSS, fully proportional.
+ * iPhone 17 Pro frame — pure CSS, fully proportional.
  *
- * Geometry is modelled in device points (display 440×956pt, bezel 7pt,
- * band 5pt → body 464×980pt ≈ real 77.6×163.4mm) and expressed ONLY in
- * percentages / aspect-ratios / container units, so the frame renders with
- * identical proportions at ANY width — no fixed-pixel radii to drift when
- * the layout shrinks.
+ * Geometry measured off Apple's own front-view renders (apple.com/iphone-17-pro
+ * product viewer, silhouette circle-fit + island probe), modelled in device
+ * points: display 440×956pt, metal rim 4.5pt, black bezel 11pt → body
+ * 471×987pt. The Liquid-Glass generation is much rounder than the 15/16 era:
+ * body corner R ≈ 97pt (~20.6% of width), display R ≈ 81pt, concentric.
  *
- * Corner radii use the `x% / y%` two-value syntax (x resolves against
- * width, y against height) so corners stay perfectly circular.
+ * Everything is percentages / aspect-ratios / `x% / y%` radius pairs, so the
+ * frame renders with identical proportions at ANY width — no fixed-pixel
+ * values to drift when the layout shrinks.
  *
  * The scene (children) fills the screen edge-to-edge; the Dynamic Island,
- * status bar and home indicator are frame-owned overlays. Scenes read
- * `--hg-safe-top` / `--hg-safe-bottom` (container-query units, resolved
- * against the screen) to keep their content out of the overlays.
+ * status bar and home indicator are frame-owned overlays. The status-bar
+ * time/icons are vertically centered on the island's centerline, like iOS.
+ * Scenes read `--hg-safe-top` / `--hg-safe-bottom` (container units resolved
+ * against the screen) to keep their content clear of the overlays.
  */
 export default function IPhoneFrame({
   children,
@@ -28,27 +30,27 @@ export default function IPhoneFrame({
 }) {
   return (
     <div className={`relative mx-auto w-full device-shadow ${className}`}>
-      {/* Titanium band — 5pt of 464 */}
+      {/* Aluminum rim — 4.5pt of 471 */}
       <div
-        className="relative bg-gradient-to-br from-[#e3e4e8] via-[#9fa2a9] to-[#585b62] p-[1.08%] shadow-[inset_0_1px_1px_rgba(255,255,255,0.55)]"
-        style={{ borderRadius: "15.9% / 7.55%" }}
+        className="relative bg-gradient-to-br from-[#e3e4e8] via-[#9fa2a9] to-[#585b62] p-[0.96%] shadow-[inset_0_1px_1px_rgba(255,255,255,0.55)]"
+        style={{ borderRadius: "20.6% / 9.82%" }}
       >
-        {/* Black bezel — 7pt of 454 */}
+        {/* Black bezel — 11pt of 462 */}
         <div
-          className="relative bg-black p-[1.55%] shadow-[inset_0_0_1px_rgba(255,255,255,0.28)]"
-          style={{ borderRadius: "15.2% / 7.11%" }}
+          className="relative bg-black p-[2.38%] shadow-[inset_0_0_1px_rgba(255,255,255,0.28)]"
+          style={{ borderRadius: "20% / 9.45%" }}
         >
           {/* Screen — 440×956pt, the query container for scene sizing */}
           <div
             className="relative w-full overflow-hidden bg-white [container-type:inline-size]"
-            style={{ aspectRatio: "440 / 956", borderRadius: "14.1% / 6.49%" }}
+            style={{ aspectRatio: "440 / 956", borderRadius: "18.5% / 8.51%" }}
           >
-            {/* Scene — edge-to-edge behind the island (จอเต็มขอบบน) */}
+            {/* Scene — edge-to-edge behind the island */}
             <div
               className="absolute inset-0"
               style={
                 {
-                  "--hg-safe-top": "13.5cqw",
+                  "--hg-safe-top": "14cqw",
                   "--hg-safe-bottom": "6cqw",
                 } as React.CSSProperties
               }
@@ -56,10 +58,15 @@ export default function IPhoneFrame({
               {children}
             </div>
 
-            {/* Status bar overlay */}
-            <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex h-[5.65%] items-center justify-between pl-[8%] pr-[6.5%] text-zinc-900">
-              <span className="text-[3.8cqw] font-semibold tracking-[0.01em]">9:41</span>
-              <span className="flex items-center gap-[1.3cqw]">
+            {/* Status bar — items sit on the island's centerline (island
+                center = 37.5pt of 956 ≈ 3.92%H, so the row is 7.84%H tall
+                and its center matches). Time centers in the left segment
+                beside the island, icons mirror on the right. */}
+            <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex h-[7.84%] items-center justify-between text-zinc-900">
+              <span className="flex w-[35%] justify-center pl-[4%] text-[3.9cqw] font-semibold tracking-[0.01em]">
+                9:41
+              </span>
+              <span className="flex w-[35%] items-center justify-center gap-[1.3cqw] pr-[4%]">
                 {/* cellular */}
                 <svg viewBox="0 0 16 10" className="w-[4.3cqw]" fill="currentColor">
                   <rect x="0" y="6" width="2.6" height="4" rx="0.6" />
@@ -80,10 +87,10 @@ export default function IPhoneFrame({
               </span>
             </div>
 
-            {/* Dynamic Island — 125×37pt, 11pt from top */}
+            {/* Dynamic Island — 130×40.6pt, 17.2pt from the top */}
             <div
-              className="pointer-events-none absolute left-1/2 top-[1.15%] z-30 w-[28.4%] -translate-x-1/2 rounded-full bg-black"
-              style={{ aspectRatio: "125 / 37" }}
+              className="pointer-events-none absolute left-1/2 top-[1.8%] z-30 w-[29.5%] -translate-x-1/2 rounded-full bg-black"
+              style={{ aspectRatio: "3.2" }}
             >
               {/* camera lens glint */}
               <span className="absolute right-[7%] top-1/2 h-[52%] -translate-y-1/2 rounded-full bg-[#0a0a12]" style={{ aspectRatio: "1" }}>
