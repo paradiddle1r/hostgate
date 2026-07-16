@@ -73,11 +73,15 @@ export default function IpadFrame({
       {/* Edge buttons — scale with the body */}
       {landscape ? (
         <>
-          {/* power (top-left) */}
-          <span className="absolute rounded-t-sm bg-gradient-to-b from-[#a7aab1] to-[#6f727a]" style={{ top: "-0.5%", left: "2%", width: "4%", height: "0.55%" }} />
-          {/* volume up / down (top-right) */}
-          <span className="absolute rounded-t-sm bg-gradient-to-b from-[#a7aab1] to-[#6f727a]" style={{ top: "-0.5%", right: "9.4%", width: "2.6%", height: "0.55%" }} />
-          <span className="absolute rounded-t-sm bg-gradient-to-b from-[#a7aab1] to-[#6f727a]" style={{ top: "-0.5%", right: "6%", width: "2.6%", height: "0.55%" }} />
+          {/* With the landscape camera at the top, the portrait top edge has
+              rotated to the left: the single top/power button belongs here. */}
+          <span
+            className="absolute rounded-l-full bg-gradient-to-r from-[#666a72] via-[#9da1a8] to-[#d6d8dc] shadow-[0_0_0_0.35px_rgba(40,44,50,0.35)]"
+            style={{ left: "-0.5%", top: "5.6%", width: "max(1px, 0.55%)", height: "6.5%" }}
+          />
+          {/* Volume buttons sit on the landscape top edge, near the left. */}
+          <span className="absolute rounded-t-full bg-gradient-to-b from-[#d6d8dc] via-[#9da1a8] to-[#666a72] shadow-[0_-0.4px_0_rgba(255,255,255,0.7),0_0_0_0.35px_rgba(40,44,50,0.35)]" style={{ top: "-0.38%", left: "6.9%", width: "3.6%", height: "max(1px, 0.5%)" }} />
+          <span className="absolute rounded-t-full bg-gradient-to-b from-[#d6d8dc] via-[#9da1a8] to-[#666a72] shadow-[0_-0.4px_0_rgba(255,255,255,0.7),0_0_0_0.35px_rgba(40,44,50,0.35)]" style={{ top: "-0.38%", left: "11.2%", width: "3.6%", height: "max(1px, 0.5%)" }} />
         </>
       ) : (
         <>

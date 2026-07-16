@@ -8,8 +8,8 @@ import { ReactNode } from "react";
  * Geometry measured off Apple's own front-view renders (apple.com/iphone-17-pro
  * product viewer, silhouette circle-fit + island probe), modelled in device
  * points: display 440×956pt, metal rim 4.5pt, black bezel 11pt → body
- * 471×987pt. The Liquid-Glass generation is much rounder than the 15/16 era:
- * body corner R ≈ 97pt (~20.6% of width), display R ≈ 81pt, concentric.
+ * 471×987pt. The three radii are kept concentric, but slightly restrained at
+ * marketing-render sizes so the silhouette does not read like a capsule.
  *
  * Everything is percentages / aspect-ratios / `x% / y%` radius pairs, so the
  * frame renders with identical proportions at ANY width — no fixed-pixel
@@ -33,17 +33,17 @@ export default function IPhoneFrame({
       {/* Aluminum rim — 4.5pt of 471 */}
       <div
         className="relative bg-gradient-to-br from-[#e3e4e8] via-[#9fa2a9] to-[#585b62] p-[0.96%] shadow-[inset_0_1px_1px_rgba(255,255,255,0.55)]"
-        style={{ borderRadius: "20.6% / 9.82%" }}
+        style={{ borderRadius: "17.2% / 8.2%" }}
       >
         {/* Black bezel — 11pt of 462 */}
         <div
           className="relative bg-black p-[2.38%] shadow-[inset_0_0_1px_rgba(255,255,255,0.28)]"
-          style={{ borderRadius: "20% / 9.45%" }}
+          style={{ borderRadius: "16.6% / 7.82%" }}
         >
           {/* Screen — 440×956pt, the query container for scene sizing */}
           <div
             className="relative w-full overflow-hidden bg-white [container-type:inline-size]"
-            style={{ aspectRatio: "440 / 956", borderRadius: "18.5% / 8.51%" }}
+            style={{ aspectRatio: "440 / 956", borderRadius: "14.9% / 6.85%" }}
           >
             {/* Scene — edge-to-edge behind the island */}
             <div
@@ -117,14 +117,14 @@ export default function IPhoneFrame({
 
       {/* Side buttons — % of body so they scale with the frame */}
       {/* Action button */}
-      <span className="absolute rounded-l-sm bg-gradient-to-r from-[#6f727a] to-[#a7aab1]" style={{ left: "-0.5%", top: "18%", width: "0.6%", height: "3.5%" }} />
+      <span className="absolute rounded-l-full bg-gradient-to-r from-[#5e626a] via-[#9da1a9] to-[#c4c6cb] shadow-[0_0_0_0.3px_rgba(0,0,0,0.35)]" style={{ left: "-0.65%", top: "14.7%", width: "0.8%", height: "3.5%" }} />
       {/* Volume up / down */}
-      <span className="absolute rounded-l-sm bg-gradient-to-r from-[#6f727a] to-[#a7aab1]" style={{ left: "-0.5%", top: "24.8%", width: "0.6%", height: "6.3%" }} />
-      <span className="absolute rounded-l-sm bg-gradient-to-r from-[#6f727a] to-[#a7aab1]" style={{ left: "-0.5%", top: "32.4%", width: "0.6%", height: "6.3%" }} />
+      <span className="absolute rounded-l-full bg-gradient-to-r from-[#5e626a] via-[#9da1a9] to-[#c4c6cb] shadow-[0_0_0_0.3px_rgba(0,0,0,0.35)]" style={{ left: "-0.65%", top: "21.2%", width: "0.8%", height: "6.1%" }} />
+      <span className="absolute rounded-l-full bg-gradient-to-r from-[#5e626a] via-[#9da1a9] to-[#c4c6cb] shadow-[0_0_0_0.3px_rgba(0,0,0,0.35)]" style={{ left: "-0.65%", top: "29.1%", width: "0.8%", height: "6.1%" }} />
       {/* Power */}
-      <span className="absolute rounded-r-sm bg-gradient-to-l from-[#6f727a] to-[#a7aab1]" style={{ right: "-0.5%", top: "26%", width: "0.6%", height: "9.8%" }} />
+      <span className="absolute rounded-r-full bg-gradient-to-l from-[#5e626a] via-[#9da1a9] to-[#c4c6cb] shadow-[0_0_0_0.3px_rgba(0,0,0,0.35)]" style={{ right: "-0.65%", top: "20.5%", width: "0.8%", height: "10.4%" }} />
       {/* Camera Control */}
-      <span className="absolute rounded-r-sm bg-gradient-to-l from-[#6f727a] to-[#a7aab1]" style={{ right: "-0.45%", top: "62%", width: "0.5%", height: "4.7%" }} />
+      <span className="absolute rounded-r-full bg-gradient-to-l from-[#5e626a] via-[#9da1a9] to-[#c4c6cb] shadow-[0_0_0_0.3px_rgba(0,0,0,0.35)]" style={{ right: "-0.6%", top: "58.8%", width: "0.72%", height: "5.2%" }} />
     </div>
   );
 }

@@ -21,19 +21,44 @@ export default function MarketingChrome({ children }: { children: ReactNode }) {
     pathname === "/book" ||
     pathname.startsWith("/book/") ||
     pathname === "/admin" ||
-    pathname.startsWith("/admin/");
+    pathname.startsWith("/admin/") ||
+    // design-lab sample landings render their own chrome per version
+    pathname === "/labs" ||
+    pathname.startsWith("/labs/");
+
+  const isAuth =
+    pathname === "/login" ||
+    pathname === "/signup" ||
+    pathname === "/verify-email" ||
+    pathname === "/onboarding" ||
+    pathname.startsWith("/onboarding/");
 
   if (isApp) return <>{children}</>;
 
+  const mesh = (
+    <div className="mesh-bg" aria-hidden>
+      <div className="blob b1" />
+      <div className="blob b2" />
+      <div className="blob b3" />
+      <div className="blob b4" />
+      <div className="blob b5" />
+    </div>
+  );
+
+  // Auth routes provide their own compact brand header. Keep the atmospheric
+  // marketing background, but do not duplicate the marketing navbar/footer.
+  if (isAuth) {
+    return (
+      <>
+        {mesh}
+        <div className="relative">{children}</div>
+      </>
+    );
+  }
+
   return (
     <>
-      <div className="mesh-bg" aria-hidden>
-        <div className="blob b1" />
-        <div className="blob b2" />
-        <div className="blob b3" />
-        <div className="blob b4" />
-        <div className="blob b5" />
-      </div>
+      {mesh}
       <div className="relative">
         <Navbar />
         <main>{children}</main>

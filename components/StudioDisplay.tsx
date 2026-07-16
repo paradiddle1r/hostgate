@@ -52,51 +52,56 @@ export default function StudioDisplay({
         </div>
       </div>
 
-      {/* Stand arm — brushed metal column behind the display */}
+      {/* Original short rectangular stand arm — brushed aluminum. */}
       <div
-        className="relative z-0 mx-auto -mt-[0.9%] w-[16%]"
+        className="relative z-0 mx-auto -mt-[0.9%] w-[16%] overflow-hidden"
         style={{
           aspectRatio: "16 / 5.2",
           background:
-            "linear-gradient(90deg, #74787f 0%, #b9bcc2 28%, #e0e2e6 50%, #b3b6bd 72%, #686c73 100%)",
+            "linear-gradient(90deg, #777b82 0%, #b4b7bd 18%, #e9eaed 42%, #f5f6f7 50%, #d0d2d7 62%, #9a9da4 84%, #686c73 100%)",
+          boxShadow: "inset 1px 0 rgba(255,255,255,.28), inset -1px 0 rgba(34,38,44,.16)",
         }}
       >
-        {/* AO: display overhang shadow at the top of the arm */}
-        <div className="absolute inset-x-0 top-0 h-[45%] bg-gradient-to-b from-black/35 to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-[45%] bg-gradient-to-b from-black/30 via-black/10 to-transparent" />
+        <div className="absolute inset-x-[12%] bottom-0 h-px bg-white/45" />
       </div>
 
-      {/* Base plate — receding top surface (trapezoid, catches the light) */}
+      {/* Original receding trapezoid base, with more natural aluminum tones. */}
       <div
-        className="relative mx-auto w-[31%]"
+        className="relative mx-auto w-[31%] overflow-hidden"
         style={{
           aspectRatio: "31 / 2",
           clipPath: "polygon(7% 0, 93% 0, 100% 100%, 0 100%)",
-          background: "linear-gradient(180deg, #eef0f2 0%, #cdd0d6 100%)",
+          background: "linear-gradient(180deg, #f6f7f8 0%, #e3e4e7 28%, #c8cbd0 68%, #aeb2b8 100%)",
+          boxShadow: "inset 0 1px rgba(255,255,255,.95)",
         }}
       >
-        {/* AO where the arm meets the plate */}
         <div
           className="absolute inset-0"
-          style={{ background: "radial-gradient(42% 90% at 50% 0%, rgba(0,0,0,0.22), transparent 68%)" }}
+          style={{
+            background:
+              "radial-gradient(38% 100% at 50% 0%, rgba(30,34,40,.18), transparent 66%), linear-gradient(90deg, rgba(70,74,80,.08), transparent 18%, transparent 82%, rgba(70,74,80,.09))",
+          }}
         />
       </div>
 
-      {/* Base plate — front edge */}
+      {/* Original thin front edge. */}
       <div
         className="relative mx-auto w-[31%] rounded-t-[1px] rounded-b-full"
         style={{
           aspectRatio: "31 / 0.9",
-          background: "linear-gradient(180deg, #c6c9cf 0%, #9598a0 55%, #73767d 100%)",
+          background: "linear-gradient(180deg, #c8cbd0 0%, #a7aab0 30%, #858990 68%, #686c72 100%)",
+          boxShadow: "inset 0 1px rgba(255,255,255,.38), 0 1px 1px rgba(26,30,36,.14)",
         }}
       />
 
       {/* Floor shadows — tight contact + wide ambient */}
       <div
-        className="pointer-events-none mx-auto -mt-[0.35%] w-[34%] rounded-[50%] bg-black/25 blur-md"
+        className="pointer-events-none mx-auto -mt-[0.35%] w-[34%] rounded-[50%] bg-black/[0.18] blur-md"
         style={{ aspectRatio: "34 / 1.6" }}
       />
       <div
-        className="pointer-events-none mx-auto -mt-[1%] w-[54%] rounded-[50%] bg-black/10 blur-xl"
+        className="pointer-events-none mx-auto -mt-[1%] w-[54%] rounded-[50%] bg-black/[0.07] blur-xl"
         style={{ aspectRatio: "54 / 2.4" }}
       />
     </div>
