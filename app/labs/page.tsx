@@ -42,6 +42,12 @@ const VERSIONS = [
     desc: "บูทีคโฮเทลหรู — ครีม/ทราย ทองจางๆ serif ไทย อากาศเยอะ นิ่งและแพง",
     swatch: ["#faf6ef", "#a16207", "#3f3a33"],
   },
+  {
+    href: "/labs/v6",
+    name: "V6 · Motion",
+    desc: "แอนิเมชันจัดเต็ม — headline เบลอเข้าโฟกัส, aurora ไหล, ตัวเลขนับขึ้น, การ์ดลอย, ฟีดจองสด",
+    swatch: ["#070711", "#a855f7", "#22d3ee"],
+  },
 ];
 
 export default function LabsIndex() {
