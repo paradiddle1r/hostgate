@@ -104,6 +104,20 @@ export async function provisionTenant(input: ProvisionInput): Promise<ProvisionR
     return { ok: false, error: `property: ${propertyErr?.message ?? "insert_failed"}` };
   }
 
+  // ----- 4b. Seed this property's accounting books (Thai SME chart of
+  //           accounts + posting map) via the SECURITY DEFINER RPC. The new
+  //           owner is already a tenant member (step 3), so the RPC's internal
+  //           membership check passes. Best-effort: a seeding hiccup must never
+  //           block onboarding — it can be re-run later with the same
+  //           idempotent seed_tenant_accounting(tenant, property).
+  const { error: seedErr } = await supabase.rpc("seed_tenant_accounting", {
+    p_tenant: tenant.id,
+    p_property: property.id,
+  });
+  if (seedErr) {
+    console.error("[provisionTenant] seed_tenant_accounting failed:", seedErr);
+  }
+
   // ----- 5. Room types — insert, then map each back to its id by sort_order
   //         (= its original index) so step 6 can attach rooms to the right one.
   const stayKind: StayKind = input.property_type === "monthly" ? "monthly" : "daily";
