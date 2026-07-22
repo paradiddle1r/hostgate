@@ -13,7 +13,7 @@ import dynamic from "next/dynamic";
 // WebGL Aurora backdrop — client-only, lazy. Never loaded unless an Aurora
 // theme is active, so three/gsap stay out of every other theme's bundle.
 const AuroraBackground = dynamic(() => import("./AuroraBackground"), { ssr: false });
-import { CalendarDays, Users, BedDouble, Settings, LayoutDashboard, Menu, X, Building2, BookOpen, Tag, Receipt, BarChart3, SprayCan, CalendarClock, Wrench, KeyRound, ShoppingCart, UserCog, Activity, Megaphone, ChevronDown } from "lucide-react";
+import { CalendarDays, Users, BedDouble, Settings, LayoutDashboard, Menu, X, Building2, BookOpen, Tag, Receipt, BarChart3, SprayCan, CalendarClock, Wrench, KeyRound, ShoppingCart, UserCog, Activity, Megaphone, ChevronDown, FileText, Wallet, BookOpenCheck, Landmark, Package } from "lucide-react";
 import type { Property } from "@/lib/db/properties";
 import { useAppT } from "@/lib/app-i18n";
 import { ToastProvider } from "@/components/app/ui/Toast";
@@ -59,6 +59,16 @@ const NAV_GROUPS = [
       { href: "/app/pos", icon: ShoppingCart, key: "nav.pos" },
       { href: "/app/invoices", icon: Receipt, key: "nav.invoices" },
       { href: "/app/reports", icon: BarChart3, key: "nav.reports" },
+    ],
+  },
+  {
+    key: "nav.group.accounting",
+    items: [
+      { href: "/app/documents", icon: FileText, key: "nav.documents" },
+      { href: "/app/expenses", icon: Wallet, key: "nav.expenses" },
+      { href: "/app/accounting", icon: BookOpenCheck, key: "nav.accounting" },
+      { href: "/app/banking", icon: Landmark, key: "nav.banking" },
+      { href: "/app/assets", icon: Package, key: "nav.assets" },
     ],
   },
   {
