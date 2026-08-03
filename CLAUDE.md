@@ -19,15 +19,19 @@ prj_Z07JaIHygcxUHRaUyVoPvzxlZUdD). Public GitHub repo `paradiddle1r/hostgate`.
   `lib/app-i18n.ts` (`useAppT()`, the PMS shell).
 - Vitest for pure helpers. lucide-react for icons. server-only guard.
 
-## Two layers
+## Product surfaces
 1. **Marketing site** — landing/blog/contact/privacy/terms, Apple-style device
    mockups, animated mesh. Routes under `app/` (page, blog, contact, …). Chrome
    (Navbar/Footer/mesh) lives in `components/MarketingChrome.tsx`, which **hides
    itself on `/app/*`** so the PMS gets a clean shell.
-2. **Auth + onboarding** — Supabase auth (Google OAuth + email magic link; LINE
-   disabled). `/login`, `/signup`, 3-step `/onboarding` wizard →
+2. **Auth + onboarding** — Supabase auth code paths for Google/Facebook OAuth,
+   LINE via Custom OAuth2, and email magic link. Production currently has
+   Google + LINE + email enabled; remaining provider-console setup is tracked in
+   `docs/auth/PROVIDERS.md`. `/login`, `/signup`, 3-step `/onboarding` wizard →
    `provisionTenant()` creates tenant + membership + property + room_types.
 3. **The PMS** (`/app/*`) — the real product. See below.
+4. **Platform admin + Channex** — `/admin/*` (also `admin.hostgate.app`),
+   service-role channel sync, webhook ingestion, and scheduled feed/ARI jobs.
 
 ## Multi-tenant model (RLS, single DB)
 Every PMS table carries **`tenant_id` + `property_id`** and is RLS-locked to
@@ -63,6 +67,13 @@ Property + booking codes auto-generate via triggers (`MMM-01`, `BK-MMM-01-0001`)
   guard, booking-conflict guard, booking-code gen, RLS, indexes.
 - `06_pms_fk_indexes_and_revokes` — FK covering indexes + revoke client EXECUTE
   on trigger-only functions (auth_tenant_ids stays authenticated-executable).
+- `07`–`10` — rate plans, invoices/payments/receipts, operations, and monthly
+  rentals/meters/bills/contracts.
+- `12`–`14` — POS, tenant administration/activity, and the public booking engine.
+- `15`–`19` — feature-parity tables/triggers, member policy fixes, activity
+  triggers, and the liquid-glass/Aurora theme families.
+- `20_channex_platform` — platform admins, Channex connections/mappings,
+  revisions, webhook events, ARI queue, sync logs, and security hardening.
 
 ## Code map (PMS)
 ```
@@ -75,12 +86,16 @@ lib/
   app-i18n.ts        useAppT() — PMS shell strings (TH/EN), separate from i18n.tsx
   active-property.tsx        client context + cookie-backed property switcher
   active-property-server.ts  getMemberships / getActiveProperty / listTenantProperties
-  db/{properties,rooms,guests,bookings,rates}.ts  server-only, RLS-scoped,
+  db/*.ts            server-only, RLS-scoped PMS modules for properties, rooms,
+                     guests, bookings, rates, invoices, rentals, operations,
+                     POS, admin, notes, announcements, and rate plans;
                      every fn returns ActionResult<T>, maps errors → HG codes
+  channex/           provisioning, ARI batching, booking revisions, API client
 components/app/
   AppShell.tsx       sidebar (+mobile drawer) + topbar; owns live data-theme
   PropertySwitcher / ThemeToggle / LocaleToggle / AppErrorBoundary
-  HomeClient / SettingsClient / ComingSoon
+  dashboard, calendar, bookings, guests, rooms, rentals, operations, POS,
+  invoices, reports, team, announcements, activity, settings
   ui/{Button,Modal,Toast,EmptyState,Skeleton,Spinner}.tsx  theme-token primitives
   rooms/RoomsClient.tsx        floor generator wizard + bulk type assign + table
   guests/GuestsClient.tsx      search + add/edit
@@ -88,18 +103,21 @@ components/app/
 app/app/
   layout.tsx         server shell: user→active property→theme; redirects out
   page.tsx           overview (counts + quick links)
-  {calendar,guests,rooms,settings}/{page,actions}.ts(x)
+  feature routes and colocated server actions for all PMS modules
 ```
 
-## What v1 covers / doesn't
-**Does:** tenant isolation, plan limits, property codes, error codes, theming,
-app shell + property switcher, **rooms** (floor generator + bulk assign),
-**guests** CRM, **daily-stay booking calendar** (create/edit/check-in/out,
-conflict-guarded, rate-aware). Spec: `docs/superpowers/specs/2026-06-12-pms-v1-design.md`;
-plan: `docs/superpowers/plans/2026-06-12-pms-v1.md`.
-**Doesn't (later phases):** invoices/tax, monthly rentals + meters, POS,
-housekeeping, chat/AI, reports, channel manager/OTA, drag-drop calendar, LINE
-login. Schema leaves tenant_id/property_id room for all of these.
+## Current product scope
+Shipped: tenant isolation, plan/property limits, bilingual/themed PMS shell,
+dashboard, rooms, guests, daily-stay calendar and booking management, rate
+plans, invoices/payments/receipts, monthly rentals/meters/bills/contracts,
+housekeeping/shifts/maintenance, POS/inventory/sales, reports, team roles,
+notes/announcements/activity, public booking flow, Channex integration, platform
+admin console, and initial Owner/Tenant mobile-app foundations.
+
+Still later-phase or incomplete: accounting-grade tax/e-invoice integrations,
+AI/chat, full drag-drop calendar workflows, broader OTA/channel
+coverage beyond Channex, and production mobile-store releases. The original v1
+spec and plan remain historical references under `docs/superpowers/`.
 
 ## Conventions
 - New migration: write `supabase/migrations/NN_*.sql` AND apply via MCP
