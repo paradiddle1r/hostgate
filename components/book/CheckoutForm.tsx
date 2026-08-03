@@ -46,11 +46,19 @@ export default function CheckoutForm({
   const [submitting, setSubmitting] = useState(false);
 
   const soldOut = available <= 0;
+  // Mirrors the HG-BOOK-425 guard in public_create_booking: a room type with no
+  // published rate must not be sold at zero.
+  const unpriced = !soldOut && total <= 0;
 
   async function confirm() {
     setError("");
     if (!name.trim()) {
       setError("กรุณากรอกชื่อ / Please enter your name.");
+      return;
+    }
+    // The property is told it will contact the guest, so it needs a way to.
+    if (!phone.trim() && !email.trim()) {
+      setError("กรุณากรอกเบอร์โทรหรืออีเมล / Please enter a phone number or an email.");
       return;
     }
     setSubmitting(true);
@@ -96,7 +104,11 @@ export default function CheckoutForm({
           </div>
         </div>
         <div className="mt-4 border-t border-[var(--app-border)] pt-3 text-base font-semibold">
-          รวม / Total: {money(total)}
+          {unpriced ? (
+            <span className="text-[var(--app-fg-muted)]">สอบถามราคา / Rate on request</span>
+          ) : (
+            <>รวม / Total: {money(total)}</>
+          )}
         </div>
       </div>
 
@@ -106,6 +118,13 @@ export default function CheckoutForm({
           <div className="mb-4 flex items-center gap-2 rounded-lg border border-[var(--app-border)] bg-[var(--app-surface-2)] px-3 py-2 text-sm text-[var(--app-danger)]">
             <AlertTriangle size={15} className="flex-none" />
             เต็มแล้ว / No longer available
+          </div>
+        )}
+        {unpriced && (
+          <div className="mb-4 flex items-center gap-2 rounded-lg border border-[var(--app-border)] bg-[var(--app-surface-2)] px-3 py-2 text-sm text-[var(--app-fg-muted)]">
+            <AlertTriangle size={15} className="flex-none" />
+            ห้องนี้ยังไม่ประกาศราคา กรุณาติดต่อที่พักโดยตรง / This room has no published
+            rate yet — please contact the property directly.
           </div>
         )}
 
@@ -123,7 +142,8 @@ export default function CheckoutForm({
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-[var(--app-fg-muted)]">
-              เบอร์โทร / Phone
+              เบอร์โทร / Phone{" "}
+              <span className="font-normal opacity-70">(กรอกอย่างน้อย 1 ช่องทาง / at least one)</span>
             </span>
             <input
               type="tel"
@@ -155,7 +175,7 @@ export default function CheckoutForm({
         <Button
           onClick={confirm}
           loading={submitting}
-          disabled={soldOut}
+          disabled={soldOut || unpriced}
           className="mt-4 w-full"
         >
           ยืนยันการจอง / Confirm booking

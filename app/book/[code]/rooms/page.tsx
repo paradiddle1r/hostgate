@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getPublicProperty, getAvailability, getQuote } from "@/lib/book";
+import { todayISO, addDaysISO, nightsBetween } from "@/lib/date";
 import RoomsClient from "@/components/book/RoomsClient";
 
 export const dynamic = "force-dynamic";
@@ -18,18 +19,16 @@ export default async function BookRoomsPage({
     return <p className="text-sm text-[var(--app-fg-muted)]">Property not found.</p>;
   }
 
-  const checkIn = isDate(searchParams.check_in) ? searchParams.check_in! : new Date().toISOString().slice(0, 10);
+  const today = todayISO();
+  const checkIn = isDate(searchParams.check_in) ? searchParams.check_in! : today;
   const checkOut = isDate(searchParams.check_out)
     ? searchParams.check_out!
-    : new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+    : addDaysISO(checkIn, 1);
   const adults = Math.max(1, Number(searchParams.adults) || 1);
   const children = Math.max(0, Number(searchParams.children) || 0);
 
   const avail = await getAvailability(property.id, checkIn, checkOut);
-  const nights = Math.max(
-    1,
-    Math.round((Date.parse(checkOut + "T00:00:00Z") - Date.parse(checkIn + "T00:00:00Z")) / 86_400_000)
-  );
+  const nights = Math.max(1, nightsBetween(checkIn, checkOut));
 
   // Quote each available type.
   const rows = await Promise.all(

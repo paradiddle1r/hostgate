@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarDays, Users, Search } from "lucide-react";
+import { addDaysISO } from "@/lib/date";
 import Button from "@/components/app/ui/Button";
 
 const field =
@@ -10,10 +11,13 @@ const field =
 
 export default function BookSearchForm({
   code,
+  today,
   defaultCheckIn,
   defaultCheckOut,
 }: {
   code: string;
+  /** Property-local today (`YYYY-MM-DD`); floors the check-in picker. */
+  today: string;
   defaultCheckIn: string;
   defaultCheckOut: string;
 }) {
@@ -28,6 +32,10 @@ export default function BookSearchForm({
     setError("");
     if (!checkIn || !checkOut) {
       setError("กรุณาเลือกวันที่ / Please choose dates.");
+      return;
+    }
+    if (checkIn < today) {
+      setError("เลือกวันที่เข้าพักย้อนหลังไม่ได้ / Check-in cannot be in the past.");
       return;
     }
     if (checkOut <= checkIn) {
@@ -57,7 +65,14 @@ export default function BookSearchForm({
             <input
               type="date"
               value={checkIn}
-              onChange={(e) => setCheckIn(e.target.value)}
+              min={today}
+              onChange={(e) => {
+                const v = e.target.value;
+                setCheckIn(v);
+                // Keep the stay valid rather than letting the user submit a
+                // check-out that is now on or before the new check-in.
+                if (v && checkOut <= v) setCheckOut(addDaysISO(v, 1));
+              }}
               className={`${field} w-full`}
             />
           </label>

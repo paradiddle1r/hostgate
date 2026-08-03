@@ -1,4 +1,5 @@
 import { getPublicProperty } from "@/lib/book";
+import { todayISO, addDaysISO } from "@/lib/date";
 import BookSearchForm from "@/components/book/BookSearchForm";
 
 export const dynamic = "force-dynamic";
@@ -16,8 +17,10 @@ export default async function BookLandingPage({ params }: { params: { code: stri
     );
   }
 
-  const today = new Date().toISOString().slice(0, 10);
-  const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+  // Local (+07) today, not UTC today — before 07:00 those are different days
+  // and the form would open on a check-in date the server then rejects.
+  const today = todayISO();
+  const tomorrow = addDaysISO(today, 1);
 
-  return <BookSearchForm code={params.code} defaultCheckIn={today} defaultCheckOut={tomorrow} />;
+  return <BookSearchForm code={params.code} today={today} defaultCheckIn={today} defaultCheckOut={tomorrow} />;
 }
