@@ -15,10 +15,14 @@ interface Props {
   initialError?: string;
 }
 
+/** Only render a provider button once its Supabase provider is actually live. */
+const FACEBOOK_ENABLED = process.env.NEXT_PUBLIC_ENABLE_FACEBOOK_AUTH === "1";
+
 /**
  * Shared sign-in / sign-up form.
- * Renders 3 social buttons (Google / Facebook / LINE),
- * then an email field that triggers Supabase magic-link OTP.
+ * Renders the enabled social buttons (Google / LINE, plus Facebook once
+ * NEXT_PUBLIC_ENABLE_FACEBOOK_AUTH=1), then an email field that triggers
+ * Supabase magic-link OTP.
  *
  * On submit the Supabase callback URL is /auth/callback which decides
  * whether to send the user to /onboarding (new account) or the app shell.
@@ -101,14 +105,20 @@ export default function AuthForm({ mode, initialError }: Props) {
             variant="white"
             icon={<GoogleIcon />}
           />
-          <ProviderButton
-            onClick={() => oauth("facebook", "facebook")}
-            loading={submitting === "facebook"}
-            disabled={submitting !== null}
-            label={pick(t.auth.facebook, locale)}
-            variant="blue"
-            icon={<FacebookIcon />}
-          />
+          {/* Facebook is off until the Meta app exists and the Supabase
+              provider is enabled — an always-rendered button just sent real
+              guests into an OAuth error. Flip NEXT_PUBLIC_ENABLE_FACEBOOK_AUTH
+              to "1" in Vercel the moment the provider goes live. */}
+          {FACEBOOK_ENABLED && (
+            <ProviderButton
+              onClick={() => oauth("facebook", "facebook")}
+              loading={submitting === "facebook"}
+              disabled={submitting !== null}
+              label={pick(t.auth.facebook, locale)}
+              variant="blue"
+              icon={<FacebookIcon />}
+            />
+          )}
           <ProviderButton
             onClick={() => oauth("custom:line", "line")}
             loading={submitting === "line"}
