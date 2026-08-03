@@ -6,6 +6,8 @@
 
 # testing
 /coverage
+/.playwright-cli/
+/output/playwright/
 
 # next.js
 /.next/
@@ -24,12 +26,21 @@ yarn-debug.log*
 yarn-error.log*
 
 # local env files
-.env*.local
-.env
+.env*
+!.env.example
 
 # vercel
 .vercel
 
+# local Supabase CLI link/cache
+/supabase/.temp/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# graphify knowledge graph (generated artifact)
+/graphify-out/
+
+# local scratch inside codex config dir
+/.codex/*.png
