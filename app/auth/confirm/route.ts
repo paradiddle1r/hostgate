@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { type EmailOtpType } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { safeNextPath } from "@/lib/auth-errors";
 
 /**
  * Email magic-link / OTP confirmation route.
@@ -30,8 +31,9 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  if (explicitNext && explicitNext.startsWith("/") && explicitNext !== "/") {
-    return NextResponse.redirect(new URL(explicitNext, url.origin));
+  const nextPath = safeNextPath(explicitNext, url.origin);
+  if (nextPath && nextPath !== "/") {
+    return NextResponse.redirect(new URL(nextPath, url.origin));
   }
 
   const { data: { user } } = await supabase.auth.getUser();

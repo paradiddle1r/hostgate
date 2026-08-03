@@ -447,10 +447,12 @@ export const translations = {
       switchCta: { th: "เข้าสู่ระบบ", en: "Log in" },
     },
     google: { th: "ใช้บัญชี Google", en: "Continue with Google" },
-    apple: { th: "ใช้บัญชี Apple", en: "Continue with Apple" },
     facebook: { th: "ใช้บัญชี Facebook", en: "Continue with Facebook" },
     line: { th: "ใช้บัญชี LINE", en: "Continue with LINE" },
-    lineSoon: { th: "เร็วๆ นี้", en: "Coming soon" },
+    socialConsent: {
+      th: "เมื่อใช้บัญชีโซเชียล HostGate อาจได้รับชื่อ อีเมล และรูปโปรไฟล์ตามข้อมูลที่ผู้ให้บริการอนุญาต เพื่อสร้างบัญชี ระบุตัวตน และรักษาความปลอดภัยในการเข้าใช้งาน โดยใช้ข้อมูลตามนโยบายความเป็นส่วนตัว",
+      en: "When you use a social account, HostGate may receive your name, email address, and profile photo, depending on what the provider shares, to create your account, identify you, and secure access. We use this data under our Privacy Policy.",
+    },
     orDivider: { th: "หรือ", en: "or" },
     emailPlaceholder: { th: "อีเมล", en: "Email address" },
     emailCta: { th: "ใช้อีเมล", en: "Continue with email" },
@@ -467,8 +469,8 @@ export const translations = {
     verifyResend: { th: "ส่งใหม่อีกครั้ง", en: "Resend link" },
     error: {
       providerNotConfigured: {
-        th: "ผู้ให้บริการนี้ยังไม่ได้ตั้งค่าใน Supabase — แจ้งทีมงาน",
-        en: "This sign-in method isn't set up yet — please contact support.",
+        th: "ช่องทางเข้าสู่ระบบนี้ยังไม่พร้อมใช้งาน กรุณาใช้ช่องทางอื่นหรือติดต่อทีมงาน",
+        en: "This sign-in method isn't available yet. Please use another method or contact support.",
       },
       generic: {
         th: "เข้าสู่ระบบไม่สำเร็จ ลองอีกครั้ง",

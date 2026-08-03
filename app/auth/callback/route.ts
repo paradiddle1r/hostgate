@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { safeNextPath } from "@/lib/auth-errors";
 
 /**
  * OAuth + magic-link callback.
@@ -40,8 +41,9 @@ export async function GET(request: NextRequest) {
   }
 
   // Honor an explicit next param if it's a same-origin path.
-  if (explicitNext && explicitNext.startsWith("/")) {
-    return NextResponse.redirect(new URL(explicitNext, url.origin));
+  const nextPath = safeNextPath(explicitNext, url.origin);
+  if (nextPath) {
+    return NextResponse.redirect(new URL(nextPath, url.origin));
   }
 
   // Otherwise route based on whether they've completed onboarding.

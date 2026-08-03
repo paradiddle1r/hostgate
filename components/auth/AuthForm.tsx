@@ -3,35 +3,42 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import type { Provider } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { useI18n, pick } from "@/lib/i18n";
+import { classifyAuthError } from "@/lib/auth-errors";
 
 type Mode = "login" | "signup";
 
 interface Props {
   mode: Mode;
+  initialError?: string;
 }
 
 /**
  * Shared sign-in / sign-up form.
- * Renders 4 social buttons (Google / Apple / Facebook / LINE-disabled),
+ * Renders 3 social buttons (Google / Facebook / LINE),
  * then an email field that triggers Supabase magic-link OTP.
  *
  * On submit the Supabase callback URL is /auth/callback which decides
  * whether to send the user to /onboarding (new account) or the app shell.
  */
-export default function AuthForm({ mode }: Props) {
+export default function AuthForm({ mode, initialError }: Props) {
   const { locale, t } = useI18n();
   const router = useRouter();
   const supabase = createClient();
 
   const [email, setEmail] = useState("");
-  const [submitting, setSubmitting] = useState<null | "google" | "apple" | "facebook" | "email">(null);
-  const [error, setError] = useState<string | null>(null);
+  type SubmitMethod = "google" | "facebook" | "line" | "email";
+  const [submitting, setSubmitting] = useState<SubmitMethod | null>(null);
+  const [error, setError] = useState<string | null>(() => {
+    if (!initialError) return null;
+    return pick(t.auth.error[classifyAuthError(initialError)], locale);
+  });
 
-  const oauth = async (provider: "google" | "apple" | "facebook") => {
+  const oauth = async (provider: Provider, method: Exclude<SubmitMethod, "email">) => {
     setError(null);
-    setSubmitting(provider);
+    setSubmitting(method);
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
@@ -39,11 +46,7 @@ export default function AuthForm({ mode }: Props) {
       },
     });
     if (error) {
-      setError(
-        /provider is not enabled/i.test(error.message)
-          ? pick(t.auth.error.providerNotConfigured, locale)
-          : pick(t.auth.error.generic, locale)
-      );
+      setError(pick(t.auth.error[classifyAuthError(error.message)], locale));
       setSubmitting(null);
     }
   };
@@ -91,7 +94,7 @@ export default function AuthForm({ mode }: Props) {
 
         <div className="mt-7 space-y-2.5">
           <ProviderButton
-            onClick={() => oauth("google")}
+            onClick={() => oauth("google", "google")}
             loading={submitting === "google"}
             disabled={submitting !== null}
             label={pick(t.auth.google, locale)}
@@ -99,15 +102,7 @@ export default function AuthForm({ mode }: Props) {
             icon={<GoogleIcon />}
           />
           <ProviderButton
-            onClick={() => oauth("apple")}
-            loading={submitting === "apple"}
-            disabled={submitting !== null}
-            label={pick(t.auth.apple, locale)}
-            variant="black"
-            icon={<AppleIcon />}
-          />
-          <ProviderButton
-            onClick={() => oauth("facebook")}
+            onClick={() => oauth("facebook", "facebook")}
             loading={submitting === "facebook"}
             disabled={submitting !== null}
             label={pick(t.auth.facebook, locale)}
@@ -115,15 +110,21 @@ export default function AuthForm({ mode }: Props) {
             icon={<FacebookIcon />}
           />
           <ProviderButton
-            onClick={() => undefined}
-            loading={false}
-            disabled
+            onClick={() => oauth("custom:line", "line")}
+            loading={submitting === "line"}
+            disabled={submitting !== null}
             label={pick(t.auth.line, locale)}
             variant="green"
             icon={<LineIcon />}
-            badge={pick(t.auth.lineSoon, locale)}
           />
         </div>
+
+        <p className="mt-3 text-center text-[11px] leading-relaxed text-zinc-500">
+          {pick(t.auth.socialConsent, locale)}{" "}
+          <Link href="/privacy" className="font-medium text-indigo-600 hover:text-indigo-700">
+            {locale === "th" ? "อ่านนโยบาย" : "Read policy"}
+          </Link>
+        </p>
 
         <div className="relative my-6">
           <div className="absolute inset-0 flex items-center" aria-hidden>
@@ -179,7 +180,7 @@ interface ProviderButtonProps {
   loading: boolean;
   disabled: boolean;
   label: string;
-  variant: "white" | "black" | "blue" | "green";
+  variant: "white" | "blue" | "green";
   icon: React.ReactNode;
   badge?: string;
 }
@@ -188,8 +189,6 @@ function ProviderButton({ onClick, loading, disabled, label, variant, icon, badg
   const styles =
     variant === "white"
       ? "border border-zinc-200 bg-white text-zinc-900 hover:bg-zinc-50"
-      : variant === "black"
-      ? "border border-zinc-900 bg-zinc-900 text-white hover:bg-zinc-800"
       : variant === "blue"
       ? "border border-[#1877F2] bg-[#1877F2] text-white hover:bg-[#1666d4]"
       : "border border-[#06C755] bg-[#06C755] text-white hover:bg-[#05b04c]";
@@ -221,14 +220,6 @@ function GoogleIcon() {
       <path fill="#34A853" d="M9 18c2.43 0 4.46-.8 5.95-2.18l-2.9-2.25c-.8.54-1.83.86-3.05.86-2.35 0-4.34-1.59-5.05-3.71H.96v2.34A9 9 0 009 18z"/>
       <path fill="#FBBC04" d="M3.95 10.72A5.4 5.4 0 013.66 9c0-.6.1-1.18.29-1.72V4.94H.96A8.97 8.97 0 000 9c0 1.45.35 2.83.96 4.06l2.99-2.34z"/>
       <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.46 3.44 1.35l2.58-2.58C13.46.86 11.43 0 9 0A9 9 0 00.96 4.94l2.99 2.34C4.66 5.17 6.65 3.58 9 3.58z"/>
-    </svg>
-  );
-}
-
-function AppleIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden>
-      <path d="M16.36 12.7c0-2.41 1.97-3.58 2.06-3.63-1.12-1.64-2.87-1.86-3.49-1.89-1.49-.15-2.9.87-3.66.87-.75 0-1.92-.84-3.16-.82-1.62.02-3.12.94-3.95 2.39-1.68 2.92-.43 7.25 1.21 9.62.8 1.16 1.76 2.46 3.02 2.42 1.22-.05 1.68-.79 3.16-.79 1.47 0 1.89.79 3.18.76 1.31-.02 2.14-1.18 2.94-2.35.92-1.35 1.31-2.66 1.33-2.73-.03-.01-2.55-.98-2.58-3.85zM13.94 5.42c.66-.81 1.11-1.93 1-3.04-.95.04-2.11.63-2.79 1.42-.61.71-1.15 1.85-1.01 2.93 1.07.08 2.14-.55 2.8-1.31z"/>
     </svg>
   );
 }
