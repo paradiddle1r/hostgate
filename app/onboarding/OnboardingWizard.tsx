@@ -29,6 +29,7 @@ const STR: Record<Locale, Record<string, string>> = {
     s3Title: "สร้างห้องพัก", s3Sub: "กำหนดชั้นและจำนวนห้อง ระบบจะสร้างเลขห้องให้ แล้วเลือกประเภทแต่ละห้อง — เสร็จแล้วปฏิทินพร้อมใช้ทันที",
     next: "ถัดไป", back: "ย้อนกลับ", finishing: "กำลังสร้าง…",
     errName: "กรุณากรอกชื่อที่พัก", errType: "กรุณาเพิ่มประเภทห้องอย่างน้อย 1 ประเภท",
+    errRate: "กรุณาใส่ราคาต่อคืนของทุกประเภทห้อง — ห้องที่ไม่มีราคาจะเปิดให้จองออนไลน์ไม่ได้",
     errFail: "สร้างบัญชีไม่สำเร็จ", stepOf: "ขั้นที่ {n} จาก 3",
   },
   en: {
@@ -41,6 +42,7 @@ const STR: Record<Locale, Record<string, string>> = {
     s3Title: "Create your rooms", s3Sub: "Set floors + rooms per floor, we generate the room numbers, then pick a type per room — when you're done the calendar is ready.",
     next: "Continue", back: "Back", finishing: "Creating…",
     errName: "Please enter a property name", errType: "Add at least one room type",
+    errRate: "Give every room type a nightly rate — an unpriced room can't be sold online",
     errFail: "Couldn't create your account", stepOf: "Step {n} of 3",
   },
 };
@@ -68,6 +70,10 @@ export default function OnboardingWizard({ userEmail }: { userEmail: string }) {
   const [error, setError] = useState<string | null>(null);
 
   const validTypes = types.filter((t) => t.name.trim().length > 0);
+  // A room type with no rate quotes at 0, and the booking engine refuses to
+  // sell it (HG-BOOK-425) — so a wizard that lets the rate through empty hands
+  // the new owner a booking page that cannot take a single booking.
+  const unpricedTypes = validTypes.filter((t) => !(Number(t.rate) > 0));
 
   function next() {
     setError(null);
@@ -76,6 +82,7 @@ export default function OnboardingWizard({ userEmail }: { userEmail: string }) {
       setStep(2);
     } else if (step === 2) {
       if (validTypes.length === 0) return setError(s("errType"));
+      if (unpricedTypes.length > 0) return setError(s("errRate"));
       setStep(3);
     }
   }
@@ -84,6 +91,14 @@ export default function OnboardingWizard({ userEmail }: { userEmail: string }) {
   // assigned type (an index string) back to a numeric index for provisioning.
   function finish(rows: { number: string; floor: number; room_type_id: string | null; sort_order: number }[]): Promise<boolean> {
     return new Promise((resolve) => {
+      // Step 2 already blocks this, but step 3 can be reached by going Back and
+      // clearing a rate, so re-check before provisioning.
+      if (unpricedTypes.length > 0) {
+        setError(s("errRate"));
+        setStep(2);
+        resolve(false);
+        return;
+      }
       startTransition(async () => {
         const res = await provisionTenant({
           property_name: propertyName.trim(),

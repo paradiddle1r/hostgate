@@ -52,6 +52,14 @@ export async function provisionTenant(input: ProvisionInput): Promise<ProvisionR
     return { ok: false, error: "not_authenticated" };
   }
 
+  // ----- 0. Every named room type needs a rate -----
+  // The booking engine refuses to sell an unpriced room (HG-BOOK-425), so
+  // provisioning one would silently hand the new owner a dead booking page.
+  const namedTypes = input.room_types.filter((r) => r.name.trim().length > 0);
+  if (namedTypes.some((r) => !(Number(r.rate) > 0))) {
+    return { ok: false, error: "room_types: every room type needs a rate above 0" };
+  }
+
   // ----- 1. Generate a slug from the property name -----
   const baseSlug = slugify(input.property_name) || `prop-${Date.now().toString(36)}`;
   const slug = await uniqueSlug(supabase, baseSlug);
