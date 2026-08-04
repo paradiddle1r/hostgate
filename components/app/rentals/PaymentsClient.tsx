@@ -20,6 +20,7 @@ import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/components/app/ui/Toast";
 import EmptyState from "@/components/app/ui/EmptyState";
 import { setBillStatusAction } from "@/app/app/rentals/actions";
+import { thisMonthISO } from "@/lib/date";
 
 export interface PaymentTenant {
   bookingId: string;
@@ -119,7 +120,7 @@ export default function PaymentsClient({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<"all" | "paid" | "out">("all");
 
-  const thisMonth = useMemo(() => new Date().toISOString().slice(0, 7), []);
+  const thisMonth = useMemo(() => thisMonthISO(), []);
 
   const months = useMemo(() => {
     const set = new Set(

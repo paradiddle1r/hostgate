@@ -45,6 +45,11 @@ export function nightsBetween(checkIn: string, checkOut: string): number {
   return Math.max(0, Math.round(ms / 86_400_000));
 }
 
+/** Current calendar month in `tz`, as `YYYY-MM`. */
+export function thisMonthISO(tz: string = DEFAULT_TIMEZONE): string {
+  return todayISO(tz).slice(0, 7);
+}
+
 /** True when `iso` is before today in `tz`. */
 export function isPastDate(iso: string, tz: string = DEFAULT_TIMEZONE): boolean {
   return iso < todayISO(tz);

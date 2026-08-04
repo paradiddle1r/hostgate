@@ -1,4 +1,5 @@
 import "server-only";
+import { todayISO } from "@/lib/date";
 
 // Accounting data layer: invoices + line items + payments + receipts.
 // Totals are recomputed in code (not a DB trigger) on every item/payment
@@ -322,7 +323,7 @@ export async function issueInvoice(id: string, propertyId: string): Promise<Acti
     if (cur?.number) return ok(cur as Invoice); // already issued — idempotent
     const { data: num, error: numErr } = await supabase.rpc("next_doc_number", { p_property: propertyId, p_kind: "invoice" });
     if (numErr) throw numErr;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayISO();
     const { data, error } = await supabase
       .from("invoices")
       .update({ number: num as string, issue_date: today, status: "issued" })

@@ -25,6 +25,7 @@ import {
   type BulkAssignInput,
 } from "@/app/app/shifts/actions";
 import type { ShiftAssignment, ShiftType, TenantMember } from "@/lib/db/operations";
+import { todayISO } from "@/lib/date";
 
 // ── shift presets ──────────────────────────────────────────────────────────────
 // Times are hotel-local; night rolls past midnight. Defaults seed the time inputs
@@ -226,9 +227,6 @@ const field =
   "w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] px-2.5 py-2 text-sm outline-none focus:border-[var(--app-accent)]";
 const label = "mb-1 block text-xs font-medium text-[var(--app-fg-muted)]";
 
-function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 function parseMonth(month: string): { y: number; m: number } {
   const [y, m] = month.split("-").map(Number);
   return { y, m: m - 1 };

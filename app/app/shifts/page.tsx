@@ -2,12 +2,13 @@ import { createClient } from "@/lib/supabase/server";
 import { getActiveProperty } from "@/lib/active-property-server";
 import { listShifts, listTenantMembers } from "@/lib/db/operations";
 import ShiftsClient from "@/components/app/operations/ShiftsClient";
+import { thisMonthISO } from "@/lib/date";
 
 export const dynamic = "force-dynamic";
 
 function monthBounds(month: string): { from: string; to: string; month: string } {
   // month = "YYYY-MM"; fall back to current month.
-  const m = /^\d{4}-\d{2}$/.test(month) ? month : new Date().toISOString().slice(0, 7);
+  const m = /^\d{4}-\d{2}$/.test(month) ? month : thisMonthISO();
   const [y, mo] = m.split("-").map(Number);
   const from = `${m}-01`;
   const last = new Date(Date.UTC(y, mo, 0)).getUTCDate(); // day 0 of next month

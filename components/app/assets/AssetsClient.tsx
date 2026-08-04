@@ -18,6 +18,7 @@ import Modal from "@/components/app/ui/Modal";
 import EmptyState from "@/components/app/ui/EmptyState";
 import { useToast } from "@/components/app/ui/Toast";
 import { scheduleFor, monthlyDepreciation, depreciableBase, bookValue } from "@/lib/accounting/depreciation";
+import { todayISO as todayStr, thisMonthISO as thisMonthStr } from "@/lib/date";
 import {
   loadAssetDetail,
   nextAssetCodeAction,
@@ -174,14 +175,6 @@ function statusLabel(tr: Tr, s: AssetStatus | "all"): string {
   if (s === "active") return tr.statusActive;
   if (s === "disposed") return tr.statusDisposed;
   return tr.statusFully;
-}
-
-function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function thisMonthStr(): string {
-  return new Date().toISOString().slice(0, 7);
 }
 
 export default function AssetsClient({

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { todayISO, addDaysISO } from "@/lib/date";
 import { getActiveProperty, getMemberships } from "@/lib/active-property-server";
 import { listRooms } from "@/lib/db/rooms";
 import { listBookings } from "@/lib/db/bookings";
@@ -11,12 +12,6 @@ export const dynamic = "force-dynamic";
 // Selectable time-frame windows. Default 14 (preserves prior behaviour).
 const ALLOWED_DAYS = [7, 14, 30] as const;
 const DEFAULT_DAYS = 14;
-
-function addDays(iso: string, n: number): string {
-  const d = new Date(iso + "T00:00:00Z");
-  d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0, 10);
-}
 
 export default async function CalendarPage({
   searchParams,
@@ -36,9 +31,9 @@ export default async function CalendarPage({
     ? parsedDays
     : DEFAULT_DAYS;
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISO();
   const from = /^\d{4}-\d{2}-\d{2}$/.test(sp?.from ?? "") ? (sp!.from as string) : today;
-  const to = addDays(from, windowDays);
+  const to = addDaysISO(from, windowDays);
 
   const [roomsRes, typesRes, bookingsRes, plansRes, membersRes] = await Promise.all([
     listRooms(property.id),

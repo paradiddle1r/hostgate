@@ -5,6 +5,7 @@ import {
   addDaysISO,
   nightsBetween,
   isPastDate,
+  thisMonthISO,
   DEFAULT_TIMEZONE,
 } from "./date";
 
@@ -64,6 +65,16 @@ describe("nightsBetween", () => {
 
   it("spans a month boundary", () => {
     expect(nightsBetween("2026-08-30", "2026-09-02")).toBe(3);
+  });
+});
+
+describe("thisMonthISO", () => {
+  it("follows the local date across a month boundary", () => {
+    vi.useFakeTimers();
+    // 18:30 UTC on Aug 31 is already 01:30 on Sep 1 in Bangkok.
+    vi.setSystemTime(new Date("2026-08-31T18:30:00Z"));
+    expect(new Date().toISOString().slice(0, 7)).toBe("2026-08"); // the old bug
+    expect(thisMonthISO()).toBe("2026-09");
   });
 });
 

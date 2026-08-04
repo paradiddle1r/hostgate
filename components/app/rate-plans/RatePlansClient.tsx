@@ -22,6 +22,7 @@ import Button from "@/components/app/ui/Button";
 import EmptyState from "@/components/app/ui/EmptyState";
 import Modal from "@/components/app/ui/Modal";
 import BulkRateModal from "@/components/app/calendar/BulkRateModal";
+import { todayISO as isoToday, addDaysISO } from "@/lib/date";
 import {
   saveRatePlan,
   removeRatePlan,
@@ -129,15 +130,6 @@ interface Draft {
   color: string;
   active: boolean;
   rates: Record<string, number | "">; // room_type_id → override price
-}
-
-function isoToday(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-function addDaysISO(iso: string, n: number): string {
-  const d = new Date(iso + "T00:00:00Z");
-  d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0, 10);
 }
 
 export default function RatePlansClient({

@@ -1,4 +1,5 @@
 import { getActiveProperty } from "@/lib/active-property-server";
+import { todayISO, addDaysISO } from "@/lib/date";
 import { listRooms } from "@/lib/db/rooms";
 import { listMaintenance, MaintenanceOrder } from "@/lib/db/operations";
 import MaintenanceClient from "@/components/app/operations/MaintenanceClient";
@@ -38,7 +39,7 @@ export default async function MaintenancePage({
     rawPeriod && PERIOD_DAYS[rawPeriod] !== undefined ? rawPeriod : DEFAULT_PERIOD;
   const days = PERIOD_DAYS[period];
   const since =
-    days != null ? new Date(Date.now() - days * 86400000).toISOString().slice(0, 10) : null;
+    days != null ? addDaysISO(todayISO(), -days) : null;
 
   const [roomsRes, ordersRes] = await Promise.all([
     listRooms(property.id),

@@ -11,6 +11,7 @@
 // Excel/Sheets) by prefixing a single quote.
 
 import type { Booking } from "@/lib/db/bookings";
+import { todayISO } from "@/lib/date";
 
 // `key` is a Booking field (or a derived sentinel handled in `cellValue`);
 // `label` is the column header. Order matches what an accountant reviewing
@@ -107,7 +108,7 @@ function htmlEscape(v: string): string {
 
 /** Build a filename with today's date, e.g. bookings-2026-06-12.csv */
 function fileName(ext: string): string {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISO();
   return `bookings-${today}.${ext}`;
 }
 

@@ -40,6 +40,7 @@ import Button from "@/components/app/ui/Button";
 import Modal from "@/components/app/ui/Modal";
 import EmptyState from "@/components/app/ui/EmptyState";
 import { useToast } from "@/components/app/ui/Toast";
+import { todayISO } from "@/lib/date";
 import {
   saveTenantConfig,
   addReading,
@@ -465,7 +466,7 @@ export default function TenantDetailClient({
   const parkingFee = rentalTenant?.parking_fee ?? n(cfg.parking_fee);
 
   // ── section 3: add reading ──────────────────────────────────────────────────
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISO();
   const [newReading, setNewReading] = useState<{
     reading_date: string;
     electric: Num;

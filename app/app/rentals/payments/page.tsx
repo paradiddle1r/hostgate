@@ -1,4 +1,5 @@
 import { getActiveProperty } from "@/lib/active-property-server";
+import { todayISO } from "@/lib/date";
 import { listRooms } from "@/lib/db/rooms";
 import { listMonthlyTenants } from "@/lib/db/rentals";
 import type { MonthlyTenantRow } from "@/lib/db/rentals";
@@ -40,14 +41,14 @@ export default async function RentalPaymentsPage() {
 
   const rooms = roomsRes.ok ? roomsRes.data : [];
   const roomById = new Map(rooms.map((r) => [r.id, r.number]));
-  const todayISO = new Date().toISOString().slice(0, 10);
+  const today = todayISO();
 
   const activeRows = collapseToPrimaries(
     (tenantsRes.ok ? tenantsRes.data : []).filter(
       (row) =>
         row.booking.status !== "checked_out" &&
         row.booking.status !== "cancelled" &&
-        (isOpenEnded(row.booking.check_out) || row.booking.check_out >= todayISO)
+        (isOpenEnded(row.booking.check_out) || row.booking.check_out >= today)
     )
   );
 

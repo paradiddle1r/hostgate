@@ -1,4 +1,5 @@
 import { getActiveProperty } from "@/lib/active-property-server";
+import { todayISO } from "@/lib/date";
 import { listProducts, listCategories } from "@/lib/db/pos";
 import { listBookings } from "@/lib/db/bookings";
 import PosTerminalClient from "@/components/app/pos/PosTerminalClient";
@@ -10,7 +11,7 @@ export default async function PosPage() {
   const active = await getActiveProperty();
   if (!active.ok) return null;
   const { property } = active.data;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISO();
 
   const [productsRes, catsRes, bookingsRes] = await Promise.all([
     listProducts(property.id, { activeOnly: true }),

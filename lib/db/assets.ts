@@ -1,4 +1,5 @@
 import "server-only";
+import { todayISO } from "@/lib/date";
 
 // Fixed assets register + straight-line depreciation (accounting Phase 6 port
 // of hotel-pms schema_update_75 / AssetsClient.jsx). Tenant+property scoped,
@@ -265,7 +266,7 @@ export async function disposeAsset(id: string, disposedAt?: string): Promise<Act
     const supabase = createClient();
     const { data, error } = await supabase
       .from("fixed_assets")
-      .update({ status: "disposed", disposed_at: disposedAt ?? new Date().toISOString().slice(0, 10) })
+      .update({ status: "disposed", disposed_at: disposedAt ?? todayISO() })
       .eq("id", id)
       .select()
       .single();

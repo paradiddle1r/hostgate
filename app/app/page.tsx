@@ -3,18 +3,13 @@ import { listRooms } from "@/lib/db/rooms";
 import { listBookings } from "@/lib/db/bookings";
 import { listInvoices } from "@/lib/db/invoices";
 import { listHousekeeping } from "@/lib/db/operations";
+import { todayISO, addDaysISO } from "@/lib/date";
 import DashboardClient, {
   type DashKpis,
   type DashRow,
 } from "@/components/app/dashboard/DashboardClient";
 
 export const dynamic = "force-dynamic";
-
-function addDays(iso: string, n: number): string {
-  const d = new Date(iso + "T00:00:00Z");
-  d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0, 10);
-}
 
 const REALIZED = new Set(["confirmed", "checked_in", "checked_out"]);
 const REVENUE_TYPES = new Set(["standard", "monthly"]);
@@ -24,9 +19,9 @@ export default async function DashboardPage() {
   if (!active.ok) return null;
   const property = active.data.property;
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISO();
   const monthStart = today.slice(0, 8) + "01";
-  const upcomingTo = addDays(today, 31);
+  const upcomingTo = addDaysISO(today, 31);
   // One window wide enough to cover this month's revenue + the next 30 days.
   const windowFrom = monthStart < today ? monthStart : today;
 
@@ -74,7 +69,7 @@ export default async function DashboardPage() {
   const departures = live.filter((b) => b.check_out === today).map(toRow);
   const inHouse = live.filter((b) => b.check_in <= today && b.check_out > today);
   const upcoming = live
-    .filter((b) => b.check_in > today && b.check_in <= addDays(today, 7))
+    .filter((b) => b.check_in > today && b.check_in <= addDaysISO(today, 7))
     .sort((a, b) => a.check_in.localeCompare(b.check_in))
     .slice(0, 8)
     .map(toRow);
@@ -85,7 +80,7 @@ export default async function DashboardPage() {
       REALIZED.has(b.status) &&
       REVENUE_TYPES.has(b.booking_type) &&
       b.check_in >= monthStart &&
-      b.check_in < addDays(monthStart, 31),
+      b.check_in < addDaysISO(monthStart, 31),
   );
   const monthRevenue = monthBookings.reduce((s, b) => s + (b.total_amount ?? 0), 0);
 
