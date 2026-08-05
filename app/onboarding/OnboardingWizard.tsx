@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
 import { provisionTenant, type PropertyType } from "./actions";
 import RoomGenerator from "@/components/app/rooms/RoomGenerator";
+import { namedRoomTypes, unpricedRoomTypes } from "@/lib/onboarding";
 
 // Streamlined onboarding — 3 steps, and the calendar is ready when it's done:
 //   1. Property      — name + type + city + currency
@@ -69,11 +70,12 @@ export default function OnboardingWizard({ userEmail }: { userEmail: string }) {
   ]);
   const [error, setError] = useState<string | null>(null);
 
-  const validTypes = types.filter((t) => t.name.trim().length > 0);
+  const validTypes = namedRoomTypes(types);
   // A room type with no rate quotes at 0, and the booking engine refuses to
   // sell it (HG-BOOK-425) — so a wizard that lets the rate through empty hands
   // the new owner a booking page that cannot take a single booking.
-  const unpricedTypes = validTypes.filter((t) => !(Number(t.rate) > 0));
+  // Same predicate provisionTenant re-checks server-side.
+  const unpricedTypes = unpricedRoomTypes(types);
 
   function next() {
     setError(null);

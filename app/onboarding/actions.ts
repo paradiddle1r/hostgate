@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { unpricedProvisionRows } from "@/lib/onboarding";
 
 export type PropertyType = "daily" | "monthly" | "both";
 export type StayKind = "daily" | "monthly";
@@ -55,9 +56,17 @@ export async function provisionTenant(input: ProvisionInput): Promise<ProvisionR
   // ----- 0. Every named room type needs a rate -----
   // The booking engine refuses to sell an unpriced room (HG-BOOK-425), so
   // provisioning one would silently hand the new owner a dead booking page.
-  const namedTypes = input.room_types.filter((r) => r.name.trim().length > 0);
-  if (namedTypes.some((r) => !(Number(r.rate) > 0))) {
-    return { ok: false, error: "room_types: every room type needs a rate above 0" };
+  // Note this checks EVERY row, not just the named ones: step 5 below backfills
+  // a blank name to "Type N" and persists it, so an unnamed row is still a room
+  // type that would reach the booking engine unpriced.
+  const unpriced = unpricedProvisionRows(input.room_types);
+  if (unpriced.length > 0) {
+    return {
+      ok: false,
+      error: `room_types: every room type needs a rate above 0 (${unpriced
+        .map((r, i) => r.name.trim() || `Type ${i + 1}`)
+        .join(", ")})`,
+    };
   }
 
   // ----- 1. Generate a slug from the property name -----
