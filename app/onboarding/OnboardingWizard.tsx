@@ -48,8 +48,15 @@ const STR: Record<Locale, Record<string, string>> = {
   },
 };
 
-const input =
-  "w-full rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none transition focus:border-[#0a84ff]";
+// No width here on purpose. This used to carry `w-full`, and the step-2 row
+// then appended `flex-1` (name) and `w-28` (rate) to it — but Tailwind emits
+// `.w-full` after both, so `w-full` won regardless of class order: the rate
+// input rendered 528px and the name input collapsed to 26px, leaving the owner
+// unable to read the room-type name they were typing. Callers set their own
+// width; `input` below is the full-width variant for the stacked step-1 fields.
+const inputBase =
+  "rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none transition focus:border-[#0a84ff]";
+const input = `${inputBase} w-full`;
 const label = "mb-1 block text-xs font-medium text-zinc-500";
 
 export default function OnboardingWizard({ userEmail }: { userEmail: string }) {
@@ -194,9 +201,9 @@ export default function OnboardingWizard({ userEmail }: { userEmail: string }) {
               </div>
               {types.map((row, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  <input className={`${input} flex-1`} value={row.name}
+                  <input className={`${inputBase} min-w-0 flex-1`} value={row.name}
                     onChange={(e) => setTypes((cur) => cur.map((r, idx) => (idx === i ? { ...r, name: e.target.value } : r)))} />
-                  <input type="number" min={0} className={`${input} w-28`} value={row.rate}
+                  <input type="number" min={0} className={`${inputBase} w-28 flex-none`} value={row.rate}
                     onChange={(e) => setTypes((cur) => cur.map((r, idx) => (idx === i ? { ...r, rate: e.target.value === "" ? "" : Number(e.target.value) } : r)))} />
                   <button type="button" aria-label="remove"
                     onClick={() => setTypes((cur) => cur.filter((_, idx) => idx !== i))}
