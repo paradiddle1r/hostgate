@@ -18,12 +18,16 @@ export default async function RentalsPage() {
     listRooms(property.id),
   ]);
 
-  const tenants = tenantsRes.ok ? tenantsRes.data : [];
-  const bookings = bookingsRes.ok ? bookingsRes.data : [];
+  if (!tenantsRes.ok) throw new Error(`${tenantsRes.code}: Unable to load tenants`);
+  if (!bookingsRes.ok) throw new Error(`${bookingsRes.code}: Unable to load rental candidates`);
+  if (!roomsRes.ok) throw new Error(`${roomsRes.code}: Unable to load rooms`);
+  const tenants = tenantsRes.data;
+  const bookings = bookingsRes.data;
   const tenantBookingIds = new Set(tenants.map((t) => t.booking.id));
   // Bookings not yet attached to a rental config — candidates to convert.
   const candidates = bookings.filter(
-    (b) => !tenantBookingIds.has(b.id) && b.status !== "cancelled"
+    (b) => !tenantBookingIds.has(b.id) && b.status !== "cancelled" && b.status !== "checked_out" &&
+      (b.booking_type === "standard" || b.booking_type === "monthly")
   );
 
   return (

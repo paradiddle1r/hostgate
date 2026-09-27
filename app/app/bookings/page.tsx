@@ -2,6 +2,7 @@ import { getActiveProperty } from "@/lib/active-property-server";
 import { createClient } from "@/lib/supabase/server";
 import { listRooms } from "@/lib/db/rooms";
 import type { Booking } from "@/lib/db/bookings";
+import { fetchAllPages } from "@/lib/pagination";
 import BookingsClient from "@/components/app/bookings/BookingsClient";
 
 export const dynamic = "force-dynamic";
@@ -13,20 +14,13 @@ export const dynamic = "force-dynamic";
 // scoping is preserved — `.eq("property_id", …)` is on every page of the loop.
 async function loadAllBookings(propertyId: string): Promise<Booking[]> {
   const supabase = createClient();
-  const PAGE = 1000;
-  const all: Booking[] = [];
-  for (let from = 0; ; from += PAGE) {
-    const { data, error } = await supabase
-      .from("bookings")
-      .select("*")
-      .eq("property_id", propertyId)
-      .order("check_in", { ascending: false })
-      .range(from, from + PAGE - 1);
-    if (error || !data || data.length === 0) break;
-    all.push(...(data as Booking[]));
-    if (data.length < PAGE) break;
-  }
-  return all;
+  return fetchAllPages<Booking>((from, to) => supabase
+    .from("bookings")
+    .select("*")
+    .eq("property_id", propertyId)
+    .order("check_in", { ascending: false })
+    .order("id", { ascending: true })
+    .range(from, to));
 }
 
 export default async function BookingsPage() {

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
 import type { Room } from "@/lib/db/rooms";
 import type { Booking, BookingInput, BookingStatus, BookingType } from "@/lib/db/bookings";
@@ -14,9 +13,9 @@ import {
   createBookingAction,
   updateBookingAction,
   setStatusAction,
-  bookingsInRangeAction,
   createMultiRoomBooking,
-} from "@/app/app/calendar/actions";
+} from "@/lib/calendar-api";
+import { bookingsInRangeAction } from "@/app/app/calendar/actions";
 import type { RoomTypeBrief } from "./CalendarClient";
 
 // Extra bed ("เสริมเตียง") — 50% of room total, floored at 250.
@@ -189,6 +188,7 @@ export default function BookingModal({
   rates,
   currency,
   onClose,
+  onSaved,
   // Optional: all bookings already in the calendar window. When absent the
   // modal fetches its own window via bookingsInRangeAction so the occupied-room
   // filter still works (the calendar grid domain doesn't pass this).
@@ -200,12 +200,12 @@ export default function BookingModal({
   rates: RateMap;
   currency: string;
   onClose: () => void;
+  onSaved: (bookings: Booking[]) => void;
   allBookings?: Booking[];
 }) {
   const { locale: raw } = useI18n();
   const s = STR[raw === "en" ? "en" : "th"];
   const toast = useToast();
-  const router = useRouter();
   const editing = !!seed.booking;
   const b = seed.booking;
 
@@ -389,6 +389,10 @@ export default function BookingModal({
       check_in: form.check_in,
       check_out: form.check_out,
       status: form.status,
+      source: isBlocked ? "direct"
+        : form.ota === "Walk-in" ? "walk_in"
+          : form.ota === "Direct booking" ? "direct"
+            : form.ota ? "ota" : b?.source ?? "direct",
       adults: Number(form.adults) || 1,
       children: Number(form.children) || 0,
       total_amount: isBlocked ? null : form.total_amount ? parseFloat(form.total_amount) : null,
@@ -432,9 +436,9 @@ export default function BookingModal({
         : await createBookingAction(input);
     setSaving(false);
     if (res.ok) {
+      onSaved(res.data);
       toast.success(s.saved);
       onClose();
-      router.refresh();
     } else {
       toast.error(`${res.code} · ${res.message}`);
     }
@@ -446,9 +450,9 @@ export default function BookingModal({
     const res = await setStatusAction(b!.id, status);
     setSaving(false);
     if (res.ok) {
+      onSaved(res.data);
       toast.success(s.saved);
       onClose();
-      router.refresh();
     } else {
       toast.error(`${res.code} · ${res.message}`);
     }
@@ -790,7 +794,7 @@ export default function BookingModal({
                 : `${calc.nights} ${s.nights}`}
             </span>
             <span className="font-semibold">
-              {s.total}: {fmtMoney(calc.total * roomCount)}
+              {s.total}: {fmtMoney(moneyDerived.baseTotal * roomCount)}
             </span>
           </div>
         )}
@@ -800,17 +804,17 @@ export default function BookingModal({
             {editing ? s.update : s.save}
           </Button>
           {editing && b!.status !== "checked_in" && (
-            <Button variant="ghost" onClick={() => quickStatus("checked_in")}>
+            <Button variant="ghost" disabled={saving} onClick={() => quickStatus("checked_in")}>
               {s.markCheckedIn}
             </Button>
           )}
           {editing && b!.status === "checked_in" && (
-            <Button variant="ghost" onClick={() => quickStatus("checked_out")}>
+            <Button variant="ghost" disabled={saving} onClick={() => quickStatus("checked_out")}>
               {s.markCheckedOut}
             </Button>
           )}
           {editing && b!.status !== "cancelled" && (
-            <Button variant="danger" onClick={() => quickStatus("cancelled")}>
+            <Button variant="danger" disabled={saving} onClick={() => quickStatus("cancelled")}>
               {s.cancelBooking}
             </Button>
           )}

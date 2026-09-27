@@ -6,6 +6,7 @@ import "server-only";
 // All recovered by mapPgError, so we just throw the PostgREST error.
 
 import { createClient } from "@/lib/supabase/server";
+import { fetchAllPages } from "@/lib/pagination";
 import { ActionResult, ok, mapPgError } from "@/lib/errors";
 
 export type BookingStatus =
@@ -126,15 +127,16 @@ export async function listBookings(
 ): Promise<ActionResult<Booking[]>> {
   try {
     const supabase = createClient();
-    const { data, error } = await supabase
+    const data = await fetchAllPages<Booking>((start, end) => supabase
       .from("bookings")
       .select("*")
       .eq("property_id", propertyId)
       .lt("check_in", toISO)
       .gt("check_out", fromISO)
-      .order("check_in", { ascending: true });
-    if (error) throw error;
-    return ok((data ?? []) as Booking[]);
+      .order("check_in", { ascending: true })
+      .order("id", { ascending: true })
+      .range(start, end));
+    return ok(data);
   } catch (e) {
     return mapPgError(e);
   }
@@ -176,17 +178,8 @@ export async function listAllBookings(
   }
 }
 
-/** Create a booking. Surfaces HG-BOOK-409 from the conflict trigger. */
-export async function createBooking(
-  propertyId: string,
-  tenantId: string,
-  input: BookingInput
-): Promise<ActionResult<Booking>> {
-  try {
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from("bookings")
-      .insert({
+function bookingInsertRow(propertyId: string, tenantId: string, input: BookingInput) {
+  return {
         tenant_id: tenantId,
         property_id: propertyId,
         room_id: input.room_id ?? null,
@@ -232,7 +225,30 @@ export async function createBooking(
         id_expires_date: input.id_expires_date ?? null,
         id_address: input.id_address ?? null,
         id_photo_path: input.id_photo_path ?? null,
-      })
+      };
+}
+
+/** One statement: a group either saves completely or rolls back on conflict. */
+export async function createBookings(propertyId: string, tenantId: string, inputs: BookingInput[]): Promise<ActionResult<Booking[]>> {
+  try {
+    const { data, error } = await createClient().from("bookings")
+      .insert(inputs.map(input => bookingInsertRow(propertyId, tenantId, input))).select();
+    if (error) throw error;
+    return ok(data as Booking[]);
+  } catch (e) { return mapPgError(e); }
+}
+
+/** Create a booking. Surfaces HG-BOOK-409 from the conflict trigger. */
+export async function createBooking(
+  propertyId: string,
+  tenantId: string,
+  input: BookingInput
+): Promise<ActionResult<Booking>> {
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("bookings")
+      .insert(bookingInsertRow(propertyId, tenantId, input))
       .select()
       .single();
     if (error) throw error;
@@ -245,16 +261,14 @@ export async function createBooking(
 /** Patch a booking. Surfaces HG-BOOK-409 if the change creates a conflict. */
 export async function updateBooking(
   id: string,
-  patch: Partial<BookingInput>
+  patch: Partial<BookingInput>,
+  propertyId?: string
 ): Promise<ActionResult<Booking>> {
   try {
     const supabase = createClient();
-    const { data, error } = await supabase
-      .from("bookings")
-      .update(patch)
-      .eq("id", id)
-      .select()
-      .single();
+    let query = supabase.from("bookings").update(patch).eq("id", id);
+    if (propertyId) query = query.eq("property_id", propertyId);
+    const { data, error } = await query.select().single();
     if (error) throw error;
     return ok(data as Booking);
   } catch (e) {

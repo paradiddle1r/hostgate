@@ -39,7 +39,11 @@ export async function saveTenantConfig(
   const active = await getActiveProperty();
   if (!active.ok) return active;
   const res = await upsertRentalTenant(active.data.property.id, active.data.property.tenant_id, bookingId, input);
-  if (res.ok) bust(bookingId);
+  if (res.ok) {
+    bust(bookingId);
+    revalidatePath("/app/calendar");
+    revalidatePath("/app/bookings");
+  }
   return res;
 }
 

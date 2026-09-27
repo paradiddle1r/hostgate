@@ -7,6 +7,8 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { ActionResult, ok, mapPgError } from "@/lib/errors";
 
+import { fetchAllPages } from "@/lib/pagination";
+
 export interface DailyRate {
   id: string;
   tenant_id: string;
@@ -18,6 +20,30 @@ export interface DailyRate {
 }
 
 export type RateMap = Record<string, Record<string, number>>;
+
+/** Read prices and plan stripes together, independent of the room-type query. */
+export async function calendarRates(propertyId: string, fromISO: string, toISO: string): Promise<ActionResult<{
+  rates: RateMap; planByDate: Record<string, string>;
+}>> {
+  try {
+    const supabase = createClient();
+    const rows = await fetchAllPages<{ room_type_id: string; date: string; price: number; plan_id: string | null }>(
+      (from, to) => supabase.from("daily_rates")
+        .select("room_type_id, date, price, plan_id")
+        .eq("property_id", propertyId).gte("date", fromISO).lt("date", toISO)
+        .order("id", { ascending: true }).range(from, to)
+    );
+    const rates: RateMap = {};
+    const planByDate: Record<string, string> = {};
+    for (const row of rows) {
+      (rates[row.room_type_id] ??= {})[row.date] = Number(row.price);
+      if (row.plan_id && !planByDate[row.date]) planByDate[row.date] = row.plan_id;
+    }
+    return ok({ rates, planByDate });
+  } catch (e) {
+    return mapPgError(e);
+  }
+}
 
 /**
  * Nested map of price overrides for the given room types over [fromISO, toISO).

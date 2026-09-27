@@ -55,40 +55,28 @@ export const getCurrentUser = cache(async () => {
   return user;
 });
 
-/** The tenant ids the current user belongs to — resolved once per request. */
-const userTenantIds = cache(async (): Promise<string[]> => {
-  const user = await getCurrentUser();
-  if (!user) return [];
-  const supabase = createClient();
-  const { data } = await supabase.from("tenant_members").select("tenant_id").eq("user_id", user.id);
-  return (data ?? []).map((m) => m.tenant_id as string);
-});
-
-/** All tenant memberships for the current user (joined to their tenant row). */
-export const getMemberships = cache(async (): Promise<ActionResult<Membership[]>> => {
+/** Shared membership read, memoized only for this server request. */
+const readMemberships = cache(async (): Promise<ActionResult<(Membership & { tenants: Tenant })[]>> => {
   try {
     const user = await getCurrentUser();
     if (!user) return fail("HG-AUTH-401", "You are not signed in.");
-    const supabase = createClient();
-    const { data, error } = await supabase
+    const { data, error } = await createClient()
       .from("tenant_members")
-      .select("tenant_id, role, tenants:tenant_id(name, slug, plan)")
+      .select("tenant_id, role, tenants:tenant_id(id, name, slug, plan, created_by, created_at)")
       .eq("user_id", user.id);
     if (error) throw error;
     const rows = (data ?? []).map((m) => {
-      const tenant = (Array.isArray(m.tenants) ? m.tenants[0] : m.tenants) as TenantBrief;
-      return {
-        tenant_id: m.tenant_id as string,
-        role: m.role as Membership["role"],
-        plan: tenant?.plan,
-        tenants: tenant,
-      };
+      const tenant = (Array.isArray(m.tenants) ? m.tenants[0] : m.tenants) as Tenant | undefined;
+      if (!tenant || tenant.id !== m.tenant_id) throw new Error("Missing membership tenant");
+      return { tenant_id: m.tenant_id as string, role: m.role as Membership["role"], plan: tenant.plan, tenants: tenant };
     });
     return ok(rows);
   } catch (e) {
     return mapPgError(e);
   }
 });
+
+export const getMemberships = cache(async (): Promise<ActionResult<Membership[]>> => readMemberships());
 
 /**
  * Resolve the property the user should manage.
@@ -99,10 +87,10 @@ export const getActiveProperty = cache(async function getActiveProperty(
   cookiePropId?: string
 ): Promise<ActionResult<{ property: Property; tenant: Tenant }>> {
   try {
-    const user = await getCurrentUser();
-    if (!user) return fail("HG-AUTH-401", "You are not signed in.");
 
-    const tenantIds = await userTenantIds();
+    const memberships = await readMemberships();
+    if (!memberships.ok) return memberships;
+    const tenantIds = memberships.data.map((m) => m.tenant_id);
     if (tenantIds.length === 0) return fail("HG-PROP-404", "No property available for this account.");
 
     const supabase = createClient();
@@ -116,7 +104,7 @@ export const getActiveProperty = cache(async function getActiveProperty(
         .in("tenant_id", tenantIds)
         .maybeSingle();
       if (pErr) throw pErr;
-      if (prop) return await withTenant(supabase, prop as Property);
+      if (prop) return await withTenant(memberships.data, prop as Property);
     }
 
     const { data: fallback, error: fErr } = await supabase
@@ -128,32 +116,28 @@ export const getActiveProperty = cache(async function getActiveProperty(
       .maybeSingle();
     if (fErr) throw fErr;
     if (!fallback) return fail("HG-PROP-404", "No property available for this account.");
-    return await withTenant(supabase, fallback as Property);
+    return await withTenant(memberships.data, fallback as Property);
   } catch (e) {
     return mapPgError(e);
   }
 });
 
 /** Attach the owning tenant row to a resolved property. */
-async function withTenant(
-  supabase: ReturnType<typeof createClient>,
+function withTenant(
+  memberships: (Membership & { tenants: Tenant })[],
   property: Property
-): Promise<ActionResult<{ property: Property; tenant: Tenant }>> {
-  const { data: tenant, error } = await supabase
-    .from("tenants")
-    .select("*")
-    .eq("id", property.tenant_id)
-    .single();
-  if (error) throw error;
-  return ok({ property, tenant: tenant as Tenant });
+): ActionResult<{ property: Property; tenant: Tenant }> {
+  const tenant = memberships.find((m) => m.tenant_id === property.tenant_id)?.tenants;
+  if (!tenant) return fail("HG-PROP-404", "No property available for this account.");
+  return ok({ property, tenant });
 }
 
 /** Every property across all of the user's tenants (for the property switcher). */
 export const listTenantProperties = cache(async (): Promise<ActionResult<Property[]>> => {
   try {
-    const user = await getCurrentUser();
-    if (!user) return fail("HG-AUTH-401", "You are not signed in.");
-    const tenantIds = await userTenantIds();
+    const memberships = await readMemberships();
+    if (!memberships.ok) return memberships;
+    const tenantIds = memberships.data.map((m) => m.tenant_id);
     if (tenantIds.length === 0) return ok([]);
     const supabase = createClient();
     const { data, error } = await supabase

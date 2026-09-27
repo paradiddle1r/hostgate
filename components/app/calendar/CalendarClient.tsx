@@ -7,7 +7,7 @@ import type { Room } from "@/lib/db/rooms";
 import type { Booking, BookingStatus, BookingType } from "@/lib/db/bookings";
 import type { RateMap } from "@/lib/db/rates";
 import type { RatePlan } from "@/lib/db/rate-plans";
-import { stayTotal } from "@/lib/booking-calc";
+import { bookingMovePatch } from "@/lib/booking-move";
 import { useAppT } from "@/lib/app-i18n";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/components/app/ui/Toast";
@@ -17,7 +17,7 @@ import Modal from "@/components/app/ui/Modal";
 import BookingModal, { ModalSeed } from "./BookingModal";
 import PasteImportModal from "./PasteImportModal";
 import BulkRateModal from "./BulkRateModal";
-import { setStatusAction, updateBookingAction } from "@/app/app/calendar/actions";
+import { setStatusAction, updateBookingAction } from "@/lib/calendar-api";
 
 export interface RoomTypeBrief {
   id: string;
@@ -90,6 +90,8 @@ const STR: Record<"th" | "en", Record<string, string>> = {
     openEnded: "ไม่มีกำหนด",
     guest: "ผู้เข้าพัก",
     moveTitle: "ย้ายการจอง?",
+    moveDateWarning: "วันเข้าพักเปลี่ยน กรุณาตรวจสอบช่วงวันก่อนยืนยัน",
+    movePriceUnchanged: "คงยอดจองเดิม หากต้องการเปลี่ยนราคาให้แก้ไขในการจอง",
     moveFrom: "จาก",
     moveTo: "ไป",
     moveCancel: "ยกเลิก",
@@ -142,6 +144,8 @@ const STR: Record<"th" | "en", Record<string, string>> = {
     openEnded: "Open-ended",
     guest: "Guest",
     moveTitle: "Move booking?",
+    moveDateWarning: "Stay dates have changed. Review the date range before confirming.",
+    movePriceUnchanged: "The agreed booking amount stays unchanged. Edit the booking to adjust its price.",
     moveFrom: "From",
     moveTo: "To",
     moveCancel: "Cancel",
@@ -274,9 +278,17 @@ export default function CalendarClient({
   // position OPTIMISTICALLY — it lands instantly, without waiting on the server
   // round-trip + a full page re-fetch. Re-syncs whenever fresh props arrive.
   const [rows, setRows] = useState(bookings);
+  const pendingWrites = useRef(new Set<string>());
   useEffect(() => {
-    setRows(bookings);
+    setRows(previous => bookings.map(row => pendingWrites.current.has(row.id)
+      ? previous.find(b => b.id === row.id) ?? row : row));
   }, [bookings]);
+  function acceptSaved(saved: Booking[]) {
+    setRows(prev => [...prev.filter(row => !saved.some(b => b.id === row.id)), ...saved]);
+    // Refresh other inventory in the background, after the committed row is
+    // already usable. The JSON save does not wait for this RSC reconciliation.
+    startNav(() => router.refresh());
+  }
   const live = rows.filter((b) => b.status !== "cancelled");
 
   // Plan lookup by id for colour chip + tooltip name.
@@ -337,12 +349,6 @@ export default function CalendarClient({
   // Rich hover tooltip: the booking + pointer coords.
   const [tip, setTip] = useState<{ b: Booking; x: number; y: number } | null>(null);
 
-  function recomputeTotal(roomId: string | null, ci: string, co: string): number | null {
-    const rtId = rooms.find((r) => r.id === roomId)?.room_type_id ?? null;
-    const base = roomTypes.find((rt) => rt.id === rtId)?.daily_rate ?? 0;
-    const rm = rtId ? rates[rtId] ?? {} : {};
-    return stayTotal(rm, Number(base) || 0, ci, co).total || null;
-  }
 
   function restoreSrcBar() {
     if (srcBarRef.current) {
@@ -355,7 +361,7 @@ export default function CalendarClient({
   }
 
   function onBarPointerDown(e: React.PointerEvent, b: Booking) {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || pendingWrites.current.has(b.id)) return;
     // Monthly leases + cancelled bars are drag-locked (parity with hotel-pms):
     // moving them would silently invalidate linked tenant/contract/meter rows or
     // re-activate a cancelled booking. A plain click still opens the modal.
@@ -500,33 +506,30 @@ export default function CalendarClient({
   // Apply the move the operator confirmed in the dialog.
   async function confirmMove() {
     const mc = moveConfirm;
-    if (!mc) return;
+    if (!mc || pendingWrites.current.has(mc.b.id)) return;
+    pendingWrites.current.add(mc.b.id);
     setMoveConfirm(null);
     const roomTypeId = rooms.find((r) => r.id === mc.newRoomId)?.room_type_id ?? null;
-    const total = recomputeTotal(mc.newRoomId, mc.newCI, mc.newCO);
+    const patch = bookingMovePatch(mc.newRoomId, roomTypeId, mc.newCI, mc.newCO);
     // Optimistic: move the bar in local state NOW so it lands instantly. The
     // server write + reconcile happen in the background.
     setRows((prev) =>
       prev.map((x) =>
         x.id === mc.b.id
-          ? { ...x, room_id: mc.newRoomId, room_type_id: roomTypeId, check_in: mc.newCI, check_out: mc.newCO, total_amount: total }
+          ? { ...x, ...patch }
           : x,
       ),
     );
-    const res = await updateBookingAction(mc.b.id, {
-      room_id: mc.newRoomId,
-      room_type_id: roomTypeId,
-      check_in: mc.newCI,
-      check_out: mc.newCO,
-      total_amount: total,
-    });
+    const res = await updateBookingAction(mc.b.id, patch);
+    pendingWrites.current.delete(mc.b.id);
     if (res.ok) {
+      acceptSaved(res.data);
       toast.success(t("cal.saved"));
-      // No router.refresh() — the optimistic state already matches the server,
-      // so re-fetching would only add a slow flash. Next navigation reconciles.
     } else {
+      // Restore immediately, even when the follow-up read is slow or offline.
+      setRows(prev => prev.map(row => row.id === mc.b.id ? mc.b : row));
       toast.error(`${res.code} · ${res.message}`);
-      router.refresh(); // failed — pull the truth back to revert the optimistic move
+      router.refresh();
     }
   }
 
@@ -567,8 +570,8 @@ export default function CalendarClient({
   async function quick(b: Booking, status: BookingStatus) {
     const res = await setStatusAction(b.id, status);
     if (res.ok) {
+      acceptSaved(res.data);
       toast.success(t("cal.saved"));
-      router.refresh();
     } else {
       toast.error(`${res.code} · ${res.message}`);
     }
@@ -989,7 +992,7 @@ export default function CalendarClient({
                 today={today}
                 matchedIds={matchedIds}
                 onCell={() => {}}
-                onBar={(b) => setSeed({ booking: b })}
+                onBar={(b) => { if (!pendingWrites.current.has(b.id)) setSeed({ booking: b }); }}
                 onBarPointerDown={onBarPointerDown}
                 onBarHover={(b, x, y) => setTip({ b, x, y })}
                 onBarLeave={() => setTip(null)}
@@ -1019,7 +1022,7 @@ export default function CalendarClient({
                     today={today}
                     matchedIds={matchedIds}
                     onCell={(date) => setSeed({ roomId: r.id, checkIn: date, checkOut: addDays(date, 1) })}
-                    onBar={(b) => setSeed({ booking: b })}
+                    onBar={(b) => { if (!pendingWrites.current.has(b.id)) setSeed({ booking: b }); }}
                     onBarPointerDown={onBarPointerDown}
                     onBarHover={(b, x, y) => setTip({ b, x, y })}
                     onBarLeave={() => setTip(null)}
@@ -1059,6 +1062,7 @@ export default function CalendarClient({
           roomTypes={roomTypes}
           rates={rates}
           currency={currency}
+          onSaved={acceptSaved}
           onClose={() => setSeed(null)}
         />
       )}
@@ -1068,7 +1072,7 @@ export default function CalendarClient({
           onClose={() => setPasteOpen(false)}
           onSeed={(p) => {
             setPasteOpen(false);
-            setSeed({ checkIn: p.checkIn, checkOut: p.checkOut, guestName: p.guestName, phone: p.phone });
+            setSeed(p);
           }}
         />
       )}
@@ -1113,12 +1117,23 @@ export default function CalendarClient({
                 {moveConfirm.fromRoom} <span className="text-[var(--app-fg-muted)]">→</span> {moveConfirm.toRoom}
               </span>
             </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-[var(--app-fg-muted)]">{s.dates}</span>
-              <span className="font-medium">
-                {moveConfirm.newCI} <span className="text-[var(--app-fg-muted)]">→</span> {moveConfirm.newCO}
-              </span>
+            <div className="rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-2)] p-3">
+              <div className="mb-2 text-xs text-[var(--app-fg-muted)]">{s.dates}</div>
+              <div className="flex flex-wrap justify-between gap-2">
+                <span className="text-[var(--app-fg-muted)]">{s.moveFrom}</span>
+                <span>{moveConfirm.b.check_in} → {moveConfirm.b.check_out}</span>
+              </div>
+              <div className="mt-1 flex flex-wrap justify-between gap-2 font-medium">
+                <span>{s.moveTo}</span>
+                <span>{moveConfirm.newCI} → {moveConfirm.newCO}</span>
+              </div>
             </div>
+            {moveConfirm.newCI !== moveConfirm.b.check_in && (
+              <p role="alert" className="rounded-xl border border-amber-500/50 bg-amber-500/10 p-3">
+                {s.moveDateWarning} ({dayIdx(moveConfirm.b.check_in, moveConfirm.newCI) > 0 ? "+" : ""}{dayIdx(moveConfirm.b.check_in, moveConfirm.newCI)})
+              </p>
+            )}
+            <p className="text-xs text-[var(--app-fg-muted)]">{s.movePriceUnchanged}</p>
           </div>
         </Modal>
       )}

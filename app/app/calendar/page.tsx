@@ -3,7 +3,7 @@ import { todayISO, addDaysISO } from "@/lib/date";
 import { getActiveProperty, getMemberships } from "@/lib/active-property-server";
 import { listRooms } from "@/lib/db/rooms";
 import { listBookings } from "@/lib/db/bookings";
-import { rateMap } from "@/lib/db/rates";
+import { calendarRates } from "@/lib/db/rates";
 import { listRatePlans } from "@/lib/db/rate-plans";
 import CalendarClient, { RoomTypeBrief } from "@/components/app/calendar/CalendarClient";
 
@@ -35,7 +35,7 @@ export default async function CalendarPage({
   const from = /^\d{4}-\d{2}-\d{2}$/.test(sp?.from ?? "") ? (sp!.from as string) : today;
   const to = addDaysISO(from, windowDays);
 
-  const [roomsRes, typesRes, bookingsRes, plansRes, membersRes] = await Promise.all([
+  const [roomsRes, typesRes, bookingsRes, plansRes, membersRes, ratesRes] = await Promise.all([
     listRooms(property.id),
     supabase
       .from("room_types")
@@ -45,11 +45,18 @@ export default async function CalendarPage({
     listBookings(property.id, from, to),
     listRatePlans(property.id),
     getMemberships(),
+    calendarRates(property.id, from, to),
   ]);
 
-  const rooms = (roomsRes.ok ? roomsRes.data : []).filter((r) => r.status === "active");
+  // An incomplete calendar must never look like available inventory.
+  if (!roomsRes.ok) throw new Error(`${roomsRes.code}: Unable to load calendar rooms`);
+  if (!bookingsRes.ok) throw new Error(`${bookingsRes.code}: Unable to load calendar bookings`);
+  if (typesRes.error) throw new Error("Unable to load calendar room types");
+  if (!plansRes.ok) throw new Error(`${plansRes.code}: Unable to load calendar rate plans`);
+
+  const rooms = roomsRes.data.filter((r) => r.status === "active");
   const roomTypes = (typesRes.data ?? []) as RoomTypeBrief[];
-  const bookings = bookingsRes.ok ? bookingsRes.data : [];
+  const bookings = bookingsRes.data;
   const plans = (plansRes.ok ? plansRes.data : []).filter((p) => p.active);
 
   // Current user's role for THIS tenant — gates the admin/owner analytics block.
@@ -58,29 +65,8 @@ export default async function CalendarPage({
       ? membersRes.data.find((m) => m.tenant_id === tenant.id)?.role ?? "staff"
       : "staff";
 
-  const typeIds = roomTypes.map((t) => t.id);
-  const ratesRes = typeIds.length ? await rateMap(property.id, typeIds, from, to) : null;
-  const rates = ratesRes && ratesRes.ok ? ratesRes.data : {};
-
-  // Which date carries which rate plan (date → plan_id), so the header can
-  // paint a coloured stripe on plan-stamped days. We read daily_rates.plan_id
-  // directly (not exposed by rateMap) and keep the first plan we see per date —
-  // a single plan apply stamps every room type the same day, so one is enough.
-  const planByDate: Record<string, string> = {};
-  if (typeIds.length) {
-    const { data: planRows } = await supabase
-      .from("daily_rates")
-      .select("date, plan_id")
-      .eq("property_id", property.id)
-      .in("room_type_id", typeIds)
-      .not("plan_id", "is", null)
-      .gte("date", from)
-      .lt("date", to);
-    for (const r of planRows ?? []) {
-      const d = r.date as string;
-      if (!planByDate[d] && r.plan_id) planByDate[d] = r.plan_id as string;
-    }
-  }
+  if (!ratesRes.ok) throw new Error(`${ratesRes.code}: Unable to load calendar rates`);
+  const { rates, planByDate } = ratesRes.data;
 
   return (
     <CalendarClient
