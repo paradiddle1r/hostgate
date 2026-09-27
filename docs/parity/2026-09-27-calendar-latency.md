@@ -66,3 +66,36 @@ Verify rejected moves roll back, multi-room conflict writes zero partial rows,
 and cancellation of newly created test rows restores availability. Do not
 promise a target duration until this production run is observed. Preserve
 hotel-pms as read-only. Full parity and rental migration28 remain separate work.
+
+## Production release completed (owner approved “จัดการเลย”)
+
+- Deployed 2026-09-27 via `vercel deploy --prod --yes`; READY
+  `dpl_FzsGq5nZHLR6Xzvn22F4Zi3mws5R`,
+  `https://hostgate-14vlwvyii-paradiddle1rs-projects.vercel.app`, aliased hostgate.app.
+  Subsequent `vercel inspect https://hostgate.app` confirmed function region **sin1**.
+  Deployed source recorded in local commit `c3b0193` (same working files uploaded).
+- Real authenticated MMM-01 browser tests, each measured with browser Resource
+  Timing for complete `/api/calendar/bookings` response (not tool-call time):
+
+  | Operation | Response duration |
+  |---|---:|
+  | Create Agoda, room101, amount750 | 876.3 ms |
+  | Drag/confirm101→102, same dates | 733.2 ms |
+  | Group create101+103+104, amount500 each | 369.0 ms |
+  | Block105 | 698.5 ms |
+
+- First create's background calendar refresh took591.3ms separately after the
+  JSON response. These are individual observations, not p50/p95 or a guarantee.
+  Prior Sep17 requests were on a different date/deployment (headers3–6s,
+  full paste response8.263s), so the comparison is indicative, not controlled.
+- Observed create/move/group/block success; moved booking retained750 and102.
+  Full browser reload retained all test bars and group-of-three aggregation.
+  This validates production persistence and Next background reconciliation for
+  these flows, beyond the earlier synthetic fixture.
+- Created five rows, all tagged HGTEST-0927 (SPEED, GROUP×3, BLOCK issue note).
+  Cancelled each through UI; full reload showed zero test bars/zero BLOCKED,
+  original one five-night booking unchanged, revenueTHB0, availability15/15
+  for Sep27–29. Cancelled audit rows retained; no deletion/financial documents.
+- Proof screenshots (ignored): `output/playwright/booking-fix-qa/2026-09-27-production.png`
+  and `2026-09-27-production-clean.png`. hotel-pms untouched.
+- Migration28 was NOT applied; separate monthly-conversion work remains pending.
