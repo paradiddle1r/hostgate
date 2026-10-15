@@ -29,7 +29,10 @@ export default function FAQ() {
             >
               <button
                 onClick={() => setOpen(open === i ? null : i)}
-                className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left"
+                id={`faq-question-${i}`}
+                aria-expanded={open === i}
+                aria-controls={`faq-answer-${i}`}
+                className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left transition-colors hover:bg-zinc-50"
               >
                 <span className="text-base font-semibold text-zinc-900">
                   {pick(item.q, locale)}
@@ -47,12 +50,16 @@ export default function FAQ() {
                 </svg>
               </button>
               <div
+                id={`faq-answer-${i}`}
+                role="region"
+                aria-labelledby={`faq-question-${i}`}
+                aria-hidden={open !== i}
                 className={`grid transition-all duration-300 ease-out ${
                   open === i ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
                 }`}
               >
                 <div className="overflow-hidden">
-                  <p className="px-6 pb-5 text-sm leading-relaxed text-zinc-600">
+                  <p className="px-6 pb-5 text-sm leading-7 text-zinc-600">
                     {pick(item.a, locale)}
                   </p>
                 </div>

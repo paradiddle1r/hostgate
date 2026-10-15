@@ -32,9 +32,9 @@ export default function Features() {
           {t.features.items.map((item, i) => (
             <div
               key={i}
-              className="lift group relative bg-white p-7"
+              className="lift group relative bg-white p-7 transition-colors duration-300 hover:bg-indigo-50/40 sm:p-8"
             >
-              <div className="mb-5 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-zinc-900 text-white transition group-hover:scale-105">
+              <div className="mb-5 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-zinc-900 text-white transition duration-300 group-hover:scale-105 group-hover:bg-indigo-600">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="h-5 w-5">
                   {icons[i]}
                 </svg>
@@ -42,7 +42,7 @@ export default function Features() {
               <h3 className="text-base font-semibold tracking-tight text-zinc-900">
                 {pick(item.title, locale)}
               </h3>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-600">
+              <p className="mt-3 text-sm leading-7 text-zinc-600">
                 {pick(item.desc, locale)}
               </p>
             </div>

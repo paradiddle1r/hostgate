@@ -26,7 +26,8 @@ export default function Pricing() {
             <div className="flex items-center gap-1 rounded-full border border-zinc-200 bg-white p-1 text-sm">
               <button
                 onClick={() => setYearly(false)}
-                className={`rounded-full px-4 py-1.5 transition ${
+                aria-pressed={!yearly}
+                className={`min-h-11 rounded-full px-5 py-2 transition ${
                   !yearly ? "bg-zinc-900 text-white" : "text-zinc-600 hover:text-zinc-900"
                 }`}
               >
@@ -34,7 +35,8 @@ export default function Pricing() {
               </button>
               <button
                 onClick={() => setYearly(true)}
-                className={`rounded-full px-4 py-1.5 transition ${
+                aria-pressed={yearly}
+                className={`min-h-11 rounded-full px-5 py-2 transition ${
                   yearly ? "bg-zinc-900 text-white" : "text-zinc-600 hover:text-zinc-900"
                 }`}
               >

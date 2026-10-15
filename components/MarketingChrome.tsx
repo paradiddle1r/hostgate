@@ -59,7 +59,7 @@ export default function MarketingChrome({ children }: { children: ReactNode }) {
   return (
     <>
       {mesh}
-      <div className="relative">
+      <div className="marketing-site relative">
         <Navbar />
         <main>{children}</main>
         <Footer />

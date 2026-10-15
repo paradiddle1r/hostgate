@@ -21,8 +21,8 @@ export const translations = {
     title1: { th: "ที่พักของคุณ.", en: "Your property." },
     title2: { th: "บริหารง่ายขึ้น.", en: "Simplified." },
     subtitle: {
-      th: "ระบบจัดการห้องพัก สำหรับโรงแรมและอพาร์ตเมนต์ ออกแบบใหม่ตั้งแต่ต้น",
-      en: "A property management system for hotels and apartments. Rethought from the ground up.",
+      th: "การจอง งานหน้าฟรอนต์ และรายเดือน\nครบในระบบเดียว สำหรับทุกวันของทีมคุณ",
+      en: "Bookings, front desk, and monthly rentals.\nOne place for your team to manage every stay.",
     },
     ctaPrimary: { th: "เริ่มใช้งาน", en: "Get started" },
     ctaSecondary: { th: "ดู Demo", en: "Watch demo" },

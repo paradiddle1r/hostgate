@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useI18n, pick } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/client";
 import Logo from "./Logo";
@@ -11,6 +11,19 @@ export default function Navbar() {
   const { locale, t } = useI18n();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+        menuButton.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [menuOpen]);
   // null = haven't checked yet, false = signed out, true = signed in.
   // Treating "unknown" specially avoids the login-button flash on first paint
   // for already-authenticated users.
@@ -71,7 +84,7 @@ export default function Navbar() {
     <header
       className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
         scrolled
-          ? "border-b border-zinc-200/70 bg-white/80 backdrop-blur-xl"
+          ? "border-b border-zinc-200/70 bg-white/85 shadow-[0_4px_24px_-16px_rgba(24,24,27,0.18)] backdrop-blur-xl"
           : "bg-transparent"
       }`}
     >
@@ -123,8 +136,11 @@ export default function Navbar() {
 
         <button
           onClick={() => setMenuOpen((o) => !o)}
-          className="rounded-md p-2 text-zinc-700 lg:hidden"
-          aria-label="Menu"
+          ref={menuButton}
+          className="flex h-11 w-11 items-center justify-center rounded-full text-zinc-700 transition hover:bg-zinc-100 lg:hidden"
+          aria-label={locale === "th" ? (menuOpen ? "ปิดเมนู" : "เปิดเมนู") : (menuOpen ? "Close menu" : "Open menu")}
+          aria-expanded={menuOpen}
+          aria-controls={menuOpen ? "marketing-mobile-menu" : undefined}
         >
           <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
             {menuOpen ? (
@@ -137,7 +153,7 @@ export default function Navbar() {
       </nav>
 
       {menuOpen && (
-        <div className="border-t border-zinc-200 bg-white/95 px-5 pb-5 backdrop-blur-xl lg:hidden">
+        <div id="marketing-mobile-menu" className="max-h-[calc(100dvh-76px)] overflow-y-auto border-t border-zinc-200 bg-white/95 px-5 pb-5 shadow-lg shadow-zinc-900/5 backdrop-blur-xl lg:hidden">
           <ul className="flex flex-col gap-1 pt-2">
             {links.map((l) => (
               <li key={l.href}>
