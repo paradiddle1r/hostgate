@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getPlatformAdmin } from "@/lib/admin";
+import { BrandLockup } from "@/components/Logo";
 import { Boxes, LayoutDashboard, Link2, ListTree, ScrollText } from "lucide-react";
 
 // Platform admin console shell — served at /admin/* and, via the middleware
@@ -26,8 +27,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <header className="sticky top-0 z-40 border-b border-zinc-800 bg-zinc-950/90 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-7xl items-center gap-6 px-4">
           <Link href="/admin" className="flex items-center gap-2 font-semibold tracking-tight">
-            <span className="grid h-7 w-7 place-items-center rounded-lg bg-emerald-500 text-xs font-bold text-zinc-950">HG</span>
-            HostGate <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-zinc-400">Admin</span>
+            <BrandLockup className="h-7 w-auto" inverted />
+            <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-zinc-400">Admin</span>
           </Link>
           <nav className="flex items-center gap-1 text-sm">
             {NAV.map(({ href, label, icon: Icon }) => (

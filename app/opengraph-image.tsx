@@ -6,6 +6,12 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 export default async function OG() {
+  // Bundle the outlined logo into the edge route, avoiding a runtime request
+  // back to the production domain while a release is being promoted.
+  const logoResponse = await fetch(new URL("../public/brand/hostgate-a4-horizontal-color.svg", import.meta.url));
+  const logoBytes = new Uint8Array(await logoResponse.arrayBuffer());
+  const logoData = `data:image/svg+xml;base64,${btoa(String.fromCharCode(...logoBytes))}`;
+
   return new ImageResponse(
     (
       <div
@@ -24,24 +30,9 @@ export default async function OG() {
       >
         {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <div
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: 14,
-              background:
-                "linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 32,
-              fontWeight: 800,
-              color: "white",
-            }}
-          >
-            H
-          </div>
-          <div style={{ fontSize: 36, fontWeight: 700, color: "#18181b" }}>HostGate</div>
+          {/* ImageResponse renders the same outlined mark used by the website. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={logoData} alt="HostGate" width={286} height={56} />
         </div>
 
         {/* Headline */}

@@ -1,11 +1,10 @@
-<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#818cf8"/>
-      <stop offset="0.5" stop-color="#c084fc"/>
-      <stop offset="1" stop-color="#f472b6"/>
-    </linearGradient>
-  </defs>
-  <rect x="2" y="2" width="36" height="36" rx="10" fill="url(#g)"/>
-  <path d="M13 27V13h3v5.5h8V13h3v14h-3v-5.5h-8V27h-3z" fill="white"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+  <style>.booking{fill:#1C2B4D}@media(prefers-color-scheme:dark){.booking{fill:#FFFFFF}}</style>
+  <g fill="#FF6656">
+    <rect x="1" y="1" width="4" height="4" rx="1"/>
+    <rect x="11" y="1" width="4" height="4" rx="1"/>
+    <rect class="booking" x="1" y="6" width="14" height="4" rx="1"/>
+    <rect x="1" y="11" width="4" height="4" rx="1"/>
+    <rect x="11" y="11" width="4" height="4" rx="1"/>
+  </g>
 </svg>

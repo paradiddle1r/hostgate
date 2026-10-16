@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useI18n, pick } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/client";
-import Logo from "./Logo";
+import { BrandLockup } from "./Logo";
 import LanguageToggle from "./LanguageToggle";
 
 export default function Navbar() {
@@ -90,8 +90,7 @@ export default function Navbar() {
     >
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3.5 lg:px-8">
         <Link href="/" className="flex items-center gap-2.5 group">
-          <Logo className="h-8 w-8 transition-transform group-hover:scale-105" />
-          <span className="text-lg font-semibold tracking-tight text-zinc-900">HostGate</span>
+          <BrandLockup className="h-7 w-auto transition-transform group-hover:scale-[1.02]" />
         </Link>
 
         <ul className="hidden items-center gap-1 lg:flex">

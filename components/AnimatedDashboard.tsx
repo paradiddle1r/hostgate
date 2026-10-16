@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePauseWhenHidden } from "@/lib/useReveal";
+import { BrandLockup } from "@/components/Logo";
 
 /**
  * Animated PMS mockup rendered in the REAL hotel-pms "liquid light" theme —
@@ -47,10 +48,7 @@ export default function AnimatedDashboard({ phase }: { phase?: number }) {
       {/* Top bar — horizontal nav, like the real hotel-pms desktop TopNav */}
       <header className="pms-ll-surface relative z-10 flex h-8 flex-none items-center gap-1 px-2.5">
         <div className="flex flex-none items-center gap-1.5 pr-1.5">
-          <div className="grid h-5 w-5 place-items-center rounded-md bg-[var(--ll-accent)] text-white">
-            <HotelGlyph />
-          </div>
-          <span className="text-[10px] font-bold tracking-tight">HostGate</span>
+          <BrandLockup className="h-4 w-auto" />
         </div>
         <nav className="flex min-w-0 items-center gap-0.5 overflow-hidden">
           {NAV.map((item, i) => {
@@ -85,14 +83,6 @@ export default function AnimatedDashboard({ phase }: { phase?: number }) {
         <Scene visible={p === 3}><ChannelsScene /></Scene>
       </div>
     </div>
-  );
-}
-
-function HotelGlyph() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 21h18M5 21V5a1 1 0 011-1h8a1 1 0 011 1v16M15 9h3a1 1 0 011 1v11M9 8h.01M9 12h.01" />
-    </svg>
   );
 }
 

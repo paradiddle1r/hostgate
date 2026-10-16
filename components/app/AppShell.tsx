@@ -13,7 +13,8 @@ import dynamic from "next/dynamic";
 // WebGL Aurora backdrop — client-only, lazy. Never loaded unless an Aurora
 // theme is active, so three/gsap stay out of every other theme's bundle.
 const AuroraBackground = dynamic(() => import("./AuroraBackground"), { ssr: false });
-import { CalendarDays, Users, BedDouble, Settings, LayoutDashboard, Menu, X, Building2, BookOpen, Tag, Receipt, BarChart3, SprayCan, CalendarClock, Wrench, KeyRound, ShoppingCart, UserCog, Activity, Megaphone, ChevronDown, FileText, Wallet, BookOpenCheck, Landmark, Package } from "lucide-react";
+import { CalendarDays, Users, BedDouble, Settings, LayoutDashboard, Menu, X, BookOpen, Tag, Receipt, BarChart3, SprayCan, CalendarClock, Wrench, KeyRound, ShoppingCart, UserCog, Activity, Megaphone, ChevronDown, FileText, Wallet, BookOpenCheck, Landmark, Package } from "lucide-react";
+import Logo from "@/components/Logo";
 import type { Property } from "@/lib/db/properties";
 import { useAppT } from "@/lib/app-i18n";
 import { ToastProvider } from "@/components/app/ui/Toast";
@@ -183,8 +184,8 @@ export default function AppShell({
               <Menu size={22} />
             </button>
             <div className="flex min-w-0 flex-none items-center gap-2 pr-1">
-              <div className="grid h-7 w-7 flex-none place-items-center rounded-lg bg-[var(--app-accent)] text-[var(--app-accent-fg)]">
-                <Building2 size={16} />
+              <div className="grid h-7 w-7 flex-none place-items-center rounded-lg bg-white">
+                <Logo className="h-6 w-6" />
               </div>
               <PropertySwitcher />
             </div>

@@ -37,7 +37,11 @@ export const metadata: Metadata = {
     description: "ระบบจัดการห้องพักครบวงจร เริ่มต้นฟรี",
   },
   icons: {
-    icon: "/favicon.svg",
+    icon: [
+      { url: "/favicon.svg?v=a4", type: "image/svg+xml" },
+      { url: "/brand/favicon-32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: { url: "/brand/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
   },
 };
 

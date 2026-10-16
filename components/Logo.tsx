@@ -1,18 +1,34 @@
-export default function Logo({ className = "h-8 w-8" }: { className?: string }) {
+import Image from "next/image";
+
+/** Selected A4: four room blocks and one reservation span form an H. */
+export default function Logo({ className = "h-8 w-8", inverted = false }: {
+  className?: string;
+  inverted?: boolean;
+}) {
   return (
-    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <defs>
-        <linearGradient id="hg-grad" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#818cf8" />
-          <stop offset="0.5" stopColor="#c084fc" />
-          <stop offset="1" stopColor="#f472b6" />
-        </linearGradient>
-      </defs>
-      <rect x="2" y="2" width="36" height="36" rx="10" fill="url(#hg-grad)" />
-      <path
-        d="M13 27V13h3v5.5h8V13h3v14h-3v-5.5h-8V27h-3z"
-        fill="white"
-      />
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+      <rect x="4" y="7" width="16" height="15" rx="3.5" fill="#FF6656" />
+      <rect x="44" y="7" width="16" height="15" rx="3.5" fill="#FF6656" />
+      <rect x="4" y="25" width="56" height="14" rx="4" fill={inverted ? "#FFFFFF" : "#1C2B4D"} />
+      <rect x="4" y="43" width="16" height="15" rx="3.5" fill="#FF6656" />
+      <rect x="44" y="43" width="16" height="15" rx="3.5" fill="#FF6656" />
     </svg>
+  );
+}
+
+/** Outlined Nunito wordmark: no browser font substitution or layout shift. */
+export function BrandLockup({ className = "h-7 w-auto", inverted = false }: {
+  className?: string;
+  inverted?: boolean;
+}) {
+  return (
+    <Image
+      src={`/brand/hostgate-a4-horizontal-${inverted ? "reverse" : "color"}.svg`}
+      alt="HostGate"
+      width={490}
+      height={96}
+      className={className}
+      unoptimized
+    />
   );
 }

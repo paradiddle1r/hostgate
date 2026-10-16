@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Logo from "@/components/Logo";
+import { BrandLockup } from "@/components/Logo";
 
 /**
  * Auth route group layout.
@@ -12,10 +12,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     <div className="relative flex min-h-screen flex-col">
       <header className="relative z-10 px-5 py-5 lg:px-8">
         <Link href="/" className="inline-flex items-center gap-2.5 group">
-          <Logo className="h-8 w-8 transition-transform group-hover:scale-105" />
-          <span className="text-lg font-semibold tracking-tight text-zinc-900">
-            HostGate
-          </span>
+          <BrandLockup className="h-7 w-auto transition-transform group-hover:scale-[1.02]" />
         </Link>
       </header>
 
